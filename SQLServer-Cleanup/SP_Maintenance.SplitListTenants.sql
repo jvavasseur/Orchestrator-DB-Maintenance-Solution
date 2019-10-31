@@ -33,7 +33,9 @@ GO
 --                      dash sign disards a tenant
 --                      % is used for wildcard selection
 --                      Special values: #ALL_TENANTS#, #ACTIVE_TENANTS#, #INACTIVE_TENANTS#, #DELETED_TENANTS#
--- Output = Table list of Tenant' Id and Name
+-- Output = Table list of 
+--            - Tenant' Id and Name when item in @TenantList match to an existing 
+--            - Item name when item in @TenantList doesn't match to an existing tenant
 ----------------------------------------------------------------------------------------------------
 ALTER PROCEDURE [Maintenance].[SplitListTenants]
     @TenantList nvarchar(max)
@@ -48,11 +50,9 @@ BEGIN
     INSERT INTO @keywords(keyword) VALUES(N'#ALL_TENANTS#'), (N'#ACTIVE_TENANTS#'), (N'#INACTIVE_TENANTS#'), (N'#DELETED_TENANTS#');
     DECLARE @invalidKeywords nvarchar(max);
     DECLARE @itemsList TABLE(Id int, Item nvarchar(max), Tenant nvarchar(128), isDiscarded bit);
-    --DECLARE @items TABLE(item nvarchar(max), isDiscarded bit);
     
     BEGIN TRY
-        IF @TenantList IS NULL THROW 60001, N'@TenantList can''t be NULL', 1;
-
+        -- Remove special characters: end of line, return, space and double delimiter
         SET @TenantList = REPLACE(@TenantList, CHAR(10), '');
         SET @TenantList = REPLACE(@TenantList, CHAR(13), '');
         SET @TenantList = LTRIM(RTRIM(@TenantList));
@@ -60,10 +60,12 @@ BEGIN
         WHILE CHARINDEX(' '+@Delimiter, @TenantList) > 0 SET @TenantList = REPLACE(@TenantList,' '+@Delimiter, @Delimiter);
         WHILE CHARINDEX(@Delimiter+@Delimiter, @TenantList) > 0 SET @TenantList = REPLACE(@TenantList,@Delimiter+@Delimiter, @Delimiter);
 
+        -- Check empty list
+        IF @TenantList IS NULL THROW 60001, N'@TenantList can''t be NULL', 1;
         IF @TenantList = '' THROW 60002, N'@TenantList can''t be empty', 1;
         IF @TenantList = @Delimiter THROW 60003, N'@TenantList can''t be empty', 1;
 
-        -- Extract items / link item to tenants' names
+        -- Extract items from @TenantList and return a list of matching id and tenants' names or unmatched items
         WITH Split (StartPosition, EndPosition, Item) AS
         (
             SELECT StartPosition = 1
@@ -92,7 +94,7 @@ BEGIN
         WHERE itm.item <> N''
         OPTION (MAXRECURSION 0);
 
-        -- Check invalid keywords
+        -- Check invalid keywords usage
         SELECT @invalidKeywords = NULL;
         SELECT @invalidKeywords = COALESCE(@invalidKeywords + N', ' + item, item) FROM (
             SELECT item FROM @itemsList WHERE item LIKE N'#%#' AND Id IS NULL
@@ -106,56 +108,16 @@ BEGIN
             THROW 60004, @message, 1;
         END;
 
-        -- Get Tenants
-        SELECT Id, COALESCE(Tenant, Item) FROM @itemsList WHERE isDiscarded = 0 --AND Id IS NOT NULL
+        -- Get a unique list of Id/Tenants and unmatched item (if any)
+        SELECT Id, COALESCE(Tenant, Item) FROM @itemsList WHERE isDiscarded = 0
         EXCEPT
         SELECT Id, Tenant FROM @itemsList WHERE isDiscarded = 1;
 
-/*        WITH tenants(Id, Item, Tenant, isDiscarded) AS (
-            SELECT tnt.Id, itm.Item, tnt.Name, itm.isDiscarded
-            FROM @itemsList itm
-            CROSS JOIN dbo.Tenants tnt
-            WHERE tnt.Name LIKE itm.Item
-                OR itm.Item = N'#ALL_TENANTS#'
-                OR (itm.Item = N'#ACTIVE_TENANTS#' AND tnt.IsActive = 1) OR (itm.Item = N'#INACTIVE_TENANTS#' AND tnt.IsActive = 0) 
-                OR (itm.Item = N'#DELETED_TENANTS#' AND tnt.IsDeleted = 1)  
-        )
-        SELECT Id, Tenant FROM tenants WHERE isDiscarded = 0
-        EXCEPT
-        SELECT Id, Tenant FROM tenants WHERE isDiscarded = 1
-*/
 	END TRY
 	BEGIN CATCH
-		DECLARE @ERROR_NUMBER INT, @ERROR_SEVERITY INT, @ERROR_STATE INT, @ERROR_PROCEDURE NVARCHAR(126), @ERROR_LINE INT, @ERROR_MESSAGE NVARCHAR(2048) 
-		
-		SELECT    @ERROR_NUMBER = ERROR_NUMBER()
-				, @ERROR_SEVERITY = ERROR_SEVERITY()
-				, @ERROR_STATE = ERROR_STATE()
-				, @ERROR_PROCEDURE = ERROR_PROCEDURE()
-				, @ERROR_LINE = ERROR_LINE()
-				, @ERROR_MESSAGE = ERROR_MESSAGE();
-
---		IF @@TRANCOUNT > 0 ROLLBACK TRAN;
-
-/*		SET @msg = CAST(
-			 N'@ERROR_NUMBER = ' + CAST(ERROR_NUMBER() AS nvarchar(20)) 
-			+ N', @ERROR_SEVERITY = ' + CAST(ERROR_SEVERITY() AS nvarchar(20)) 
-			+ N' , @ERROR_STATE = ' + CAST(ERROR_STATE() AS nvarchar(20)) 
-			+ N' , @ERROR_PROCEDURE = '+ ERROR_PROCEDURE()
-			+ N' , @ERROR_LINE = ' + CAST(ERROR_LINE() AS nvarchar(20)) 
-			+ N' , @ERROR_MESSAGE = ' + ERROR_MESSAGE()
-			AS nvarchar(4000))
-		;*/
-		
---		PRINT @msg;
---		INSERT INTO [Cleanup].[CleanupHistory]([TableNames], [Message], [DeletedCount], [Status])
---		SELECT @TableName, @msg, 0, 0;		
-
---		RAISERROR('ErrorNumber: %d, ErrorMessage: %s, ErrorSeverity: %d, ErrorState: %d, ErrorProcedure: %s, ErrorLine: %d', 16, 1, @ERROR_NUMBER, @ERROR_MESSAGE, @ERROR_SEVERITY, @ERROR_STATE, @ERROR_PROCEDURE, @ERROR_LINE);
-
         THROW;
 	END CATCH
 END;
 GO
 
-EXEC [Maintenance].[SplitListTenants] N'default,  , -p% , - , tret , #INACTIVE_TENANTS# , #ACTIVE_TENANTS#'-- , -#xxx#, #666#';
+--EXEC [Maintenance].[SplitListTenants] N'default,  , -p% , - , tret , #INACTIVE_TENANTS# , #ACTIVE_TENANTS#'-- , -#xxx#, #666#';
