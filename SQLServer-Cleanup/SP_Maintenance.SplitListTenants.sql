@@ -1,5 +1,3 @@
---DBCC DROPCLEANBUFFERS; 
---    DROP FUNCTION [Maintenance].[SplitListTenants]
 SET NOCOUNT ON
 GO
 
@@ -123,7 +121,7 @@ BEGIN
                 OR (itm.Item = N'#DELETED_TENANTS#' AND tnt.IsDeleted = 1)  
         )
         SELECT Id, Tenant FROM tenants WHERE isDiscarded = 0
-        EXCEPT  xxxx
+        EXCEPT
         SELECT Id, Tenant FROM tenants WHERE isDiscarded = 1
 */
 	END TRY
