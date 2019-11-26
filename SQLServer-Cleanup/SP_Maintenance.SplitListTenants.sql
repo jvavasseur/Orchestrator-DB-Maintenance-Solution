@@ -1,18 +1,6 @@
 SET NOCOUNT ON
 GO
 
-PRINT 'CREATE SCHEMA';
-GO
-
-IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'Maintenance')
-BEGIN 
-	PRINT ' + Create Schema [Maintenance]';
-	EXEC sp_executesql N'CREATE SCHEMA [Maintenance]';
-END
-ELSE PRINT ' = Schema already exists: [Maintenance]';
-GO
-PRINT ''
-
 PRINT 'CREATE PROCDURE';
 GO
 
@@ -34,7 +22,7 @@ GO
 --                      % is used for wildcard selection
 --                      Special values: #ALL_TENANTS#, #ACTIVE_TENANTS#, #INACTIVE_TENANTS#, #DELETED_TENANTS#
 -- Output = Table list of 
---            - Tenant' Id and Name when item in @TenantList match to an existing 
+--            - Tenant Id and Name when item in @TenantList match to an existing 
 --            - Item name when item in @TenantList doesn't match to an existing tenant
 /*
 EXEC [Maintenance].[SplitListTenants] N'default,  , -p%, testxxx , #INACTIVE_TENANTS# , #DELETED_TENANTS#';
