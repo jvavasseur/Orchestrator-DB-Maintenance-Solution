@@ -1,20 +1,4 @@
---    DROP FUNCTION [Maintenance].[LogLevels]
 SET NOCOUNT ON
-GO
-
-PRINT 'CREATE SCHEMA';
-GO
-
-IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'Maintenance')
-BEGIN 
-	PRINT ' + Create Schema [Maintenance]';
-	EXEC sp_executesql N'CREATE SCHEMA [Maintenance]';
-END
-ELSE PRINT ' = Schema already exists: [Maintenance]';
-GO
-PRINT ''
-
-PRINT 'CREATE FUNCTION';
 GO
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[LogLevels]') AND type = N'TF')
@@ -29,7 +13,7 @@ PRINT ' ~ Update Function [Maintenance].[LogLevels]';
 GO
 
 ----------------------------------------------------------------------------------------------------
--- Returns a table with log level' Ids and Names
+-- Returns a table with all valid log level' Ids and Names
 --   Input = none
 --   Output = Log Level table with Id and Level name
 ----------------------------------------------------------------------------------------------------
@@ -44,4 +28,3 @@ BEGIN
     RETURN;
 END
 GO
-
