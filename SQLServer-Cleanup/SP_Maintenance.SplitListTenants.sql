@@ -36,6 +36,10 @@ GO
 -- Output = Table list of 
 --            - Tenant' Id and Name when item in @TenantList match to an existing 
 --            - Item name when item in @TenantList doesn't match to an existing tenant
+/*
+EXEC [Maintenance].[SplitListTenants] N'default,  , -p%, testxxx , #INACTIVE_TENANTS# , #DELETED_TENANTS#';
+GO
+*/
 ----------------------------------------------------------------------------------------------------
 ALTER PROCEDURE [Maintenance].[SplitListTenants]
     @TenantList nvarchar(max)
@@ -119,5 +123,3 @@ BEGIN
 	END CATCH
 END;
 GO
-
---EXEC [Maintenance].[SplitListTenants] N'default,  , -p% , - , tret , #INACTIVE_TENANTS# , #ACTIVE_TENANTS#'-- , -#xxx#, #666#';
