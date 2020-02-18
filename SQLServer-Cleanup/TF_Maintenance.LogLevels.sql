@@ -23,7 +23,7 @@ AS
 BEGIN
     INSERT INTO @Levels(Id, Level)
     SELECT Id, Level
-    FROM (VALUES(0, 'Trace'), (1, 'Debug'), (2, 'Info'), (3, 'Warn'), (4, 'Error'), (5, 'Fatal')) AS Levels(Id, Level);
+    FROM (VALUES(0, 'Verbose'), (1, 'Trace'), (2, 'Info'), (3, 'Warn'), (4, 'Error'), (5, 'Fatal')) AS Levels(Id, Level);
     
     RETURN;
 END

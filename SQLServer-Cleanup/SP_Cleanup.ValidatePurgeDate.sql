@@ -1,4 +1,5 @@
 SET NOCOUNT ON
+SET XACT_ABORT ON;
 GO
 
 PRINT 'CREATE PROCDURE';
@@ -35,17 +36,19 @@ ALTER PROCEDURE [Cleanup].[ValidatePurgeDate]
 AS 
 BEGIN
     SET NOCOUNT ON;
-
-	-- Output
-    DECLARE @Message nvarchar(max);
-    DECLARE @ErrorMessage nvarchar(max);
-	-- Date validation
-	DECLARE @DeleteDays int;
-	DECLARE @ForceRecentPastKeyword nvarchar(max);
-	DECLARE @ForcePastDaysKeywords TABLE(PastDays tinyint PRIMARY KEY CLUSTERED, Keyword nvarchar(max));
-	INSERT INTO @ForcePastDaysKeywords(PastDays, Keyword) VALUES(30, N'force-month'), (7, N'force-week'), (1, N'force-day'), (0, N'force-remove-all-days');
+    SET ARITHABORT ON;
+    SET ARITHABORT OFF;
 
     BEGIN TRY
+        -- Output
+        DECLARE @Message nvarchar(max);
+        DECLARE @ErrorMessage nvarchar(max);
+        -- Date validation
+        DECLARE @DeleteDays int;
+        DECLARE @ForceRecentPastKeyword nvarchar(max);
+        DECLARE @ForcePastDaysKeywords TABLE(PastDays tinyint PRIMARY KEY CLUSTERED, Keyword nvarchar(max));
+        INSERT INTO @ForcePastDaysKeywords(PastDays, Keyword) VALUES(30, N'force-month'), (7, N'force-week'), (1, N'force-day'), (0, N'force-remove-all-days');
+
  		SET @ErrorMessage = N'Missing Keep Last Days or After Date value. Use either @KeepLastDays or @KeppAfterDate';
 		IF @KeepLastDays IS NULL AND @KeepAfterDate IS NULL THROW 70003, @ErrorMessage, 1;
 
@@ -79,7 +82,9 @@ BEGIN
 		RAISERROR('%s', 10 ,1 , @Message) WITH NOWAIT;
 	END TRY
 	BEGIN CATCH
+        IF @@trancount > 0 ROLLBACK TRANSACTION
         THROW;
+        RETURN 1;
 	END CATCH
 END;
 GO

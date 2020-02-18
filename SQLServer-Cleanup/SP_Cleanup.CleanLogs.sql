@@ -1,29 +1,20 @@
-SET NOCOUNT ON
+SET NOCOUNT ON;
 GO
-
-PRINT 'CREATE SCHEMA';
-GO
-
-IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'Cleanup')
-BEGIN 
-	PRINT ' + Create Schema [Cleanup]';
-	EXEC sp_executesql N'CREATE SCHEMA [Cleanup]';
-END
-ELSE PRINT ' = Schema already exists: [Cleanup]';
-GO
-PRINT ''
-
-PRINT 'CREATE STORED PROCEDURE';
 
 -- Create an empty procedure if it doesn'texist yet...
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Cleanup].[CleanLogs]') AND type in (N'P'))
 BEGIN
 	EXEC('CREATE PROCEDURE [Cleanup].[CleanLogs] AS SELECT 1')
 END
---DROP PROCEDURE [Cleanup].[CleanLogs]
 
 PRINT N' ~ ALTER PROCEDURE [Cleanup].[CleanLogs]'
 GO
+
+----------------------------------------------------------------------------------------------------
+-- 
+-- 
+----------------------------------------------------------------------------------------------------
+--DROP PROCEDURE [Cleanup].[CleanLogs]
 ALTER PROCEDURE [Cleanup].[CleanLogs]
 	@TenantList nvarchar(max) = N''
 	, @MaxLevelToDelete nvarchar(20) = N'warn'
@@ -37,7 +28,9 @@ ALTER PROCEDURE [Cleanup].[CleanLogs]
 	, @StopAfterRunTimeInMinutes int = 120
 	, @StopAfterDateTime datetime2 = NULL
 
-	, @TLogMaxUsagePercent tinyint = 60 
+	, @TLogMaxUsage nvarchar(max) = N'50%'
+	, @TLogForceAllowGrowth nvarchar(max) = N'N'
+	, @TLogThresholdAction nvarchar(max) = N''
 	, @TlogWaitMaxMinutes tinyint = 0
 
 --	, @loopDelCount int = 10000
@@ -45,23 +38,21 @@ ALTER PROCEDURE [Cleanup].[CleanLogs]
 --	, @logPercentThreshold tinyint = 25, @logWaitMinutes int = 1, @logWaitMax int = 60
 AS
 BEGIN
-	SET NOCOUNT ON;
+    SET NOCOUNT ON;
+    SET ARITHABORT ON;
+    SET NUMERIC_ROUNDABORT OFF;
 
 	-- Init
 	DECLARE @StartDateTime datetime2 = SYSDATETIME();
 	-- Output
-    DECLARE @message nvarchar(2048);
+    DECLARE @Message nvarchar(max);
+    DECLARE @ErrorMessage nvarchar(max);
 	-- Parameters
 	DECLARE @Parameters nvarchar(max);
+	-- Date limit
+	DECLARE @PurgeDateLimit datetime2;
 	-- Log level validation
 	DECLARE @MaxLevelId int;
-	DECLARE @ListLevels nvarchar(2048);
-	-- Date validation
-	DECLARE @DeleteDate datetime2;
-	DECLARE @DeleteDays int;
-	DECLARE @ForceRecentPastKeyword nvarchar(max);
-	DECLARE @ForcePastDaysKeywords TABLE(PastDays tinyint PRIMARY KEY CLUSTERED, Keyword nvarchar(max));
-	INSERT INTO @ForcePastDaysKeywords(PastDays, Keyword) VALUES(30, N'force-month'), (7, N'force-week'), (1, N'force-day'), (0, N'force-remove-all-days');
 	-- Tenants validation
 	DECLARE @TenantsNotFound nvarchar(max);
 	DECLARE @TenantsNames nvarchar(max);
@@ -71,7 +62,11 @@ BEGIN
 	DECLARE @RowsDeletedMin int = 100;
 	DECLARE @RowsDeletedMax int = 500000;
 	DECLARE @RowsDeletedDefault int = 50000;
-	
+	-- TLog
+	DECLARE @TLogDefaultAction nvarchar(max) = N'STOP'
+	DECLARE @TLogStopActions TABLE(Action nvarchar(max));
+	INSERT INTO @TLogListActions(Action) VALUES(N'STOP'), (N'CHECKPOINT'), (N'BACKUP'), (N'WAIT')
+
 	BEGIN TRY
 	    ----------------------------------------------------------------------------------------------------
     	-- Parameter' List
@@ -96,61 +91,16 @@ BEGIN
 		----------------------------------------------------------------------------------------------------
 		-- Validate Max Level to delete 
 		----------------------------------------------------------------------------------------------------
-
-		-- Get valid Log level Id and Name
-		SELECT @ListLevels = COALESCE(@ListLevels + N', ' + level, level) FROM (SELECT CAST(id AS nvarchar(5)) + N' or ' + level FROM [Maintenance].[LogLevels]()) AS levels(level);
-
-		SET @message = N'Max Level can''t be NULL. Use: ' + @ListLevels;
-	    IF @MaxLevelToDelete IS NULL THROW 70001, @message, 1;
-
-		SELECT @MaxLevelToDelete = LTRIM(RTRIM(@MaxLevelToDelete));
-		SET @message = N'Max Level is missing. Use: ' + @ListLevels;
-    	IF @MaxLevelToDelete = '' THROW 70002, @message, 1;
-
-		-- Validate level and get Id
-		SELECT @MaxLevelId = [Maintenance].[GetLogLevelId](@MaxLevelToDelete);
-
-		SET @message = N'Max Level is invalid: '+ @MaxLevelToDelete + N'. Use: ' + @ListLevels;
-	    IF @MaxLevelId IS NULL THROW 70003, @message, 1;
-
-		-- Output validated Level Id value
-		SET @message = N'[PARAMETER] Max level = ' + CAST(@MaxLevelId AS nvarchar(10)) + N' [@MaxLevelToDelete=''' + CAST(@MaxLevelToDelete AS nvarchar(max)) + ''']';
-		RAISERROR('%s', 10 ,1 , @message) WITH NOWAIT;
+		ALTER PROCEDURE [Cleanup].[ValidateMaxLogLevel] @MaxLevelToDelete = @MaxLevelToDelete, @MaxLevelId = @MaxLevelId OUTPUT;
 
 		----------------------------------------------------------------------------------------------------
 		-- Validate Max Dates to delete
 		----------------------------------------------------------------------------------------------------
-		SET @message = N'Missing Keep Last Days or After Date value. Use either @KeepLastDays or @KeppAfterDate';
-		IF @KeepLastDays IS NULL AND @KeepAfterDate IS NULL THROW 70003, @message, 1;
-
-		-- Find most recent date between @KeepLastDays and @KeepAfterDate if both provided
-		SELECT @DeleteDate = CASE WHEN @KeepLastDays IS NULL THEN @KeepAfterDate
-								  WHEN @KeepAfterDate IS NULL THEN LastDaysDate
-								  WHEN @KeepAfterDate > LastDaysDate THEN @KeepAfterDate
-								  ELSE LastDaysDate END
-		FROM (SELECT DATEADD(dd, - ABS(@KeepLastDays), @StartDateTime)) AS KeepLastDays(LastDaysDate);
-
-		SET @message = N'Date in the future is invalid. @KeepAfterDate=' + CONVERT(nvarchar, @DeleteDate, 120);
-		IF @DeleteDate > @StartDateTime THROW 70004, @message, 1;
-
-		-- Get number of days kept
-		SET @DeleteDays = DATEDIFF(day, @DeleteDate, @StartDateTime);
-
-		-- Check if Force keyword is required for days in recent past
-		SELECT @ForceRecentPastKeyword = kwd.Keyword FROM @ForcePastDaysKeywords kwd
-		OUTER APPLY (SELECT TOP(1) PastDays FROM @ForcePastDaysKeywords WHERE PastDays < kwd.PastDays ORDER BY PastDays DESC) prc
-		WHERE @DeleteDays >= COALESCE(prc.PastDays+1, kwd.PastDays) AND @DeleteDays <= kwd.PastDays;
-
-		SET @message = N'Delete date limit is in recent past. @ForceDeleteRecentPast must be used with a valid keyword. @ForceDeleteRecentPast=' + ISNULL(''''+@ForceDeleteRecentPast+'''', N'NULL') + N' [Date='+ CONVERT(nvarchar, @DeleteDate, 120) + N']';
-		IF @ForceRecentPastKeyword IS NOT NULL AND @ForceRecentPastKeyword <> @ForceDeleteRecentPast  THROW 70005, @message, 1;
-
-		-- Output validated force recent past value
-		SET @message = N'[PARAMETER] Force Delete Recent Past = "' + @ForceDeleteRecentPast + N'" [Delete dete limit=''' + CAST(@DeleteDate AS nvarchar(max)) + ''']';
-		IF @ForceRecentPastKeyword IS NOT NULL RAISERROR('%s', 10 ,1 , @message) WITH NOWAIT;
-
-		-- Output validated delete date limit
-		SET @message = N'[PARAMETER] Delete before date = ' + CONVERT(nvarchar, @DeleteDate, 120) + N' [@KeepLastDays=' + ISNULL(CONVERT(nvarchar, @KeepLastDays, 120), N'NULL')  + N' / @KeepAfterDate=' + ISNULL(CONVERT(nvarchar, @KeepAfterDate, 120), N'NULL') + N']';
-		RAISERROR('%s', 10 ,1 , @message) WITH NOWAIT;
+		EXEC [Cleanup].[ValidatePurgeDate] @StartDateTime = @StartDateTime
+										, @KeepLastDays = @KeepLastDays
+										, @KeepAfterDate = @KeepAfterDate
+										, @ForceDeleteRecentPast = @ForceDeleteRecentPast
+										, @PurgeDateLimit = @PurgeDateLimit OUTPUT;
 
 		----------------------------------------------------------------------------------------------------
 		-- Check Tenants
@@ -159,14 +109,14 @@ BEGIN
 		EXEC [Maintenance].[SplitListTenants] @TenantList = @TenantList, @Delimiter = ',', @DiscardDelimiter = '-';
 
 		SELECT @TenantsNotFound = COALESCE(@TenantsNotFound + N', ' + [Name], [Name]) FROM @tenants WHERE Id IS NULL;
-		SET @message = N'[WARNING] Tenant(s) not found:';
-		IF @TenantsNotFound IS NOT NULL RAISERROR('%s %s', 10 ,1 , @message, @TenantsNotFound) WITH NOWAIT;
+		SET @Message = N'[WARNING] Tenant(s) not found:';
+		IF @TenantsNotFound IS NOT NULL RAISERROR('%s %s', 10 ,1 , @Message, @TenantsNotFound) WITH NOWAIT;
 
 		IF NOT EXISTS(SELECT 1 FROM @tenants WHERE Id IS NOT NULL) THROW 70006, N'No valid tenants found. Check previous warning.', 1;
 
 		SELECT @TenantsNames = COALESCE(@TenantsNames + N', ' + [Name], [Name]) FROM @tenants WHERE Id IS NOT NULL;
-		SET @message = N'[PARAMETER] Tenants =';
-		RAISERROR('%s %s', 10 ,1 , @message, @TenantsNames) WITH NOWAIT;
+		SET @Message = N'[PARAMETER] Tenants =';
+		RAISERROR('%s %s', 10 ,1 , @Message, @TenantsNames) WITH NOWAIT;
 
 		INSERT INTO @TenantMachines(Id)
 		SELECT mch.Id FROM @tenants tnt
@@ -178,23 +128,23 @@ BEGIN
 		IF @RowsDeletedByIteration IS NULL 
 		BEGIN
 			SET @RowsDeletedByIteration = @RowsDeletedDefault;
-			SET @message = N'[WARNING] @RowsDeletedByIteration IS NULL and parameter has been replaced by default value';
-			RAISERROR('%s', 10 ,1 , @message) WITH NOWAIT;
+			SET @Message = N'[WARNING] @RowsDeletedByIteration IS NULL and parameter has been replaced by default value';
+			RAISERROR('%s', 10 ,1 , @Message) WITH NOWAIT;
 		END 
 		ELSE IF @RowsDeletedByIteration < @RowsDeletedMin 
 		BEGIN 
-			SET @message = N'[WARNING] @RowsDeletedByIteration parameter is below lower default value and has been replaced: @RowsDeletedByIteration=';
-			RAISERROR('%s%d', 10 ,1 , @message, @RowsDeletedByIteration) WITH NOWAIT;
+			SET @Message = N'[WARNING] @RowsDeletedByIteration parameter is below lower default value and has been replaced: @RowsDeletedByIteration=';
+			RAISERROR('%s%d', 10 ,1 , @Message, @RowsDeletedByIteration) WITH NOWAIT;
 			SET @RowsDeletedByIteration = @RowsDeletedMin;
 		END
 		ELSE IF @RowsDeletedByIteration > @RowsDeletedMax 
 		BEGIN
-			SET @message = N'[WARNING] @RowsDeletedByIteration parameter is above upper default value and has been replaced: @RowsDeletedByIteration=';
-			RAISERROR('%s%d', 10 ,1 , @message, @RowsDeletedByIteration) WITH NOWAIT;
+			SET @Message = N'[WARNING] @RowsDeletedByIteration parameter is above upper default value and has been replaced: @RowsDeletedByIteration=';
+			RAISERROR('%s%d', 10 ,1 , @Message, @RowsDeletedByIteration) WITH NOWAIT;
 			SET @RowsDeletedByIteration = @RowsDeletedMax;
 		END
-		SET @message = N'[PARAMETER] Rows deleted by iteration =';
-		RAISERROR('%s %d', 10 ,1 , @message, @RowsDeletedByIteration) WITH NOWAIT;
+		SET @Message = N'[PARAMETER] Rows deleted by iteration =';
+		RAISERROR('%s %d', 10 ,1 , @Message, @RowsDeletedByIteration) WITH NOWAIT;
 /*
 		SELECT 'mch1',  COUNT(*), MIN(lgs.Id), MAX(lgs.Id), MIN(lgs.[TimeStamp]), MAX(lgs.[TimeStamp]) 
 		FROM dbo.logs2 lgs

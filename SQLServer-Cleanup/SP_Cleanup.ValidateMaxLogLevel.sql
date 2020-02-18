@@ -1,4 +1,5 @@
 SET NOCOUNT ON
+SET XACT_ABORT ON;
 GO
 
 PRINT 'CREATE PROCDURE';
@@ -34,14 +35,16 @@ ALTER PROCEDURE [Cleanup].[ValidateMaxLogLevel]
 AS 
 BEGIN
     SET NOCOUNT ON;
-
-	-- Output
-    DECLARE @Message nvarchar(max);
-    DECLARE @ErrorMessage nvarchar(max);
-	-- Log level validation
-	DECLARE @ListLevels nvarchar(2048);
+    SET ARITHABORT ON;
+    SET ARITHABORT OFF;
 
     BEGIN TRY
+        -- Output
+        DECLARE @Message nvarchar(max);
+        DECLARE @ErrorMessage nvarchar(max);
+        -- Log level validation
+        DECLARE @ListLevels nvarchar(2048);
+
 		-- Get valid Log level Id and Name
 		SELECT @ListLevels = COALESCE(@ListLevels + N', ' + level, level) FROM (SELECT CAST(id AS nvarchar(5)) + N' or ' + level FROM [Maintenance].[LogLevels]()) AS levels(level);
 
@@ -59,11 +62,13 @@ BEGIN
 	    IF @MaxLevelId IS NULL THROW 70003, @ErrorMessage, 1;
 
 		-- Output validated Level Id value
-		SET @Message = N'[PARAMETER] Max level = ' + CAST(@MaxLevelId AS nvarchar(10)) + N' [@MaxLevelToDelete=''' + CAST(@MaxLevelToDelete AS nvarchar(max)) + ''']';
-		RAISERROR('%s', 10 ,1 , @Message) WITH NOWAIT;
+		SET @Message = N'[PARAMETER] Max level = %s [@MaxLevelToDelete=''%s'']';
+		RAISERROR(@Message, 10, 1, @MaxLevelId, @MaxLevelToDelete) WITH NOWAIT;
 	END TRY
 	BEGIN CATCH
+        IF @@trancount > 0 ROLLBACK TRANSACTION
         THROW;
+        RETURN 1;
 	END CATCH
 END;
 GO
