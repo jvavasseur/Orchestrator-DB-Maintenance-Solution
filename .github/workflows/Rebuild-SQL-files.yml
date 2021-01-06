@@ -1,6 +1,6 @@
 # This is a basic workflow to help you get started with Actions
 
-name: Rebuild-Files
+name: Rebuild SQL Files
 
 # Controls when the action will run. Triggers the workflow on push or pull request
 # events but only for the master branch
@@ -25,13 +25,13 @@ jobs:
           fetch-depth: 0
         uses: actions/checkout@v2
       
-      - name: Git Config
+      - name: Set Git Config
         run: |
-          date >> ./_build/generated.txt
+          date >> ./_src/_build/generated.txt
           git config user.name github-actions-Rebuild
           git config user.email github-actions@github.com
 
-      # Rebuild Files
+      # Rebuild Files with Powershell script
       - name: Rebuild files
         shell: pwsh
         run: |
