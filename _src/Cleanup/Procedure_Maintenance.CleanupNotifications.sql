@@ -1,5 +1,7 @@
---USE [Uipath]
---GO
+/*
+USE [Uipath] -- Orchestrator Database
+GO
+*/
 
 SET ANSI_NULLS ON;
 GO
@@ -22,7 +24,9 @@ GO
 
 ALTER PROCEDURE [Maintenance].[CleanupNotifications]
 ----------------------------------------------------------------------------------------------------
--- ### [Version]: 2020-12-01 00:00:00                                                         
+-- ### [Version]: 2020-10-01 00:00:00                                                         
+-- ### [Hash]: XxXxXxX
+-- ### [Docs]: https://XxXxXxX
 ----------------------------------------------------------------------------------------------------
     @RowsDeletedForEachLoop int = 10000 -- Don't go above 50.000 (min = 1000, max = 100.000)
     , @HoursToKeep int = NULL -- i.e. 168h = 7*24h = 7 days => value can't be NULL and must be bigger than 0 if @CleanupBeforeDate is not set
@@ -47,6 +51,9 @@ BEGIN
     BEGIN TRY 
         SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
 		SET LOCK_TIMEOUT 5000;
+        SET ARITHABORT ON;
+        SET NOCOUNT ON;
+        SET NUMERIC_ROUNDABORT OFF;
 
         ----------------------------------------------------------------------------------------------------
         -- Local Run Variables
@@ -143,9 +150,6 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         -- START
         ----------------------------------------------------------------------------------------------------
-        SET ARITHABORT ON;
-        SET NOCOUNT ON;
-        SET NUMERIC_ROUNDABORT OFF;
 
         ----------------------------------------------------------------------------------------------------
         -- Gather General & Server Info
@@ -510,7 +514,7 @@ BEGIN
             SELECT @maxId = MAX(Id) FROM [dbo].[TenantNotifications] WITH (READPAST) WHERE CreationTime < @maxCreationTime;
 
             INSERT INTO @messages ([Message], Severity, [State])
-            SELECT 'Get MAX Id from Table Clustered Index: ' + CAST(@maxId AS nvarchar(50)), 10, 1;
+            SELECT 'Get MAX Id from Table Clustered Index: ' + COALESCE(CAST(@maxId AS nvarchar(50)), '-'), 10, 1;
 
             INSERT INTO @messages ([Message], Severity, [State])
             SELECT CASE WHEN @maxId IS NULL THEN N'Nothing to clean up before ' + CONVERT(nvarchar(50), @maxCreationTime, 121)  ELSE N'Cleanup Row(s) below Id: ' + CAST(@maxId AS nvarchar(50)) END, 10, 1;
