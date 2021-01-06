@@ -1,0 +1,489 @@
+<output>
+	<report name="sys.partitions" date="2020-02-18T15:48:30.9028525">
+		<sys.partitions database_size_mb="20560.00" log_size_mb="560.00" data_size_mb="20000.00" reserved_space_mb="1919.61" unallocated_space_mb="18080.39" data_mb="1209.20" index_mb="226.44" unused_mb="483.97" />
+	</report>
+	<report name="sys.databases" date="2020-02-18T15:48:30.8987199">
+		<name>
+			UiPath_Production
+		</name>
+		<database_id>
+			5
+		</database_id>
+		<owner_sid>
+			AQ==
+		</owner_sid>
+		<create_date>
+			2019-10-28T11:52:17.153
+		</create_date>
+		<compatibility_level>
+			140
+		</compatibility_level>
+		<collation_name>
+			Latin1_General_CI_AS
+		</collation_name>
+		<user_access>
+			0
+		</user_access>
+		<user_access_desc>
+			MULTI_USER
+		</user_access_desc>
+		<is_read_only>
+			0
+		</is_read_only>
+		<is_auto_close_on>
+			0
+		</is_auto_close_on>
+		<is_auto_shrink_on>
+			0
+		</is_auto_shrink_on>
+		<state>
+			0
+		</state>
+		<state_desc>
+			ONLINE
+		</state_desc>
+		<is_in_standby>
+			0
+		</is_in_standby>
+		<is_cleanly_shutdown>
+			0
+		</is_cleanly_shutdown>
+		<is_supplemental_logging_enabled>
+			0
+		</is_supplemental_logging_enabled>
+		<snapshot_isolation_state>
+			0
+		</snapshot_isolation_state>
+		<snapshot_isolation_state_desc>
+			OFF
+		</snapshot_isolation_state_desc>
+		<is_read_committed_snapshot_on>
+			1
+		</is_read_committed_snapshot_on>
+		<recovery_model>
+			3
+		</recovery_model>
+		<recovery_model_desc>
+			SIMPLE
+		</recovery_model_desc>
+		<page_verify_option>
+			2
+		</page_verify_option>
+		<page_verify_option_desc>
+			CHECKSUM
+		</page_verify_option_desc>
+		<is_auto_create_stats_on>
+			1
+		</is_auto_create_stats_on>
+		<is_auto_create_stats_incremental_on>
+			0
+		</is_auto_create_stats_incremental_on>
+		<is_auto_update_stats_on>
+			1
+		</is_auto_update_stats_on>
+		<is_auto_update_stats_async_on>
+			0
+		</is_auto_update_stats_async_on>
+		<is_ansi_null_default_on>
+			0
+		</is_ansi_null_default_on>
+		<is_ansi_nulls_on>
+			0
+		</is_ansi_nulls_on>
+		<is_ansi_padding_on>
+			0
+		</is_ansi_padding_on>
+		<is_ansi_warnings_on>
+			0
+		</is_ansi_warnings_on>
+		<is_arithabort_on>
+			0
+		</is_arithabort_on>
+		<is_concat_null_yields_null_on>
+			0
+		</is_concat_null_yields_null_on>
+		<is_numeric_roundabort_on>
+			0
+		</is_numeric_roundabort_on>
+		<is_quoted_identifier_on>
+			0
+		</is_quoted_identifier_on>
+		<is_recursive_triggers_on>
+			0
+		</is_recursive_triggers_on>
+		<is_cursor_close_on_commit_on>
+			0
+		</is_cursor_close_on_commit_on>
+		<is_local_cursor_default>
+			0
+		</is_local_cursor_default>
+		<is_fulltext_enabled>
+			1
+		</is_fulltext_enabled>
+		<is_trustworthy_on>
+			0
+		</is_trustworthy_on>
+		<is_db_chaining_on>
+			0
+		</is_db_chaining_on>
+		<is_parameterization_forced>
+			0
+		</is_parameterization_forced>
+		<is_master_key_encrypted_by_server>
+			0
+		</is_master_key_encrypted_by_server>
+		<is_query_store_on>
+			0
+		</is_query_store_on>
+		<is_published>
+			0
+		</is_published>
+		<is_subscribed>
+			0
+		</is_subscribed>
+		<is_merge_published>
+			0
+		</is_merge_published>
+		<is_distributor>
+			0
+		</is_distributor>
+		<is_sync_with_backup>
+			0
+		</is_sync_with_backup>
+		<service_broker_guid>
+			18379F89-054D-4E4D-8D9E-EA2C2AFC60C3
+		</service_broker_guid>
+		<is_broker_enabled>
+			0
+		</is_broker_enabled>
+		<log_reuse_wait>
+			0
+		</log_reuse_wait>
+		<log_reuse_wait_desc>
+			NOTHING
+		</log_reuse_wait_desc>
+		<is_date_correlation_on>
+			0
+		</is_date_correlation_on>
+		<is_cdc_enabled>
+			0
+		</is_cdc_enabled>
+		<is_encrypted>
+			0
+		</is_encrypted>
+		<is_honor_broker_priority_on>
+			0
+		</is_honor_broker_priority_on>
+		<containment>
+			0
+		</containment>
+		<containment_desc>
+			NONE
+		</containment_desc>
+		<target_recovery_time_in_seconds>
+			60
+		</target_recovery_time_in_seconds>
+		<delayed_durability>
+			0
+		</delayed_durability>
+		<delayed_durability_desc>
+			DISABLED
+		</delayed_durability_desc>
+		<is_memory_optimized_elevate_to_snapshot_on>
+			0
+		</is_memory_optimized_elevate_to_snapshot_on>
+		<is_federation_member>
+			0
+		</is_federation_member>
+		<is_remote_data_archive_enabled>
+			0
+		</is_remote_data_archive_enabled>
+		<is_mixed_page_allocation_on>
+			0
+		</is_mixed_page_allocation_on>
+		<is_temporal_history_retention_enabled>
+			0
+		</is_temporal_history_retention_enabled>
+	</report>
+	<report name="sys.database_files" date="2020-02-18T15:48:30.9028525">
+		<file file_id="1" type="0" type_desc="ROWS" state="0" state_desc="ONLINE" is_read_only="0" is_sparse="0" is_percent_growth="0" filegroup_ame="PRIMARY" data_space_id="1" filename="UiPath_Production" physical_name="/var/opt/mssql/data/UiPath_Production.mdf" size="640000" size-mb="5000.00" sizemax="-1" sizemax-mb="-1.00" growth="64000" growth-mb="500.00" spaceused="245712" spaceused-mb="1919.63" spacefree="394288" spacefree-mb="3080.38" />
+		<file file_id="2" type="1" type_desc="LOG" state="0" state_desc="ONLINE" is_read_only="0" is_sparse="0" is_percent_growth="0" data_space_id="0" filename="UiPath_Production_log" physical_name="/var/opt/mssql/data/UiPath_Production_log.ldf" size="71680" size-mb="560.00" sizemax="128000" sizemax-mb="1000.00" growth="2560" growth-mb="20.00" spaceused="2046" spaceused-mb="15.98" spacefree="69634" spacefree-mb="544.02" />
+		<file file_id="3" type="0" type_desc="ROWS" state="0" state_desc="ONLINE" is_read_only="0" is_sparse="0" is_percent_growth="0" filegroup_ame="PRIMARY" data_space_id="1" filename="UiPath_Production2" physical_name="/var/opt/mssql/data/UiPath_Production2.ndf" size="640000" size-mb="5000.00" sizemax="-1" sizemax-mb="-1.00" growth="64000" growth-mb="500.00" spaceused="16" spaceused-mb="0.13" spacefree="639984" spacefree-mb="4999.88" />
+		<file file_id="4" type="0" type_desc="ROWS" state="0" state_desc="ONLINE" is_read_only="0" is_sparse="0" is_percent_growth="0" filegroup_ame="PRIMARY" data_space_id="1" filename="UiPath_Production3" physical_name="/var/opt/mssql/data/UiPath_Production3.ndf" size="640000" size-mb="5000.00" sizemax="-1" sizemax-mb="-1.00" growth="64000" growth-mb="500.00" spaceused="16" spaceused-mb="0.13" spacefree="639984" spacefree-mb="4999.88" />
+		<file file_id="5" type="0" type_desc="ROWS" state="0" state_desc="ONLINE" is_read_only="0" is_sparse="0" is_percent_growth="0" filegroup_ame="PRIMARY" data_space_id="1" filename="UiPath_Production4" physical_name="/var/opt/mssql/data/UiPath_Production4.ndf" size="640000" size-mb="5000.00" sizemax="-1" sizemax-mb="-1.00" growth="64000" growth-mb="500.00" spaceused="24" spaceused-mb="0.19" spacefree="639976" spacefree-mb="4999.81" />
+	</report>
+	<report name="sys.configurations" date="2020-02-18T15:48:30.8902500">
+		<sys.configurations id="101" name="recovery interval (min)" value_in_use="0" />
+		<sys.configurations id="102" name="allow updates" value_in_use="0" />
+		<sys.configurations id="103" name="user connections" value_in_use="0" />
+		<sys.configurations id="106" name="locks" value_in_use="0" />
+		<sys.configurations id="107" name="open objects" value_in_use="0" />
+		<sys.configurations id="109" name="fill factor (%)" value_in_use="0" />
+		<sys.configurations id="114" name="disallow results from triggers" value_in_use="0" />
+		<sys.configurations id="115" name="nested triggers" value_in_use="1" />
+		<sys.configurations id="116" name="server trigger recursion" value_in_use="1" />
+		<sys.configurations id="117" name="remote access" value_in_use="1" />
+		<sys.configurations id="124" name="default language" value_in_use="0" />
+		<sys.configurations id="400" name="cross db ownership chaining" value_in_use="0" />
+		<sys.configurations id="503" name="max worker threads" value_in_use="0" />
+		<sys.configurations id="505" name="network packet size (B)" value_in_use="4096" />
+		<sys.configurations id="518" name="show advanced options" value_in_use="0" />
+		<sys.configurations id="542" name="remote proc trans" value_in_use="0" />
+		<sys.configurations id="544" name="c2 audit mode" value_in_use="0" />
+		<sys.configurations id="1126" name="default full-text language" value_in_use="1033" />
+		<sys.configurations id="1127" name="two digit year cutoff" value_in_use="2049" />
+		<sys.configurations id="1505" name="index create memory (KB)" value_in_use="0" />
+		<sys.configurations id="1517" name="priority boost" value_in_use="0" />
+		<sys.configurations id="1519" name="remote login timeout (s)" value_in_use="10" />
+		<sys.configurations id="1520" name="remote query timeout (s)" value_in_use="600" />
+		<sys.configurations id="1531" name="cursor threshold" value_in_use="-1" />
+		<sys.configurations id="1532" name="set working set size" value_in_use="0" />
+		<sys.configurations id="1534" name="user options" value_in_use="0" />
+		<sys.configurations id="1535" name="affinity mask" value_in_use="0" />
+		<sys.configurations id="1536" name="max text repl size (B)" value_in_use="65536" />
+		<sys.configurations id="1537" name="media retention" value_in_use="0" />
+		<sys.configurations id="1538" name="cost threshold for parallelism" value_in_use="5" />
+		<sys.configurations id="1539" name="max degree of parallelism" value_in_use="0" />
+		<sys.configurations id="1540" name="min memory per query (KB)" value_in_use="1024" />
+		<sys.configurations id="1541" name="query wait (s)" value_in_use="-1" />
+		<sys.configurations id="1543" name="min server memory (MB)" value_in_use="16" />
+		<sys.configurations id="1544" name="max server memory (MB)" value_in_use="2147483647" />
+		<sys.configurations id="1545" name="query governor cost limit" value_in_use="0" />
+		<sys.configurations id="1546" name="lightweight pooling" value_in_use="0" />
+		<sys.configurations id="1547" name="scan for startup procs" value_in_use="0" />
+		<sys.configurations id="1549" name="affinity64 mask" value_in_use="0" />
+		<sys.configurations id="1550" name="affinity I/O mask" value_in_use="0" />
+		<sys.configurations id="1551" name="affinity64 I/O mask" value_in_use="0" />
+		<sys.configurations id="1555" name="transform noise words" value_in_use="0" />
+		<sys.configurations id="1556" name="precompute rank" value_in_use="0" />
+		<sys.configurations id="1557" name="PH timeout (s)" value_in_use="60" />
+		<sys.configurations id="1562" name="clr enabled" value_in_use="0" />
+		<sys.configurations id="1563" name="max full-text crawl range" value_in_use="4" />
+		<sys.configurations id="1564" name="ft notify bandwidth (min)" value_in_use="0" />
+		<sys.configurations id="1565" name="ft notify bandwidth (max)" value_in_use="100" />
+		<sys.configurations id="1566" name="ft crawl bandwidth (min)" value_in_use="0" />
+		<sys.configurations id="1567" name="ft crawl bandwidth (max)" value_in_use="100" />
+		<sys.configurations id="1568" name="default trace enabled" value_in_use="1" />
+		<sys.configurations id="1569" name="blocked process threshold (s)" value_in_use="0" />
+		<sys.configurations id="1570" name="in-doubt xact resolution" value_in_use="0" />
+		<sys.configurations id="1576" name="remote admin connections" value_in_use="0" />
+		<sys.configurations id="1577" name="common criteria compliance enabled" value_in_use="0" />
+		<sys.configurations id="1578" name="EKM provider enabled" value_in_use="0" />
+		<sys.configurations id="1579" name="backup compression default" value_in_use="0" />
+		<sys.configurations id="1580" name="filestream access level" value_in_use="0" />
+		<sys.configurations id="1581" name="optimize for ad hoc workloads" value_in_use="0" />
+		<sys.configurations id="1582" name="access check cache bucket count" value_in_use="0" />
+		<sys.configurations id="1583" name="access check cache quota" value_in_use="0" />
+		<sys.configurations id="1584" name="backup checksum default" value_in_use="0" />
+		<sys.configurations id="1585" name="automatic soft-NUMA disabled" value_in_use="0" />
+		<sys.configurations id="1586" name="external scripts enabled" value_in_use="0" />
+		<sys.configurations id="1587" name="clr strict security" value_in_use="0" />
+		<sys.configurations id="16384" name="Agent XPs" value_in_use="0" />
+		<sys.configurations id="16386" name="Database Mail XPs" value_in_use="0" />
+		<sys.configurations id="16387" name="SMO and DMO XPs" value_in_use="1" />
+		<sys.configurations id="16388" name="Ole Automation Procedures" value_in_use="0" />
+		<sys.configurations id="16390" name="xp_cmdshell" value_in_use="0" />
+		<sys.configurations id="16391" name="Ad Hoc Distributed Queries" value_in_use="0" />
+		<sys.configurations id="16392" name="Replication XPs" value_in_use="0" />
+		<sys.configurations id="16393" name="contained database authentication" value_in_use="0" />
+		<sys.configurations id="16394" name="hadoop connectivity" value_in_use="0" />
+		<sys.configurations id="16395" name="polybase network encryption" value_in_use="1" />
+		<sys.configurations id="16396" name="remote data archive" value_in_use="0" />
+		<sys.configurations id="16397" name="allow polybase export" value_in_use="0" />
+	</report>
+	<report name="sys.dm_os_sys_info" date="2020-02-18T15:48:30.8902500">
+		<cpu_ticks>
+			4997513979648
+		</cpu_ticks>
+		<ms_ticks>
+			2082285
+		</ms_ticks>
+		<cpu_count>
+			4
+		</cpu_count>
+		<hyperthread_ratio>
+			1
+		</hyperthread_ratio>
+		<physical_memory_kb>
+			1630208
+		</physical_memory_kb>
+		<virtual_memory_kb>
+			137438953344
+		</virtual_memory_kb>
+		<committed_kb>
+			276464
+		</committed_kb>
+		<committed_target_kb>
+			841080
+		</committed_target_kb>
+		<visible_target_kb>
+			841080
+		</visible_target_kb>
+		<stack_size_in_bytes>
+			2093056
+		</stack_size_in_bytes>
+		<os_quantum>
+			4
+		</os_quantum>
+		<os_error_mode>
+			5
+		</os_error_mode>
+		<os_priority_class>
+			16384
+		</os_priority_class>
+		<max_workers_count>
+			256
+		</max_workers_count>
+		<scheduler_count>
+			4
+		</scheduler_count>
+		<scheduler_total_count>
+			9
+		</scheduler_total_count>
+		<deadlock_monitor_serial_number>
+			0
+		</deadlock_monitor_serial_number>
+		<sqlserver_start_time_ms_ticks>
+			714012
+		</sqlserver_start_time_ms_ticks>
+		<sqlserver_start_time>
+			2020-02-18T15:25:42.920
+		</sqlserver_start_time>
+		<affinity_type>
+			2
+		</affinity_type>
+		<affinity_type_desc>
+			AUTO
+		</affinity_type_desc>
+		<process_kernel_time_ms>
+			14364
+		</process_kernel_time_ms>
+		<process_user_time_ms>
+			27998
+		</process_user_time_ms>
+		<time_source>
+			0
+		</time_source>
+		<time_source_desc>
+			QUERY_PERFORMANCE_COUNTER
+		</time_source_desc>
+		<virtual_machine_type>
+			1
+		</virtual_machine_type>
+		<virtual_machine_type_desc>
+			HYPERVISOR
+		</virtual_machine_type_desc>
+		<softnuma_configuration>
+			0
+		</softnuma_configuration>
+		<softnuma_configuration_desc>
+			OFF
+		</softnuma_configuration_desc>
+		<process_physical_affinity>
+			{}
+		</process_physical_affinity>
+		<sql_memory_model>
+			1
+		</sql_memory_model>
+		<sql_memory_model_desc>
+			CONVENTIONAL
+		</sql_memory_model_desc>
+		<socket_count>
+			4
+		</socket_count>
+		<cores_per_socket>
+			1
+		</cores_per_socket>
+		<numa_node_count>
+			1
+		</numa_node_count>
+		<container_type>
+			1
+		</container_type>
+		<container_type_desc>
+			LINUX CONTAINER
+		</container_type_desc>
+	</report>
+	<report name="diskusage-by-tables" date="2020-02-18T15:48:30.8902500">
+		<table schemaname="dbo" tablename="__MigrationHistory" rowcount="141" reserved-kb="2768" data-kb="2672" indexes-kb="16" unused-kb="80" />
+		<table schemaname="dbo" tablename="Assets" rowcount="309" reserved-kb="144" data-kb="48" indexes-kb="88" unused-kb="8" />
+		<table schemaname="dbo" tablename="AssetValues" rowcount="369" reserved-kb="480" data-kb="168" indexes-kb="128" unused-kb="184" />
+		<table schemaname="dbo" tablename="AuditLogEntities" rowcount="11889" reserved-kb="38040" data-kb="4160" indexes-kb="1472" unused-kb="32408" />
+		<table schemaname="dbo" tablename="AuditLogs" rowcount="6462" reserved-kb="6552" data-kb="5144" indexes-kb="816" unused-kb="592" />
+		<table schemaname="dbo" tablename="BackgroundJobs" rowcount="0" reserved-kb="0" data-kb="0" indexes-kb="0" unused-kb="0" />
+		<table schemaname="dbo" tablename="Editions" rowcount="1" reserved-kb="144" data-kb="8" indexes-kb="24" unused-kb="112" />
+		<table schemaname="dbo" tablename="Environments" rowcount="49" reserved-kb="144" data-kb="8" indexes-kb="24" unused-kb="112" />
+		<table schemaname="dbo" tablename="ExecutionMedia" rowcount="0" reserved-kb="0" data-kb="0" indexes-kb="0" unused-kb="0" />
+		<table schemaname="dbo" tablename="Features" rowcount="0" reserved-kb="0" data-kb="0" indexes-kb="0" unused-kb="0" />
+		<table schemaname="dbo" tablename="HostLicenses" rowcount="1" reserved-kb="72" data-kb="8" indexes-kb="8" unused-kb="56" />
+		<table schemaname="dbo" tablename="Jobs" rowcount="88508" reserved-kb="72008" data-kb="39472" indexes-kb="30120" unused-kb="2416" />
+		<table schemaname="dbo" tablename="Languages" rowcount="8" reserved-kb="144" data-kb="8" indexes-kb="24" unused-kb="112" />
+		<table schemaname="dbo" tablename="LanguageTexts" rowcount="0" reserved-kb="0" data-kb="0" indexes-kb="0" unused-kb="0" />
+		<table schemaname="dbo" tablename="Licenses" rowcount="16" reserved-kb="144" data-kb="24" indexes-kb="32" unused-kb="88" />
+		<table schemaname="dbo" tablename="Logs" rowcount="538496" reserved-kb="1171432" data-kb="1028632" indexes-kb="142408" unused-kb="392" />
+		<table schemaname="dbo" tablename="Machines" rowcount="88" reserved-kb="216" data-kb="24" indexes-kb="80" unused-kb="112" />
+		<table schemaname="dbo" tablename="MessageTemplates" rowcount="1" reserved-kb="144" data-kb="8" indexes-kb="24" unused-kb="112" />
+		<table schemaname="dbo" tablename="Notifications" rowcount="16" reserved-kb="216" data-kb="48" indexes-kb="40" unused-kb="128" />
+		<table schemaname="dbo" tablename="NotificationSubscriptions" rowcount="967" reserved-kb="3224" data-kb="208" indexes-kb="424" unused-kb="2592" />
+		<table schemaname="dbo" tablename="OrganizationUnits" rowcount="16" reserved-kb="288" data-kb="8" indexes-kb="56" unused-kb="224" />
+		<table schemaname="dbo" tablename="PackageDefinitions" rowcount="0" reserved-kb="0" data-kb="0" indexes-kb="0" unused-kb="0" />
+		<table schemaname="dbo" tablename="PackageMetadata" rowcount="483" reserved-kb="720" data-kb="360" indexes-kb="120" unused-kb="240" />
+		<table schemaname="dbo" tablename="Permissions" rowcount="3626" reserved-kb="1624" data-kb="504" indexes-kb="832" unused-kb="288" />
+		<table schemaname="dbo" tablename="PreviousPasswords" rowcount="72" reserved-kb="144" data-kb="16" indexes-kb="32" unused-kb="96" />
+		<table schemaname="dbo" tablename="ProcessSchedules" rowcount="46" reserved-kb="216" data-kb="48" indexes-kb="48" unused-kb="120" />
+		<table schemaname="dbo" tablename="ProcessSchedulesXRobots" rowcount="21" reserved-kb="144" data-kb="8" indexes-kb="24" unused-kb="112" />
+		<table schemaname="dbo" tablename="QueueDefinitions" rowcount="31" reserved-kb="144" data-kb="8" indexes-kb="24" unused-kb="112" />
+		<table schemaname="dbo" tablename="QueueItemComments" rowcount="0" reserved-kb="0" data-kb="0" indexes-kb="0" unused-kb="0" />
+		<table schemaname="dbo" tablename="QueueItemEvents" rowcount="79147" reserved-kb="21024" data-kb="8224" indexes-kb="11400" unused-kb="1400" />
+		<table schemaname="dbo" tablename="QueueItems" rowcount="27207" reserved-kb="94032" data-kb="64904" indexes-kb="24688" unused-kb="4440" />
+		<table schemaname="dbo" tablename="QueueProcessingRecords" rowcount="94" reserved-kb="272" data-kb="24" indexes-kb="32" unused-kb="216" />
+		<table schemaname="dbo" tablename="QueueProcessingRecordsOld" rowcount="0" reserved-kb="0" data-kb="0" indexes-kb="0" unused-kb="0" />
+		<table schemaname="dbo" tablename="QueueProcessingRecordsStaging" rowcount="0" reserved-kb="0" data-kb="0" indexes-kb="0" unused-kb="0" />
+		<table schemaname="dbo" tablename="Releases" rowcount="109" reserved-kb="144" data-kb="32" indexes-kb="32" unused-kb="80" />
+		<table schemaname="dbo" tablename="ReleaseVersions" rowcount="502" reserved-kb="208" data-kb="64" indexes-kb="88" unused-kb="56" />
+		<table schemaname="dbo" tablename="RobotCredentials" rowcount="88" reserved-kb="72" data-kb="24" indexes-kb="16" unused-kb="32" />
+		<table schemaname="dbo" tablename="RobotLicenseLogs" rowcount="44062" reserved-kb="46232" data-kb="4120" indexes-kb="3272" unused-kb="38840" />
+		<table schemaname="dbo" tablename="RobotLicenses" rowcount="80" reserved-kb="1064" data-kb="88" indexes-kb="208" unused-kb="768" />
+		<table schemaname="dbo" tablename="RobotLicenseStats" rowcount="1345" reserved-kb="1296" data-kb="80" indexes-kb="96" unused-kb="1120" />
+		<table schemaname="dbo" tablename="Robots" rowcount="88" reserved-kb="352" data-kb="80" indexes-kb="80" unused-kb="192" />
+		<table schemaname="dbo" tablename="RobotsXEnvironments" rowcount="51" reserved-kb="144" data-kb="8" indexes-kb="24" unused-kb="112" />
+		<table schemaname="dbo" tablename="Roles" rowcount="72" reserved-kb="432" data-kb="16" indexes-kb="96" unused-kb="320" />
+		<table schemaname="dbo" tablename="Sessions" rowcount="88" reserved-kb="288" data-kb="24" indexes-kb="64" unused-kb="200" />
+		<table schemaname="dbo" tablename="Settings" rowcount="228" reserved-kb="288" data-kb="40" indexes-kb="160" unused-kb="88" />
+		<table schemaname="dbo" tablename="TenantNotifications" rowcount="23806" reserved-kb="411544" data-kb="68496" indexes-kb="3680" unused-kb="339368" />
+		<table schemaname="dbo" tablename="Tenants" rowcount="16" reserved-kb="648" data-kb="8" indexes-kb="136" unused-kb="504" />
+		<table schemaname="dbo" tablename="UserAccounts" rowcount="168" reserved-kb="72" data-kb="32" indexes-kb="16" unused-kb="24" />
+		<table schemaname="dbo" tablename="UserClaims" rowcount="0" reserved-kb="0" data-kb="0" indexes-kb="0" unused-kb="0" />
+		<table schemaname="dbo" tablename="UserLoginAttempts" rowcount="2001" reserved-kb="1112" data-kb="352" indexes-kb="432" unused-kb="328" />
+		<table schemaname="dbo" tablename="UserLogins" rowcount="55" reserved-kb="144" data-kb="8" indexes-kb="24" unused-kb="112" />
+		<table schemaname="dbo" tablename="UserNotifications" rowcount="33412" reserved-kb="67608" data-kb="3872" indexes-kb="5568" unused-kb="58168" />
+		<table schemaname="dbo" tablename="UserOrganizationUnits" rowcount="170" reserved-kb="360" data-kb="16" indexes-kb="80" unused-kb="264" />
+		<table schemaname="dbo" tablename="UserRoles" rowcount="137" reserved-kb="216" data-kb="16" indexes-kb="48" unused-kb="152" />
+		<table schemaname="dbo" tablename="Users" rowcount="171" reserved-kb="640" data-kb="72" indexes-kb="192" unused-kb="376" />
+		<table schemaname="dbo" tablename="vwQueueReferences" rowcount="0" reserved-kb="72" data-kb="8" indexes-kb="16" unused-kb="48" />
+		<table schemaname="dbo" tablename="WebhookEvents" rowcount="0" reserved-kb="0" data-kb="0" indexes-kb="0" unused-kb="0" />
+		<table schemaname="dbo" tablename="Webhooks" rowcount="0" reserved-kb="0" data-kb="0" indexes-kb="0" unused-kb="0" />
+		<table schemaname="quartz" tablename="QRTZ_BLOB_TRIGGERS" rowcount="0" reserved-kb="0" data-kb="0" indexes-kb="0" unused-kb="0" />
+		<table schemaname="quartz" tablename="QRTZ_CALENDARS" rowcount="13" reserved-kb="144" data-kb="32" indexes-kb="8" unused-kb="104" />
+		<table schemaname="quartz" tablename="QRTZ_CRON_TRIGGERS" rowcount="36" reserved-kb="72" data-kb="16" indexes-kb="16" unused-kb="40" />
+		<table schemaname="quartz" tablename="QRTZ_FIRED_TRIGGERS" rowcount="2" reserved-kb="1592" data-kb="8" indexes-kb="288" unused-kb="1296" />
+		<table schemaname="quartz" tablename="QRTZ_JOB_DETAILS" rowcount="36" reserved-kb="528" data-kb="256" indexes-kb="16" unused-kb="256" />
+		<table schemaname="quartz" tablename="QRTZ_LOCKS" rowcount="4" reserved-kb="72" data-kb="8" indexes-kb="8" unused-kb="56" />
+		<table schemaname="quartz" tablename="QRTZ_PAUSED_TRIGGER_GRPS" rowcount="0" reserved-kb="0" data-kb="0" indexes-kb="0" unused-kb="0" />
+		<table schemaname="quartz" tablename="QRTZ_SCHEDULER_STATE" rowcount="4" reserved-kb="72" data-kb="8" indexes-kb="8" unused-kb="56" />
+		<table schemaname="quartz" tablename="QRTZ_SIMPLE_TRIGGERS" rowcount="0" reserved-kb="72" data-kb="8" indexes-kb="16" unused-kb="48" />
+		<table schemaname="quartz" tablename="QRTZ_SIMPROP_TRIGGERS" rowcount="0" reserved-kb="0" data-kb="0" indexes-kb="0" unused-kb="0" />
+		<table schemaname="quartz" tablename="QRTZ_TRIGGERS" rowcount="36" reserved-kb="3816" data-kb="80" indexes-kb="1064" unused-kb="2672" />
+		<table schemaname="stats" tablename="ErrorLogs" rowcount="5283" reserved-kb="5040" data-kb="2096" indexes-kb="1640" unused-kb="1304" />
+	</report>
+	<report name="sys.backupset" date="2020-02-18T15:48:30.9707053">
+		<backupset backup_set_id="1" backup_start_date="2019-08-16T08:38:00" duration_min="0.37" type="Database" backup_size_mb="1940.841796875000" backup_name="UiPath_Production-Full Database Backup" device_type="2" user_name="UNICORN\julien.vavasseur" recovery_model="FULL" />
+	</report>
+	<report name="tempdb" date="2020-02-18T15:48:30.9241137">
+		<file file_id="1" type="0" type_desc="ROWS" state="0" state_desc="ONLINE" is_read_only="0" is_sparse="0" is_percent_growth="0" filegroup_ame="PRIMARY" data_space_id="1" filename="tempdev" physical_name="/var/opt/mssql/data/tempdb.mdf" size="1024" size-mb="8.00" sizemax="-1" sizemax-mb="-1.00" growth="8192" growth-mb="64.00" spaceused="368" spaceused-mb="2.88" spacefree="656" spacefree-mb="5.13" />
+		<file file_id="2" type="1" type_desc="LOG" state="0" state_desc="ONLINE" is_read_only="0" is_sparse="0" is_percent_growth="0" data_space_id="0" filename="templog" physical_name="/var/opt/mssql/data/templog.ldf" size="1024" size-mb="8.00" sizemax="-1" sizemax-mb="-1.00" growth="8192" growth-mb="64.00" spaceused="63" spaceused-mb="0.49" spacefree="961" spacefree-mb="7.51" />
+	</report>
+	<report name="sys.backupset" date="2020-02-18T15:48:30.9493146">
+		<stats Type="Database" AverageBackupDurationMin="0.366666" BackupsCount="1" BackupFirst="2019-08-16T08:38:00" BackupLast="2019-08-16T08:38:00" />
+	</report>
+</output>

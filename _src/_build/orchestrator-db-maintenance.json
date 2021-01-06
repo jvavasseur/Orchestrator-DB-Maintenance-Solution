@@ -1,0 +1,65 @@
+[
+   {
+      "Name":"Cleanup Full",
+      "file":"Orchestrator-DB-Maintenance/Orchestrator-DB-Maintenance_Cleanup-All.sql",
+      "sources":[
+         {
+            "path":"_src/Schemas/Schema_Maintenance.sql"
+         },
+         {
+            "path":"_src/Runs/Table_Maintenance.Runs.sql"
+         },
+         {
+            "path":"_src/Runs/Table_Maintenance.Messages.sql"
+         },
+         {
+            "path":"_src/Runs/Procedure_*.sql"
+         },
+         {
+            "path":"_src/Cleanup/Procedure_Maintenance.Cleanup*.sql"
+         }
+      ]
+   },
+   {
+      "name":"Cleanup Logs",
+      "file":"Orchestrator-DB-Maintenance/Orchestrator-DB-Maintenance_Cleanup-Logs.sql",
+      "sources":[
+         {
+            "path":"_src/Schemas/Schema_Maintenance.sql"
+         },
+         {
+            "path":"_src/Runs/Table_Maintenance.Runs.sql"
+         },
+         {
+            "path":"_src/Runs/Table_Maintenance.Messages.sql"
+         },
+         {
+            "path":"_src/Runs/Procedure_*.sql"
+         },
+         {
+            "path":"_src/Cleanup/Procedure_Maintenance.CleanupLogs.sql"
+         }
+      ]
+   },
+   {
+      "name":"Cleanup Notifications",
+      "file":"Orchestrator-DB-Maintenance/Orchestrator-DB-Maintenance_Cleanup-Notifications.sql",
+      "sources":[
+         {
+            "path":"_src/Schemas/Schema_Maintenance.sql"
+         },
+         {
+            "path":"_src/Runs/Table_Maintenance.Runs.sql"
+         },
+         {
+            "path":"_src/Runs/Table_Maintenance.Messages.sql"
+         },
+         {
+            "path":"_src/Runs/Procedure_*.sql"
+         },
+         {
+            "path":"_src/Cleanup/Procedure_Maintenance.CleanupNotifications.sql"
+         }
+      ]
+   }
+]
