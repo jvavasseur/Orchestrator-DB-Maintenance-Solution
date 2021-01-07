@@ -42,12 +42,15 @@ jobs:
         if: ${{ success() }}
         shell: pwsh
         run: |
-          git status
-          git add .
-          $main_commitdate=$(git log -1 --date=iso-strict --pretty=format:"%cd")
-          $message=$(git log -1 --date=iso-strict --pretty='format:Rebuild after Commit %C(auto)%h (%s, %ad)')
-          git commit --message="$($message)"
-
+          try {
+            git status
+            git add .
+            $main_commitdate=$(git log -1 --date=iso-strict --pretty=format:"%cd")
+            $message=$(git log -1 --date=iso-strict --pretty='format:Rebuild after Commit %C(auto)%h (%s, %ad)')
+            git diff-index --quiet HEAD || git commit --message="$($message)"
+          }
+          catch{
+          }
       #Push Changes (if SUCCESS)
       - name: Push
         if: ${{ success() }}
