@@ -24,7 +24,7 @@ BEGIN
     CREATE TABLE [Maintenance].[Runs]
     (
         Id int IDENTITY(0, 1) CONSTRAINT [PK_Maintenance.Run] PRIMARY KEY CLUSTERED(Id)
-        , [Type] sysname NOT NULL
+        , [Type] nvarchar(128) NOT NULL
         , [info] nvarchar(max)
         , [StartTime] datetime2 NOT NULL CONSTRAINT df_StartTime DEFAULT SYSDATETIME()
         , [EndDate] datetime2
@@ -32,8 +32,20 @@ BEGIN
     );
     PRINT '  + TABLE CREATED: [Maintenance].[Runs]';
 END
-ELSE PRINT '  = TABLE [Maintenance].[Runs] already exists' 
+ELSE
+BEGIN
+    PRINT '  = TABLE [Maintenance].[Runs] already exists' 
 
+    IF EXISTS( SELECT col.name FROM sys.tables tbl 
+        INNER JOIN sys.columns col ON tbl.object_id = col.object_id
+        WHERE tbl.name = N'Runs' AND SCHEMA_NAME(tbl.schema_id) = N'Maintenance' AND col.name = N'Type' AND col.system_type_id = 231 AND col.user_type_id <> 231
+    )
+    BEGIN
+        PRINT '  ~ UPDATE TABLE [Maintenance].[Runs] COLUMN: [Type] nvarchar(128) NOT NULL' 
+        ALTER TABLE [Maintenance].[Runs] ALTER COLUMN [Type] nvarchar(128) NOT NULL;
+    END
+
+END
 GO
 
 SET ANSI_NULLS ON;
@@ -53,7 +65,7 @@ BEGIN
         [Id] bigint IDENTITY(0, 1) CONSTRAINT [PK_Maintenance.Messages] PRIMARY KEY CLUSTERED(Id)
         , [RunId] int NOT NULL CONSTRAINT [FK_RunId] FOREIGN KEY(RunId) REFERENCES [Maintenance].[Runs](Id) ON DELETE CASCADE
         , [Date] datetime2 NOT NULL CONSTRAINT CK_Date DEFAULT SYSDATETIME()
-        , [Procedure] sysname NOT NULL
+        , [Procedure] nvarchar(max) NOT NULL
         , [Message] nvarchar(max) NOT NULL
         , [Severity] tinyint NOT NULL
         , [State] tinyint NOT NULL
@@ -62,8 +74,19 @@ BEGIN
     );
     PRINT '  + TABLE CREATED: [Maintenance].[Messages]';
 END
-ELSE PRINT '  = TABLE [Maintenance].[Messages] already exists' 
+ELSE
+BEGIN
+    PRINT '  = TABLE [Maintenance].[Messages] already exists' 
 
+    IF EXISTS( SELECT col.name FROM sys.tables tbl 
+        INNER JOIN sys.columns col ON tbl.object_id = col.object_id
+        WHERE tbl.name = N'Messages' AND SCHEMA_NAME(tbl.schema_id) = N'Maintenance' AND col.name = N'Procedure' AND col.system_type_id = 231 AND col.max_length <> -1
+    )
+    BEGIN
+        PRINT '  ~ UPDATE TABLE [Maintenance].[Messages] COLUMN: [Procedure] nvarchar(max) NOT NULL' 
+        ALTER TABLE [Maintenance].[Messages] ALTER COLUMN [Procedure] nvarchar(max) NOT NULL;
+    END
+END
 GO
 
 SET ANSI_NULLS ON;
@@ -87,45 +110,71 @@ GO
 
 ALTER PROCEDURE [Maintenance].[AddRunMessage]
 ----------------------------------------------------------------------------------------------------
--- ### [Version]: 2020-12-02T16:24:47+01:00
+-- ### [Version]: 2021-03-11T10:11:59+01:00
+-- ### [Hash]: 560870c
+-- ### [Docs]: https://XxXxXxX
 ----------------------------------------------------------------------------------------------------
     @RunId int
-	, @Procedure sysname
+	, @Procedure nvarchar(max)
 	, @Message nvarchar(max)
-	, @Severity tinyint, @Number int = NULL
-	, @Line int = NULL, @State tinyint
-	, @VerboseLevel tinyint
+	, @Severity tinyint
+    , @State tinyint
+	, @Number int = NULL
+	, @Line int = NULL
+    , @VerboseLevel tinyint
 	, @LogToTable bit
+    , @RaiseError bit = 1
+    , @LogsStack xml = NULL OUTPUT
 AS
 BEGIN
+    SET ARITHABORT ON;
+    SET NOCOUNT ON;
+    SET NUMERIC_ROUNDABORT OFF;
+
     BEGIN TRY
         DECLARE @ERROR_NUMBER INT, @ERROR_SEVERITY INT, @ERROR_STATE INT, @ERROR_PROCEDURE NVARCHAR(126), @ERROR_LINE INT, @ERROR_MESSAGE NVARCHAR(2048) ;
         DECLARE @count int;
-    
-        IF @@TRANCOUNT <> 0 
+        DECLARE @date datetime;
+        DECLARE @log xml;
+        /*IF @@TRANCOUNT <> 0 
         BEGIN
             RAISERROR(N'Can''t run when the transaction count is bigger than 0.', 16, 1);
             SET @RunId = NULL;
-        END
-        --SET @Procedure = ISNULL(@Procedure, QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')));
-        
+        END*/
+        SET @VerboseLevel = ISNULL(@VerboseLevel, 10);
+        SET @Procedure = ISNULL(@Procedure, QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')));
+        SET @date = SYSDATETIME();
+        SET @LogsStack = COALESCE(@logsStack, N'<messages></messages>');
+        SET @Message = COALESCE(@Message, N'');
+
         IF @LogToTable = 1 
         BEGIN
-            INSERT INTO [Maintenance].[Messages](RunId, [Procedure], [Message], [Severity], [State], [Number], [Line])
-                SELECT @RunId, @Procedure, @Message, @Severity, @state, @Number, @Line WHERE @RunId IS NOT NULL;
+            INSERT INTO [Maintenance].[Messages](RunId, [Date], [Procedure], [Message], [Severity], [State], [Number], [Line])
+            SELECT @RunId, @date, @Procedure, @Message, @Severity, @state, @Number, @Line WHERE @RunId IS NOT NULL;
         END
+
+        SET @log = (  SELECT * FROM (SELECT SYSDATETIME(), @Procedure, @Message, @Severity, @state, @Number, @Line) x([Date], [Procedure], [Message], [Severity], [State], [Number], [Line]) FOR XML PATH('message') )
+        SET @logsStack.modify('insert sql:variable("@log") as last into (/messages)[1]')
+
         IF @Severity >= @VerboseLevel 
         BEGIN
             IF @Severity < 10 SET @Severity = 10;
+            IF @Severity > 10
+            BEGIN
+                IF @RaiseError <> 1 SET @Severity = 10;
+                --ELSE RAISERROR(@Message, 10, @State);
+            END
             RAISERROR(@Message, @Severity, @State);
         END
     END TRY
     BEGIN CATCH
         SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();
-        IF @@TRANCOUNT > 0 ROLLBACK;
-
-        THROW;
+        --IF @@TRANCOUNT > 0 ROLLBACK;
+        IF @Message = @ERROR_MESSAGE RAISERROR(@ERROR_MESSAGE, @ERROR_SEVERITY, @ERROR_STATE);
+        ELSE THROW;
     END CATCH
+
+    RETURN 0
 END
 
 GO
@@ -151,17 +200,25 @@ GO
 
 ALTER PROCEDURE [Maintenance].[DeleteRuns]
 ----------------------------------------------------------------------------------------------------
--- ### [Version]: 2020-12-02T16:24:47+01:00
+-- ### [Version]: 2021-03-11T10:11:59+01:00
+-- ### [Hash]: 560870c
+-- ### [Docs]: https://XxXxXxX
 ----------------------------------------------------------------------------------------------------
     @CleanupAfterDays tinyint = 30
     , @RunId int = NULL
-    , @Procedure sysname = NULL
+    , @Procedure nvarchar(max) = NULL
+    , @LogsStack xml = NULL OUTPUT
 AS
 BEGIN
+    SET ARITHABORT ON;
+    SET NOCOUNT ON;
+    SET NUMERIC_ROUNDABORT OFF;
+
     BEGIN TRY
         DECLARE @ERROR_NUMBER INT, @ERROR_SEVERITY INT, @ERROR_STATE INT, @ERROR_PROCEDURE NVARCHAR(126), @ERROR_LINE INT, @ERROR_MESSAGE NVARCHAR(2048) ;
         DECLARE @count int;
-	DECLARE @localRunId int;
+    	DECLARE @localRunId int;
+        DECLARE @message nvarchar(max);
     
         IF @@TRANCOUNT <> 0 
         BEGIN
@@ -178,12 +235,18 @@ BEGIN
                     (N'Cleanup Runs', N'PROCEDURE ' + @Procedure, SYSDATETIME());
                 SELECT @localRunId = @@IDENTITY;
             END
-
+/*
             INSERT INTO [Maintenance].[Messages](RunId, [Procedure], [Message], [Severity], [State])
                 VALUES(@localRunId, @Procedure, N'Runs cleanup started', 10, 1)
                     , (@localRunId, @Procedure, N'Keep Runs from past days: ' + CAST(@CleanupAfterDays AS nvarchar(10)), 10, 1)
                     , (@localRunId, @Procedure, N'Delete Runs before: ' + CONVERT(nvarchar(20), DATEADD(DAY, - @CleanupAfterDays, SYSDATETIME()), 121), 10, 1)
-            ;
+            ;*/
+
+            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @Procedure, @Message = N'Runs cleanup started', @Severity = 10, @State = 1, @VerboseLevel = 10, @LogToTable = 1, @LogsStack = @logsStack OUTPUT;
+            SET @message = N'Keep Runs from past days: ' + CAST(@CleanupAfterDays AS nvarchar(10));
+            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @Procedure, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = 10, @LogToTable = 1, @LogsStack = @logsStack OUTPUT;
+            SET @message =  N'Delete Runs before: ' + CONVERT(nvarchar(20), DATEADD(DAY, - @CleanupAfterDays, SYSDATETIME()), 121);
+            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @Procedure, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = 10, @LogToTable = 1, @LogsStack = @logsStack OUTPUT;
 
             BEGIN TRAN
 
@@ -191,12 +254,16 @@ BEGIN
             SET @count = @@ROWCOUNT;
 
             IF @@TRANCOUNT > 0 COMMIT;
-
+/*
             INSERT INTO [Maintenance].[Messages](RunId, [Procedure], [Message], [Severity], [State]) VALUES
                 (@localRunId, @Procedure, N'Runs deleted: ' + CAST(@count AS nvarchar(10)), 10, 1)
                 , (@localRunId, @Procedure, N'Runs Cleanup Finished', 10, 1);
+*/
+            SET @message = N'Runs deleted: ' + CAST(@count AS nvarchar(10));
+            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @Procedure, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = 10, @LogToTable = 1, @LogsStack = @logsStack OUTPUT;
+            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @Procedure, @Message = N'Runs Cleanup Finished', @Severity = 10, @State = 1, @VerboseLevel = 10, @LogToTable = 1, @LogsStack = @logsStack OUTPUT;
 
-            UPDATE [Maintenance].[Runs] SET [EndDate] = SYSDATETIME(), [ErrorStatus] = 0 WHERE Id = @localRunId;
+            UPDATE [Maintenance].[Runs] SET [EndDate] = SYSDATETIME(), [ErrorStatus] = 0 WHERE Id = @localRunId AND @RunId IS NULL;
         END TRY
         BEGIN CATCH
             SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();
@@ -204,8 +271,8 @@ BEGIN
 
             IF @localRunId IS NOT NULL
             BEGIN
-                INSERT INTO [Maintenance].[Messages](RunId, [Procedure], [Message], [Severity], [State]) VALUES
-                    (@localRunId, @Procedure, N'Error: ' + @ERROR_MESSAGE, 16, 1);
+                SET @message = N'Error: ' + @ERROR_MESSAGE;
+                EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @Procedure, @Message = @message, @Severity = @ERROR_SEVERITY, @State = @ERROR_STATE, @VerboseLevel = 10, @LogToTable = 1, @RaiseError = 0, @LogsStack = @logsStack OUTPUT;
             END; 
 
             THROW;
@@ -213,14 +280,19 @@ BEGIN
         END CATCH
     END TRY
     BEGIN CATCH
+        SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();
         IF @@TRANCOUNT > 0 ROLLBACK;
 
         IF @localRunId IS NOT NULL 
         BEGIN
             -- Save Unknown Error
-            INSERT INTO [Maintenance].[Messages](RunId, [Procedure], [Message], [Severity], [State]) VALUES
-                (@localRunId, @Procedure, N'Runs Cleanup Finished with error(s)', 16, 1);
-            UPDATE [Maintenance].[Runs] SET [EndDate] = SYSDATETIME(), [ErrorStatus] = 1 WHERE Id = @localRunId;
+--            INSERT INTO [Maintenance].[Messages](RunId, [Procedure], [Message], [Severity], [State]) VALUES
+  --              (@localRunId, @Procedure, N'Runs Cleanup Finished with error(s)', 16, 1);
+                
+            SET @message = N'Runs Cleanup Finished with error(s)';
+            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @Procedure, @Message = @message, @Severity = @ERROR_SEVERITY, @State = @ERROR_STATE, @VerboseLevel = 10, @LogToTable = 1, @RaiseError = 0, @LogsStack = @logsStack OUTPUT;
+
+            UPDATE [Maintenance].[Runs] SET [EndDate] = SYSDATETIME(), [ErrorStatus] = 4 WHERE Id = @localRunId;
         END;
 
         THROW;
@@ -255,13 +327,13 @@ GO
 
 ALTER PROCEDURE [Maintenance].[CleanupNotifications]
 ----------------------------------------------------------------------------------------------------
--- ### [Version]: 2021-01-06T09:27:49+01:00
--- ### [Hash]: 0f2cc59
+-- ### [Version]: 2021-03-11T10:11:59+01:00
+-- ### [Hash]: 560870c
 -- ### [Docs]: https://XxXxXxX
 ----------------------------------------------------------------------------------------------------
-    @RowsDeletedForEachLoop int = 10000 -- Don't go above 50.000 (min = 1000, max = 100.000)
-    , @HoursToKeep int = NULL -- i.e. 168h = 7*24h = 7 days => value can't be NULL and must be bigger than 0 if @CleanupBeforeDate is not set
+    @HoursToKeep int = NULL -- i.e. 168h = 7*24h = 7 days => value can't be NULL and must be bigger than 0 if @CleanupBeforeDate is not set
     , @CleanupBeforeDate datetime = NULL -- Use either @CleanupBeforeDate or @HoursToKeep BUT not both
+    , @RowsDeletedForEachLoop int = 10000 -- Don't go above 50.000 (min = 1000, max = 100.000)
     --, @CleanupBelowId bigint = NULL -- Provide Max Log Id to procedure
     , @MaxRunMinutes int = NULL -- NULL or 0 = unlimited
     -- 
@@ -358,6 +430,7 @@ BEGIN
                 INSERT INTO [Maintenance].[Messages](RunId, [Procedure], [Message], [Severity], [State], [Number], [Line])
                     SELECT @RunId, @Procedure, @Message, @Severity, @state, @Number, @Line WHERE @RunId IS NOT NULL;
             END
+
             IF @Severity >= @VerboseLevel 
             BEGIN
                 IF @Severity < 10 SET @Severity = 10;
