@@ -28,9 +28,9 @@ ALTER PROCEDURE [Maintenance].[CleanupNotifications]
 -- ### [Hash]: XxXxXxX
 -- ### [Docs]: https://XxXxXxX
 ----------------------------------------------------------------------------------------------------
-    @RowsDeletedForEachLoop int = 10000 -- Don't go above 50.000 (min = 1000, max = 100.000)
-    , @HoursToKeep int = NULL -- i.e. 168h = 7*24h = 7 days => value can't be NULL and must be bigger than 0 if @CleanupBeforeDate is not set
+    @HoursToKeep int = NULL -- i.e. 168h = 7*24h = 7 days => value can't be NULL and must be bigger than 0 if @CleanupBeforeDate is not set
     , @CleanupBeforeDate datetime = NULL -- Use either @CleanupBeforeDate or @HoursToKeep BUT not both
+    , @RowsDeletedForEachLoop int = 10000 -- Don't go above 50.000 (min = 1000, max = 100.000)
     --, @CleanupBelowId bigint = NULL -- Provide Max Log Id to procedure
     , @MaxRunMinutes int = NULL -- NULL or 0 = unlimited
     -- 
@@ -127,6 +127,7 @@ BEGIN
                 INSERT INTO [Maintenance].[Messages](RunId, [Procedure], [Message], [Severity], [State], [Number], [Line])
                     SELECT @RunId, @Procedure, @Message, @Severity, @state, @Number, @Line WHERE @RunId IS NOT NULL;
             END
+
             IF @Severity >= @VerboseLevel 
             BEGIN
                 IF @Severity < 10 SET @Severity = 10;
