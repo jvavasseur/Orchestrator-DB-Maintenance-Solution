@@ -38,6 +38,12 @@ jobs:
         run: |
           ./_src/_build/rebuild-sql-files.ps1 ./_src/_build/orchestrator-db-maintenance.json  #, ./_src/_build/orchestrator-db-diagnostic.json
 
+      # Check Differences before commit
+      - name: Diff
+        if: ${{ success() }} 
+        run: | 
+          git diff --stat
+
       #Commit Changes (if SUCCESS)
       - name: Commit
         if: ${{ success() }}
@@ -51,11 +57,21 @@ jobs:
             git diff-index --quiet HEAD || git commit --message="$($message)"
           }
           catch{
+            Write-Message $PSItem.ToString()
+            throw
           }
+
       #Push Changes (if SUCCESS)
       - name: Push
-        if: ${{ success() }}
+        if: ${{ success() }} 
         shell: pwsh
         run: |
-          git push
-
+          Write-Host 'Branch: ${{github.ref}}'
+          Write-Host 'Event: ${{github.event_name}}'
+          if ( '${{github.ref}}' -eq 'refs/heads/master' )
+          {
+            Write-Host "Push to: ${{github.ref}}"
+            git push
+          } else {
+            Write-Host "Skip push to: ${{github.ref}}"
+          }
