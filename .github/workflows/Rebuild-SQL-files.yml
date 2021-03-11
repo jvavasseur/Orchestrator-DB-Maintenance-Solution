@@ -30,6 +30,7 @@ jobs:
           #date >> ./_src/_build/generated.txt
           git config user.name github-actions-Rebuild
           git config user.email github-actions@github.com
+          echo running on branch ${GITHUB_REF##*/}
 
       # Rebuild Files with Powershell script
       - name: Rebuild files
