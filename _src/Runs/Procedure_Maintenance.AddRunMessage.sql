@@ -8,7 +8,6 @@ GO
 ----------------------------------------------------------------------------------------------------
 -- PROCEDURE [Maintenance].[AddRunMessage]
 ----------------------------------------------------------------------------------------------------
-
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[AddRunMessage]') AND type in (N'P'))
 BEGIN
     EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[AddRunMessage] AS'
@@ -19,9 +18,11 @@ GO
 
 ALTER PROCEDURE [Maintenance].[AddRunMessage]
 ----------------------------------------------------------------------------------------------------
+-- ### [Object]: PROCEDURE [Maintenance].[AddRunMessage]
 -- ### [Version]: 2020-10-01 00:00:00                                                         
--- ### [Hash]: XxXxXxX
--- ### [Docs]: https://XxXxXxX
+-- ### [Source]: ??????
+-- ### [Hash]: ??????
+-- ### [Docs]: https://???.???
 ----------------------------------------------------------------------------------------------------
     @RunId int
 	, @Procedure nvarchar(max)

@@ -24,9 +24,11 @@ GO
 
 ALTER PROCEDURE [Maintenance].[CleanupNotifications]
 ----------------------------------------------------------------------------------------------------
+-- ### [Object]: PROCEDURE [Maintenance].[CleanupNotifications]
 -- ### [Version]: 2020-10-01 00:00:00                                                         
--- ### [Hash]: XxXxXxX
--- ### [Docs]: https://XxXxXxX
+-- ### [Source]: ??????
+-- ### [Hash]: ??????
+-- ### [Docs]: https://???.???
 ----------------------------------------------------------------------------------------------------
     @HoursToKeep int = NULL -- i.e. 168h = 7*24h = 7 days => value can't be NULL and must be bigger than 0 if @CleanupBeforeDate is not set
     , @CleanupBeforeDate datetime = NULL -- Use either @CleanupBeforeDate or @HoursToKeep BUT not both

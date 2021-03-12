@@ -19,7 +19,11 @@ GO
 
 ALTER PROCEDURE [Maintenance].[ArchiveLogs]
 ----------------------------------------------------------------------------------------------------
+-- ### [Object]: PROCEDURE [Maintenance].[ArchiveLogs]
 -- ### [Version]: 2020-10-01 00:00:00                                                         
+-- ### [Source]: ??????
+-- ### [Hash]: ??????
+-- ### [Docs]: https://???.???
 ----------------------------------------------------------------------------------------------------
     @RowsDeletedForEachLoop int = 10000 -- Don't go above 50.000 (min = 1000, max = 100.000)
     , @HoursToKeep int = NULL -- i.e. 168h = 7*24h = 7 days => value can't be NULL and must be bigger than 0 if @ArchiveBeforeDate is not set

@@ -6,7 +6,11 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- TABLE [Maintenance].[Runs]
+-- ### [Object]: TABLE [Maintenance].[Runs]
+-- ### [Version]: 2020-10-01 00:00:00                                                         
+-- ### [Source]: ??????
+-- ### [Hash]: ??????
+-- ### [Docs]: https://???.???
 ----------------------------------------------------------------------------------------------------
 IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'Runs' AND SCHEMA_NAME(schema_id) = N'Maintenance')
 BEGIN
@@ -25,6 +29,7 @@ ELSE
 BEGIN
     PRINT '  = TABLE [Maintenance].[Runs] already exists' 
 
+    -- Update existing sysname column to nvarchar(max)
     IF EXISTS( SELECT col.name FROM sys.tables tbl 
         INNER JOIN sys.columns col ON tbl.object_id = col.object_id
         WHERE tbl.name = N'Runs' AND SCHEMA_NAME(tbl.schema_id) = N'Maintenance' AND col.name = N'Type' AND col.system_type_id = 231 AND col.user_type_id <> 231

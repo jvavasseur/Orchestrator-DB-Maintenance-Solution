@@ -19,9 +19,11 @@ GO
 
 ALTER PROCEDURE [Maintenance].[DeleteRuns]
 ----------------------------------------------------------------------------------------------------
+-- ### [Object]: PROCEDURE [Maintenance].[DeleteRuns]
 -- ### [Version]: 2020-10-01 00:00:00                                                         
--- ### [Hash]: XxXxXxX
--- ### [Docs]: https://XxXxXxX
+-- ### [Source]: ??????
+-- ### [Hash]: ??????
+-- ### [Docs]: https://???.???
 ----------------------------------------------------------------------------------------------------
     @CleanupAfterDays tinyint = 30
     , @RunId int = NULL
