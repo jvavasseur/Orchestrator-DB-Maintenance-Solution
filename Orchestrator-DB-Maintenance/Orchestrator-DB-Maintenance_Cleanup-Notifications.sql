@@ -3,9 +3,10 @@ GO
 
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: Schema [Maintenance]
--- ### [Version]: 2021-03-11T16:24:39+01:00
--- ### [Hash]: 5850c01
--- ### [Docs]: https://XxXxXxX
+-- ### [Version]: 2021-03-12T09:44:50+01:00
+-- ### [Source]: _src/Schemas/Schema_Maintenance.sql
+-- ### [Hash]: 65d837c [SHA256-0F9CDE68647FA9BE44C43BFD13716BD3D16AEB97F64A2FB979B55EA1239F9B19]
+-- ### [Docs]: https://???.???
 ----------------------------------------------------------------------------------------------------
 IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'Maintenance')
 BEGIN 
@@ -23,7 +24,11 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- TABLE [Maintenance].[Runs]
+-- ### [Object]: TABLE [Maintenance].[Runs]
+-- ### [Version]: 2021-03-12T09:44:50+01:00
+-- ### [Source]: _src/Runs/Table_Maintenance.Runs.sql
+-- ### [Hash]: 65d837c [SHA256-8F55CD3EB205659CB8F4A11E5D5ED5A12440E40D22A93B18E9289EC368FAF640]
+-- ### [Docs]: https://???.???
 ----------------------------------------------------------------------------------------------------
 IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'Runs' AND SCHEMA_NAME(schema_id) = N'Maintenance')
 BEGIN
@@ -42,6 +47,7 @@ ELSE
 BEGIN
     PRINT '  = TABLE [Maintenance].[Runs] already exists' 
 
+    -- Update existing sysname column to nvarchar(max)
     IF EXISTS( SELECT col.name FROM sys.tables tbl 
         INNER JOIN sys.columns col ON tbl.object_id = col.object_id
         WHERE tbl.name = N'Runs' AND SCHEMA_NAME(tbl.schema_id) = N'Maintenance' AND col.name = N'Type' AND col.system_type_id = 231 AND col.user_type_id <> 231
@@ -62,7 +68,11 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- TABLE [Maintenance].[Messages]
+-- ### [Object]: TABLE [Maintenance].[Messages]
+-- ### [Version]: 2021-03-12T09:44:50+01:00
+-- ### [Source]: _src/Runs/Table_Maintenance.Messages.sql
+-- ### [Hash]: 65d837c [SHA256-E8CFF249EA3841977F65C278341B910301AACCE921684E10FEDC2F3E740E90C9]
+-- ### [Docs]: https://???.???
 ----------------------------------------------------------------------------------------------------
 IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'Messages' AND SCHEMA_NAME(schema_id) = N'Maintenance')
 BEGIN
@@ -84,6 +94,7 @@ ELSE
 BEGIN
     PRINT '  = TABLE [Maintenance].[Messages] already exists' 
 
+    -- Update existing sysname column to nvarchar(max)
     IF EXISTS( SELECT col.name FROM sys.tables tbl 
         INNER JOIN sys.columns col ON tbl.object_id = col.object_id
         WHERE tbl.name = N'Messages' AND SCHEMA_NAME(tbl.schema_id) = N'Maintenance' AND col.name = N'Procedure' AND col.system_type_id = 231 AND col.max_length <> -1
@@ -105,7 +116,6 @@ GO
 ----------------------------------------------------------------------------------------------------
 -- PROCEDURE [Maintenance].[AddRunMessage]
 ----------------------------------------------------------------------------------------------------
-
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[AddRunMessage]') AND type in (N'P'))
 BEGIN
     EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[AddRunMessage] AS'
@@ -116,9 +126,11 @@ GO
 
 ALTER PROCEDURE [Maintenance].[AddRunMessage]
 ----------------------------------------------------------------------------------------------------
--- ### [Version]: 2021-03-11T10:11:59+01:00
--- ### [Hash]: 560870c
--- ### [Docs]: https://XxXxXxX
+-- ### [Object]: PROCEDURE [Maintenance].[AddRunMessage]
+-- ### [Version]: 2021-03-12T09:44:50+01:00
+-- ### [Source]: _src/Runs/Procedure_Maintenance.AddRunMessage.sql
+-- ### [Hash]: 65d837c [SHA256-56C855BB40477A366EB0A7E8AF1188389C774D9075E9F91B2E0374B874DC0EF5]
+-- ### [Docs]: https://???.???
 ----------------------------------------------------------------------------------------------------
     @RunId int
 	, @Procedure nvarchar(max)
@@ -206,9 +218,11 @@ GO
 
 ALTER PROCEDURE [Maintenance].[DeleteRuns]
 ----------------------------------------------------------------------------------------------------
--- ### [Version]: 2021-03-11T10:11:59+01:00
--- ### [Hash]: 560870c
--- ### [Docs]: https://XxXxXxX
+-- ### [Object]: PROCEDURE [Maintenance].[DeleteRuns]
+-- ### [Version]: 2021-03-12T09:44:50+01:00
+-- ### [Source]: _src/Runs/Procedure_Maintenance.DeleteRuns.sql
+-- ### [Hash]: 65d837c [SHA256-9714C127DDB8BC8F5BBDD204D434DC0706FDA7DC75A28862C4DD7384AF15BBBB]
+-- ### [Docs]: https://???.???
 ----------------------------------------------------------------------------------------------------
     @CleanupAfterDays tinyint = 30
     , @RunId int = NULL
@@ -333,9 +347,11 @@ GO
 
 ALTER PROCEDURE [Maintenance].[CleanupNotifications]
 ----------------------------------------------------------------------------------------------------
--- ### [Version]: 2021-03-11T10:11:59+01:00
--- ### [Hash]: 560870c
--- ### [Docs]: https://XxXxXxX
+-- ### [Object]: PROCEDURE [Maintenance].[CleanupNotifications]
+-- ### [Version]: 2021-03-12T09:44:50+01:00
+-- ### [Source]: _src/Cleanup/Procedure_Maintenance.CleanupNotifications.sql
+-- ### [Hash]: 65d837c [SHA256-9D56A93370F2A0916CF517A1F824759E1DAB9DF1CBC0B875BD55843A60FAF8B8]
+-- ### [Docs]: https://???.???
 ----------------------------------------------------------------------------------------------------
     @HoursToKeep int = NULL -- i.e. 168h = 7*24h = 7 days => value can't be NULL and must be bigger than 0 if @CleanupBeforeDate is not set
     , @CleanupBeforeDate datetime = NULL -- Use either @CleanupBeforeDate or @HoursToKeep BUT not both
