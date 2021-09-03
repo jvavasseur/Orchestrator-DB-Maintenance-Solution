@@ -11,23 +11,23 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- PROCEDURE [Maintenance].[CleanupNotifications]
+-- PROCEDURE [Maintenance].[CleanupQueues]
 ----------------------------------------------------------------------------------------------------
 
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[CleanupNotifications]') AND type in (N'P'))
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[CleanupQueues]') AND type in (N'P'))
 BEGIN
-    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[CleanupNotifications] AS'
-    PRINT '  + PROCEDURE CREATED: [Maintenance].[CleanupNotifications]';
+    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[CleanupQueues] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[CleanupQueues]';
 END
-ELSE PRINT '  = PROCEDURE [Maintenance].[CleanupNotifications] already exists' 
+ELSE PRINT '  = PROCEDURE [Maintenance].[CleanupQueues] already exists' 
 GO
 
-PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[CleanupNotifications]'
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[CleanupQueues]'
 GO
 
-ALTER PROCEDURE [Maintenance].[CleanupNotifications]
+ALTER PROCEDURE [Maintenance].[CleanupQueues]
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: PROCEDURE [Maintenance].[CleanupNotifications]
+-- ### [Object]: PROCEDURE [Maintenance].[CleanupQueues]
 -- ### [Version]: 2020-10-01 00:00:00                                                         
 -- ### [Source]: ??????
 -- ### [Hash]: ??????
@@ -36,23 +36,23 @@ ALTER PROCEDURE [Maintenance].[CleanupNotifications]
     @HoursToKeep int = NULL -- i.e. 168h = 7*24h = 7 days => value can't be NULL and must be bigger than 0 if @CleanupBeforeDate is not set
     , @CleanupBeforeDate datetime = NULL -- Use either @CleanupBeforeDate or @HoursToKeep BUT not both
     , @RowsDeletedForEachLoop int = 10000 -- Don't go above 50.000 (min = 1000, max = 100.000)
-    --, @CleanupBelowId bigint = NULL -- Provide Max Log Id to procedure
+    , @CleanupBelowId bigint = NULL -- Provide Max Queue Item Id to procedure
     , @MaxRunMinutes int = NULL -- NULL or 0 = unlimited
     -- 
-    , @DryRunOnly sysname = NULL -- Y{es} or N{o} => Only Check Parameters (default if NULL = Y)
+    , @DryRunOnly nvarchar(MAX) = NULL -- Y{es} or N{o} => Only Check Parameters (default if NULL = Y)
     /* Error Handling */
     , @OnErrorRetry tinyint = NULL -- between 0 and 20 => retry up to 20 times (default if NULL = 10)
     , @OnErrorWaitMillisecond smallint = 1000 -- wait for milliseconds between each Retry (default if NULL = 1000ms)
     /* Index handling */
-    , @DisableIndex sysname = NULL -- Y{es} or N{o} => Disables all non clustered indexes (default if NULL = N)
-    , @RebuildIndex sysname = NULL -- Y{es} or N{o} => Rebuild all indexes (default if NULL = N)
-    , @RebuildIndexOnline sysname = NULL -- Y{es} or N{o} => Rebuild Online on Enterprise edition Only
+    , @DisableIndex nvarchar(MAX) = NULL -- Y{es} or N{o} => Disables all non clustered indexes (default if NULL = N)
+    , @RebuildIndex nvarchar(MAX) = NULL -- Y{es} or N{o} => Rebuild all indexes (default if NULL = N)
+    , @RebuildIndexOnline nvarchar(MAX) = NULL -- Y{es} or N{o} => Rebuild Online on Enterprise edition Only
     /* Messge Logging */
-    , @SaveMessagesToTable sysname = 'Y' -- Y{es} or N{o} => Save to [maintenance].[messages] table (default if NULL = Y)
+    , @SaveMessagesToTable nvarchar(MAX) = 'Y' -- Y{es} or N{o} => Save to [maintenance].[messages] table (default if NULL = Y)
     , @SavedMessagesRetentionDays smallint = 30
     , @SavedToRunId int = NULL OUTPUT
     , @OutputMessagesToDataset nvarchar(MAX) = 'N' -- Y{es} or N{o} => Output Messages Result set
-    , @Verbose sysname = NULL -- Y{es} = Print all messages < 10
+    , @Verbose nvarchar(MAX) = NULL -- Y{es} = Print all messages < 10
 AS
 BEGIN
     BEGIN TRY 
@@ -68,11 +68,11 @@ BEGIN
         DECLARE @runId int;  
         DECLARE @startTime datetime2 = SYSDATETIME();
 		DECLARE @loopStart datetime;
-        DECLARE @MaxRunDateTime datetime2;
+        DECLARE @maxRunDateTime datetime2;
         DECLARE @logToTable bit;
         DECLARE @deleteTopRows int = 10*1000;
-        DECLARE @MaxCreationTime datetime;
-        DECLARE @MaxErrorRetry tinyint;
+        DECLARE @maxCreationTime datetime;
+        DECLARE @maxErrorRetry tinyint;
         DECLARE @errorDelay smallint;
         DECLARE @errorWait datetime;
         DECLARE @indexDisable bit;
@@ -83,28 +83,30 @@ BEGIN
         -- Cleanup
         ----------------------------------------------------------------------------------------------------
         DECLARE @dryRun bit;
-        DECLARE @minId uniqueidentifier;
-        DECLARE @MaxId uniqueidentifier;
-        DECLARE @curIdStart uniqueidentifier
-        DECLARE @curIdEnd uniqueidentifier              
-        DECLARE @totalTenantNotificationsIds bigint;
-        DECLARE @totalUserNotificationsIds bigint;
-        DECLARE @countTenantNotificationsIds bigint;
-		DECLARE @countUserNotificationsIds bigint;
+        DECLARE @minId bigint = 0;
+        DECLARE @maxId bigint;
+        DECLARE @curIdStart bigint
+        DECLARE @curIdEnd bigint              
+        DECLARE @totalQueueItemsIds bigint;
+        DECLARE @totalQueueItemEventsIds bigint;
+        DECLARE @totalQueueItemCommentsIds bigint;
+        DECLARE @countQueueItemsIds bigint;
+		DECLARE @countQueueItemEventsIds bigint;
+        DECLARE @countQueueItemCommentsIds bigint;
         DECLARE @countErrorRetry tinyint;
-		DECLARE @ids TABLE(id uniqueidentifier PRIMARY KEY CLUSTERED)
+		DECLARE @ids TABLE(id bigint PRIMARY KEY CLUSTERED)
         ----------------------------------------------------------------------------------------------------
         -- Constant / Default value
         ----------------------------------------------------------------------------------------------------
-        DECLARE @MaxDeleteRows int = 100*1000; -- Raise an error if @RowsDeletedForEachLoop is bigger than this value
+        DECLARE @maxDeleteRows int = 100*1000; -- Raise an error if @RowsDeletedForEachLoop is bigger than this value
         DECLARE @minDeleteRows int = 1*1000; -- Raise an error if @RowsDeletedForEachLoop is smaller than this value
         DECLARE @VerboseBelowLevel int = 10; -- don't print message with Severity < 10 unless Verbose is set to Y
         ----------------------------------------------------------------------------------------------------
         DECLARE @lineSeparator nvarchar(MAX) = N'----------------------------------------------------------------------------------------------------';
         DECLARE @lineBreak nvarchar(MAX) = N'';
-        DECLARE @message nvarchar(4000);
+        DECLARE @message nvarchar(MAX);
         DECLARE @string nvarchar(MAX);
-        DECLARE @paramsYesNo TABLE ([id] tinyint IDENTITY(0, 1) PRIMARY KEY CLUSTERED, [parameter] sysname, [value] int)
+        DECLARE @paramsYesNo TABLE ([id] tinyint IDENTITY(0, 1) PRIMARY KEY CLUSTERED, [parameter] nvarchar(MAX), [value] int)
         ----------------------------------------------------------------------------------------------------
         -- Server Info 
         ----------------------------------------------------------------------------------------------------
@@ -117,14 +119,14 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         -- Proc Info
         ----------------------------------------------------------------------------------------------------
-        DECLARE @paramsGetProcInfo nvarchar(MAX) = N'@procid int, @info sysname, @output nvarchar(MAX) OUTPUT'
+        DECLARE @paramsGetProcInfo nvarchar(MAX) = N'@procid int, @info nvarchar(MAX), @output nvarchar(MAX) OUTPUT'
         DECLARE @stmtGetProcInfo nvarchar(MAX) = N'
-            DECLARE @definition nvarchar(MAX) = OBJECT_DEFINITION(@procid), @keyword sysname = REPLICATE(''-'', 2) + SPACE(1) + REPLICATE(''#'', 3) + SPACE(1) + QUOTENAME(LTRIM(RTRIM(@info))) + '':'';
+            DECLARE @definition nvarchar(MAX) = OBJECT_DEFINITION(@procid), @keyword nvarchar(MAX) = REPLICATE(''-'', 2) + SPACE(1) + REPLICATE(''#'', 3) + SPACE(1) + QUOTENAME(LTRIM(RTRIM(@info))) + '':'';
             SET @output = ''=''+ LTRIM(RTRIM( SUBSTRING(@definition, NULLIF(CHARINDEX(@keyword, @definition), 0 ) + LEN(@keyword), CHARINDEX( CHAR(13) , @definition, CHARINDEX(@keyword, @definition) + LEN(@keyword) + 1) - CHARINDEX(@keyword, @definition) - LEN(@keyword) ))) + ''='';
         ';
-        DECLARE @procSchemaName sysname = COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?');
-        DECLARE @procObjecttName sysname = COALESCE(OBJECT_NAME(@@PROCID), N'?');
-        DECLARE @procName sysname = QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')); 
+        DECLARE @procSchemaName nvarchar(MAX) = COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?');
+        DECLARE @procObjecttName nvarchar(MAX) = COALESCE(OBJECT_NAME(@@PROCID), N'?');
+        DECLARE @procName nvarchar(MAX) = QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')); 
         DECLARE @versionDatetime nvarchar(MAX);
         ----------------------------------------------------------------------------------------------------      
         -- Message / Error Handling
@@ -144,12 +146,12 @@ BEGIN
         DECLARE @paramsEmptyLogsStack nvarchar(MAX) = N'@LogsStack xml = NULL OUTPUT';
         DECLARE @logsStack xml;
 
-        DECLARE @ERROR_NUMBER INT, @ERROR_SEVERITY INT, @ERROR_STATE INT, @ERROR_PROCEDURE NVARCHAR(128), @ERROR_LINE INT, @ERROR_MESSAGE NVARCHAR(2048) ;
+        DECLARE @ERROR_NUMBER INT, @ERROR_SEVERITY INT, @ERROR_STATE INT, @ERROR_PROCEDURE NVARCHAR(126), @ERROR_LINE INT, @ERROR_MESSAGE NVARCHAR(2048) ;
         DECLARE @errorCount int = 0;
-        DECLARE @messages TABLE(id int IDENTITY(0, 1) PRIMARY KEY, [date] datetime2 DEFAULT SYSDATETIME(), [procedure] sysname NOT NULL DEFAULT QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')), [message] nvarchar(MAX) NOT NULL, severity tinyint NOT NULL, state tinyint NOT NULL, [number] int, [line] int);
+        DECLARE @messages TABLE(id int IDENTITY(0, 1) PRIMARY KEY, [date] datetime2 DEFAULT SYSDATETIME(), [procedure] nvarchar(MAX) NOT NULL DEFAULT QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')), [message] nvarchar(MAX) NOT NULL, severity tinyint NOT NULL, state tinyint NOT NULL, [number] int, [line] int);
         DECLARE CursorMessages CURSOR FAST_FORWARD LOCAL FOR SELECT [Date], [Procedure], [Message], [Severity], [State], [Number], [Line] FROM @messages ORDER BY [ID] ASC;
         DECLARE @cursorDate datetime2;
-        DECLARE @cursorProcedure sysname;
+        DECLARE @cursorProcedure nvarchar(MAX);
         DECLARE @cursorMessage nvarchar(MAX);
         DECLARE @cursorSeverity tinyint;
         DECLARE @cursorState tinyint;
@@ -167,13 +169,13 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
 
         -- Get Run Time limit or NULL (unlimited)
-	    SET @MaxRunDateTime = CASE WHEN ABS(@MaxRunMinutes) >= 1 THEN DATEADD(MINUTE, ABS(@MaxRunMinutes), @startTime) ELSE NULL END;
+	    SET @maxRunDateTime = CASE WHEN ABS(@MaxRunMinutes) >= 1 THEN DATEADD(MINUTE, ABS(@MaxRunMinutes), @startTime) ELSE NULL END;
 
         -- Output Start & Stop info
         INSERT INTO @messages([Message], Severity, [State]) VALUES 
             ( @lineSeparator, 10, 1)
             , (N'Start Time = ' + CONVERT(nvarchar(MAX), @startTime, 121), 10, 1 )
-            , (N'MAX Run Time = ' + ISNULL(CONVERT(nvarchar(MAX), @MaxRunDateTime, 121), N'NULL (=> unlimited)'), 10, 1 )
+            , (N'Max Run Time = ' + ISNULL(CONVERT(nvarchar(MAX), @maxRunDateTime, 121), N'NULL (=> unlimited)'), 10, 1 )
             , (@lineBreak, 10, 1);
 
         -- Get Proc Version
@@ -269,7 +271,7 @@ BEGIN
             , ( @lineSeparator, 10, 1)
             , ( N'Parameters', 10, 1)
             , ( @lineSeparator, 10, 1)
-            , ( N'@RowsDeletedForEachLoop: ' + ISNULL(CAST(@RowsDeletedForEachLoop AS nvarchar(MAX)), N'NULL (=> default = ' + CAST(@deleteTopRows AS nvarchar(MAX)) + ')'), 10, 1)
+            , ( N'@RowsDeletedForEachLoop: ' + ISNULL(CAST(@RowsDeletedForEachLoop AS nvarchar(MAX)), N'NULL (=> default = ' + CAST(@deleteTopRows AS nvarchar(MAX)) + N')'), 10, 1)
             , ( N'@HoursToKeep: ' + ISNULL(CAST(@HoursToKeep AS nvarchar(MAX)), N'NULL'), 10, 1)
             , ( N'@CleanupBeforeDate: ' + ISNULL(CONVERT(nvarchar(MAX), @CleanupBeforeDate, 121), N'NULL'), 10, 1)
             , ( N'@MaxRunMinutes: ' + ISNULL(CAST(@MaxRunMinutes AS nvarchar(MAX)), N'NULL'), 10, 1)
@@ -293,11 +295,11 @@ BEGIN
         -- Check @RowsDeletedForEachLoop
         SET @deleteTopRows = ISNULL(NULLIF(@RowsDeletedForEachLoop, 0), @deleteTopRows);
 
-        IF @deleteTopRows < @minDeleteRows OR @deleteTopRows > @MaxDeleteRows 
+        IF @deleteTopRows < @minDeleteRows OR @deleteTopRows > @maxDeleteRows 
         BEGIN
             INSERT INTO @messages ([Message], Severity, [State]) VALUES
                 ( 'Parameter @RowsDeletedForEachLoop is invalid: ' + LTRIM(RTRIM(CAST(@RowsDeletedForEachLoop AS nvarchar(MAX)))), 10, 1)
-                , ('USAGE: use a value between ' + FORMAT(@minDeleteRows,'#,0') + N' and ' + FORMAT(@MaxDeleteRows,'#,0') +  N'', 10, 1)
+                , ('USAGE: use a value between ' + FORMAT(@minDeleteRows,'#,0') + N' and ' + FORMAT(@maxDeleteRows,'#,0') +  N'', 10, 1)
                 , ('Parameter @RowsDeletedForEachLoop is invalid', 16, 1);
         END
 
@@ -321,7 +323,7 @@ BEGIN
 
         IF (@HoursToKeep > 1 AND @CleanupBeforeDate IS NULL) OR (@CleanupBeforeDate < @startTime AND @HoursToKeep IS NULL)
         BEGIN
-            SET @MaxCreationTime = CASE WHEN @HoursToKeep IS NULL THEN @CleanupBeforeDate ELSE DATEADD(hour, -ABS(@HoursToKeep), @startTime) END;
+            SET @maxCreationTime = CASE WHEN @HoursToKeep IS NULL THEN @CleanupBeforeDate ELSE DATEADD(hour, -ABS(@HoursToKeep), @startTime) END;
         END
         ELSE INSERT INTO @messages ([Message], Severity, [State]) VALUES ( N'Cleanup Date upper boundary cannot be set with the currently set values for @HoursToKeep and @CleanupBeforeDate', 16, 1);
 
@@ -335,13 +337,13 @@ BEGIN
             INSERT INTO @messages ([Message], Severity, [State]) VALUES 
                 (N'@RebuildIndexOnline is set to ' + @RebuildIndexOnline, 10, 1)
                 , (N'This SQL Server Edition doesn''t support rebuilding index Online: '  +  CAST(SERVERPROPERTY('Edition') AS nvarchar(MAX)), 16, 1);
-        END
+        END;
 
-        -- Check ALTER Permission on [dbo].[TenantNotifications]
-        INSERT INTO @messages ([Message], Severity, [State])
+        -- Check ALTER Permission on [dbo].[Queues]
+/*        INSERT INTO @messages ([Message], Severity, [State])
         SELECT 'Permission not effectively granted: ' + UPPER(p.permission_name), 10, 1
         FROM (VALUES(N'', N'ALTER')) AS p (subentity_name, permission_name)
-        LEFT JOIN sys.fn_my_permissions(N'[dbo].[TenantNotifications]', N'OBJECT') eff ON eff.subentity_name = p.subentity_name AND eff.permission_name = p.permission_name
+        LEFT JOIN sys.fn_my_permissions(N'[dbo].[Logs]', N'OBJECT') eff ON eff.subentity_name = p.subentity_name AND eff.permission_name = p.permission_name
         WHERE eff.permission_name IS NULL AND (@indexDisable = 1 OR @indexRebuild = 1)
         ORDER BY p.permission_name;
 
@@ -349,17 +351,19 @@ BEGIN
         BEGIN
             INSERT INTO @messages ([Message], Severity, [State]) VALUES
                 (N'Error: missing permission', 10, 1)
-                , (N'When set to Y, @DisableIndex or @RebuildIndex require ALTER permission on [dbo].[TenantNotifications] table', 16, 1);
-        END;
-
-        -- Check SELECT & DELETE permission on [dbo].[TenantNotifications] and [dbo].[UserNotifications]
+                , (N'When set to Y, @DisableIndex or @RebuildIndex require ALTER permission on [dbo].[Logs] table', 16, 1);
+        END
+*/
+        -- Check SELECT & DELETE permission on [dbo].[QueueItems], [dbo].[QueueItemEvents] and [dbo].[QueueItemComments]
         WITH p AS(
             SELECT entity_name, subentity_name, permission_name
             FROM (VALUES
-                (N'[dbo].[TenantNotifications]', N'', N'SELECT')
-                , (N'[dbo].[TenantNotifications]', N'', N'DELETE')
-                , (N'[dbo].[UserNotifications]', N'', N'SELECT')
-                , (N'[dbo].[UserNotifications]', N'', N'DELETE')
+                (N'[dbo].[QueueItems]', N'', N'SELECT')
+                , (N'[dbo].[QueueItems]', N'', N'DELETE')
+                , (N'[dbo].[QueueItemEvents]', N'', N'SELECT')
+                , (N'[dbo].[QueueItemEvents]', N'', N'DELETE')
+                , (N'[dbo].[QueueItemComments]', N'', N'SELECT')
+                , (N'[dbo].[QueueItemComments]', N'', N'DELETE')
             ) AS p (entity_name, subentity_name, permission_name)
         )
         INSERT INTO @messages ([Message], Severity, [State])
@@ -376,7 +380,7 @@ BEGIN
         BEGIN
             INSERT INTO @messages ([Message], Severity, [State]) VALUES
                 (N'Error: missing permission', 10, 1)
-                , (N'SELECT and DELETE permissions are required on [dbo].[TenantNotifications] and [dbo].[UserNotifications] tables', 16, 1);
+                , (N'SELECT and DELETE permissions are required on [dbo].[QueueItems], [dbo].[QueueItemEvents] and [dbo].[QueueItemComments] tables', 16, 1);
         END
 
         -- Check @SaveMessagesToTable parameter
@@ -406,7 +410,7 @@ BEGIN
         END 
         ELSE
         BEGIN
-            -- Check missing permissions on Runs and Maintenance Table
+            -- Check missing permissions on Runs and Messages Table
             WITH p AS(
                 SELECT entity_name, subentity_name, permission_name --'Permission not effectively granted: ' + UPPER(p.permission_name)
                 FROM (VALUES
@@ -449,7 +453,7 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
 
         SELECT @errorCount = COUNT(*) FROM @messages WHERE severity >= 16;
-        --IF @errorCount > 0 INSERT INTO @messages ([Message], Severity, [State]) SELECT N'End, see previous Error(s): ' + CAST(@errorCount AS nvarchar(MAX)) + N' found', 16, 1;
+        -- IF @errorCount > 0 INSERT INTO @messages ([Message], Severity, [State]) SELECT N'End, see previous Error(s): ' + CAST(@errorCount AS nvarchar(10)) + N' found', 16, 1;
 
         ----------------------------------------------------------------------------------------------------
         -- Settings
@@ -464,20 +468,20 @@ BEGIN
                 , ( @lineSeparator, 10, 1)
 
             -- Check @OnErrorRetry
-            SET @MaxErrorRetry = @OnErrorRetry;
-            IF @MaxErrorRetry IS NULL 
+            SET @maxErrorRetry = @OnErrorRetry;
+            IF @maxErrorRetry IS NULL 
             BEGIN
-                SET @MaxErrorRetry = 5;
+                SET @maxErrorRetry = 5;
                 INSERT INTO @messages ([Message], Severity, [State]) VALUES 
                     (N'@OnErrorRetry is NULL. Default value will be used (5 times).', 10, 1);
             END
-            IF @MaxErrorRetry > 20
+            IF @maxErrorRetry > 20
             BEGIN
-                SET @MaxErrorRetry = 20;
+                SET @maxErrorRetry = 20;
                 INSERT INTO @messages ([Message], Severity, [State]) VALUES 
                     (N'@OnErrorRetry is bigger than 20. Max value will be used (20 times)', 10, 1);
             END
-            
+
             -- Check @OnErrorWaitMillisecond
             IF @OnErrorWaitMillisecond IS NULL 
             BEGIN
@@ -533,19 +537,46 @@ BEGIN
             END
 
             -- Cleanup settings
-            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'Keep past hours: ' + CAST(@HoursToKeep AS nvarchar(MAX)), 10, 1 WHERE @HoursToKeep IS NOT NULL;
-            INSERT INTO @messages ([Message], Severity, [State]) VALUES (N'Cleanup data before: ' + CONVERT(nvarchar(20), @MaxCreationTime, 121), 10, 1);
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'Keep past hours: ' + COALESCE(CAST(@HoursToKeep AS nvarchar(MAX)), '-'), 10, 1 WHERE @HoursToKeep IS NOT NULL;
+            INSERT INTO @messages ([Message], Severity, [State]) VALUES (N'Cleanup data before: ' + COALESCE(CONVERT(nvarchar(MAX), @maxCreationTime, 121), '-'), 10, 1);
 
-            SELECT @MaxId = MAX(Id) FROM [dbo].[TenantNotifications] WITH (READPAST) WHERE CreationTime < @MaxCreationTime;
+            IF @CleanupBelowId IS NOT NULL
+            BEGIN 
+                SET @maxId = @CleanupBelowId
+        
+                INSERT INTO @messages ([Message], Severity, [State])
+                SELECT 'Use Provided MAX Id: ' + COALESCE(CAST(@maxId AS nvarchar(MAX)), '-'), 10, 1;
+            END
+            ELSE
+            BEGIN
+                IF (SELECT COUNT(*) FROM [dbo].QueueItems) > 100*1000
+                BEGIN
+                    BEGIN TRY
+						SELECT @maxId = MAX(ID) FROM [dbo].[QueueItems] WITH(INDEX([IX_TenantId_INCLUDES])) WHERE CreationTime < @maxCreationTime;
+
+                        INSERT INTO @messages ([Message], Severity, [State])
+                        SELECT 'Get MAX Id from Index [IX_TenantId_INCLUDES]: ' + COALESCE(CAST(@maxId AS nvarchar(MAX)), '-'), 10, 1;
+                    END TRY
+                    BEGIN CATCH
+                        INSERT INTO @messages ([Message], Severity, [State])
+                        SELECT 'ERROR fechting MAX Id from Index [IX_TenantId_INCLUDES]', 10, 1;
+                    END CATCH
+                END
+                
+                IF @maxId IS NULL
+                BEGIN
+                    SELECT @maxId = MAX(Id) FROM [dbo].[QueueItems] WITH (READPAST) WHERE CreationTime < @maxCreationTime;
+
+                    INSERT INTO @messages ([Message], Severity, [State])
+                    SELECT 'Get MAX Id from Table Clustered Index: ' + COALESCE(CAST(@maxId AS nvarchar(MAX)), '-'), 10, 1;
+                END
+            END
 
             INSERT INTO @messages ([Message], Severity, [State])
-            SELECT 'Get Max Id from Table Clustered Index: ' + COALESCE(CAST(@MaxId AS nvarchar(MAX)), '-'), 10, 1;
-
-            INSERT INTO @messages ([Message], Severity, [State])
-            SELECT CASE WHEN @MaxId IS NULL THEN N'Nothing to clean up before ' + CONVERT(nvarchar(MAX), @MaxCreationTime, 121)  ELSE N'Cleanup Row(s) below Id: ' + CAST(@MaxId AS nvarchar(MAX)) END, 10, 1;
+            SELECT CASE WHEN @maxId IS NULL THEN N'Nothing to clean up before ' + CONVERT(nvarchar(MAX), @maxCreationTime, 121)  ELSE N'Cleanup Row(s) below Id: ' + CAST(@maxId AS nvarchar(MAX)) END, 10, 1;
 
             INSERT INTO @messages ([Message], Severity, [State]) VALUES
-                (N'Run until = ' + ISNULL(CONVERT(nvarchar(MAX), @MaxRunDateTime, 121), N'unlimited'), 10, 1 )
+                (N'Run until = ' + ISNULL(CONVERT(nvarchar(MAX), @maxRunDateTime, 121), N'unlimited'), 10, 1 )
         END
 
         ----------------------------------------------------------------------------------------------------
@@ -553,8 +584,8 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         IF @logToTable = 1 
         BEGIN
-            INSERT INTO [Maintenance].[Runs]([Type], [Info], [StartTime]) SELECT N'Cleanup Notifications', N'PROCEDURE ' + @procName, @startTime;
-            SELECT @runId = @@IDENTITY;
+            INSERT INTO [Maintenance].[Runs]([Type], [Info], [StartTime]) SELECT N'Cleanup Queues', N'PROCEDURE ' + @procName, @startTime;
+            SELECT @runId = @@IDENTITY, @SavedToRunId = @@IDENTITY;
             INSERT INTO @messages ([Message], Severity, [State]) VALUES 
                 (N'Messages saved to Run Id: ' + CONVERT(nvarchar(MAX), @runId), 10, 1);
         END
@@ -653,6 +684,9 @@ BEGIN
             EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @lineSeparator, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
             EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @lineBreak, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
             -- NOT IMPLEMENTED: disable indexes
+
+            INSERT INTO @messages([Date], [Procedure], [Message], [Severity], [State], [Number], [Line])
+            EXEC sp_executesql @stmt = @stmtEmptyLogsStack, @params = @paramsEmptyLogsStack, @LogsStack = @logsStack OUTPUT;
         END
 
         ----------------------------------------------------------------------------------------------------
@@ -669,11 +703,12 @@ BEGIN
         INSERT INTO @messages([Date], [Procedure], [Message], [Severity], [State], [Number], [Line])
         EXEC sp_executesql @stmt = @stmtEmptyLogsStack, @params = @paramsEmptyLogsStack, @LogsStack = @logsStack OUTPUT;
 
-        SELECT @totalTenantNotificationsIds = 0;
-        SELECT @totalUserNotificationsIds = 0;
-		SET @MinId = '00000000-0000-0000-0000-000000000000';
-		SET @curIdStart = NULL;
-		SET @curIdEnd = NULL;
+		SELECT @totalQueueItemsIds = 0;
+		SELECT @totalQueueItemEventsIds = 0;
+		SELECT @totalQueueItemCommentsIds = 0;
+		SET @MinId = 0;
+		SET @curIdStart = 0;
+		SET @curIdEnd = 0;
 		SET @countErrorRetry = 0;
 		SET @errorCount = 0;    
 		SET @loopStart = SYSDATETIME();
@@ -681,12 +716,15 @@ BEGIN
         WHILE 0 = 0
         BEGIN
             BEGIN TRY
-                SET @countTenantNotificationsIds = 0;
-                SET @countUserNotificationsIds = 0;
+                SET @countQueueItemsIds = 0;
+                SET @countQueueItemEventsIds = 0;
+                SET @countQueueItemCommentsIds = 0;
                 -- Get Ids
-
                 BEGIN TRY
-					IF @curIdStart IS NULL OR @curIdEnd IS NULL SELECT @curIdStart = MIN(id), @curIdEnd = MAX(id) FROM (SELECT TOP(@deleteTopRows) id = id FROM [dbo].[TenantNotifications] WITH (READPAST) WHERE Id > @minId AND Id <= @MaxId AND CreationTime < @MaxCreationTime ORDER BY Id ASC) l(id);
+					IF @minId >= @curIdEnd 
+					BEGIN
+						SELECT @curIdStart = MIN(id), @curIdEnd = MAX(id) FROM (SELECT TOP(@deleteTopRows) id = id FROM [dbo].[QueueItems] WITH (READPAST) WHERE Id >= @minId AND Id <= @maxId AND CreationTime < @maxCreationTime ORDER BY Id ASC) l(id);
+					END
                 END TRY
                 BEGIN CATCH
 	                SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();
@@ -708,39 +746,27 @@ BEGIN
 
                 -- Cleanup
                 BEGIN TRY
-					DELETE FROM @ids;
-
+--					DELETE FROM @ids;
                     BEGIN TRAN;
 
                     WITH del AS (
-                        SELECT TOP(@deleteTopRows*1000) Id
-                        FROM [dbo].[TenantNotifications] WITH (READPAST)
+                        SELECT /*TOP(@deleteTopRows)*/ Id
+                        FROM [dbo].[QueueItems] WITH (READPAST)
                         WHERE Id >= @curIdStart AND Id <= @curIdEnd AND CreationTime < @MaxCreationTime 
-						ORDER BY Id ASC
-                    )
-                    DELETE FROM del
-					OUTPUT deleted.Id INTO @ids(id);
-
-                    SELECT @countTenantNotificationsIds = @@ROWCOUNT;
-
-                    WITH del AS (
-                        SELECT id
-                        FROM [dbo].[UserNotifications] WITH (READPAST)
-                        WHERE EXISTS(SELECT 1 FROM @ids WHERE id = TenantNotificationId)
+						--ORDER BY Id ASC
                     )
                     DELETE FROM del;
+--					OUTPUT deleted.Id INTO @ids(id);
 
-                    SELECT @countUserNotificationsIds = @@ROWCOUNT;
+                    SELECT @countQueueItemsIds = @@ROWCOUNT;
 
                     IF @@TRANCOUNT > 0 COMMIT TRAN;
                     --IF @@TRANCOUNT > 0 ROLLBACK TRAN;
-
                 END TRY
                 BEGIN CATCH
 	                SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();
                     IF @@TRANCOUNT > 0
                     BEGIN
-                        --RAISERROR('   => WARNING (Delete): Rollback transaction before retry', 10, 1) WITH NOWAIT;
                         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = '   => WARNING (Delete): Rollback transaction before retry', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = 0, @LogsStack = @logsStack OUTPUT;
                         ROLLBACK TRAN;
                         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = '   => WARNING (Delete): Rollback transaction before retry', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable;
@@ -752,7 +778,7 @@ BEGIN
                     SET @message = N'   => WARNING (Delete): '+ @ERROR_MESSAGE;
                     EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = @ERROR_STATE, @Number = @ERROR_NUMBER, @Line = @ERROR_LINE, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
 
-                    THROW
+                    THROW;
                 END CATCH
 
             END TRY
@@ -765,38 +791,41 @@ BEGIN
                     EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = '   => Rollback transaction before retry', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable;
                 END
 
-                IF @countErrorRetry < @MaxErrorRetry 
+                IF @countErrorRetry < @maxErrorRetry 
                 BEGIN
                     SET @countErrorRetry = @countErrorRetry + 1;
-                    SELECT @message = N'   ! Wait before retry: ' + CAST(@errorDelay AS nvarchar(MAX)) + N'ms [' + CAST(@countErrorRetry AS nvarchar(MAX)) + '/' +  CAST(@MaxErrorRetry AS nvarchar(MAX)) + ']';
+                    SELECT @message = N'   ! Wait before retry: ' + CAST(@errorDelay AS nvarchar(MAX)) + N'ms [' + CAST(@countErrorRetry AS nvarchar(MAX)) + '/' +  CAST(@maxErrorRetry AS nvarchar(MAX)) + ']';
                     EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
                     WAITFOR DELAY @errorWait;
-                    SET @message = N'   + Retry [' + CAST(@countErrorRetry AS nvarchar(MAX)) + N'/' + CAST(@MaxErrorRetry AS nvarchar(MAX)) + ']';
+                    SET @message = N'   + Retry [' + CAST(@countErrorRetry AS nvarchar(MAX)) + N'/' + CAST(@maxErrorRetry AS nvarchar(MAX)) + ']';
                     EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
                     CONTINUE;
+					-- => Ignore everything below and return to the first WHILE statemant
                 END
                 ELSE
                 BEGIN;
-                    SELECT @message = N'ERROR: Too many retries (' + CAST(@MaxErrorRetry AS nvarchar(MAX)) + ')';
+                    SELECT @message = N'ERROR: Too many retries (' + CAST(@maxErrorRetry AS nvarchar(MAX)) + ')';
                     EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
                     THROW;
                 END
             END CATCH
 
-            IF @countTenantNotificationsIds = 0
+            IF @countQueueItemsIds = 0
             BEGIN
                 SET @message = N'nothing left to cleanup...';
                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
                 BREAK;
             END
 
-            SET @totalTenantNotificationsIds = @totalTenantNotificationsIds + @countTenantNotificationsIds;
-            SET @totalUserNotificationsIds = @totalUserNotificationsIds + @countUserNotificationsIds;
+            SET @totalQueueItemsIds = @totalQueueItemsIds + @countQueueItemsIds;
+            SET @totalQueueItemEventsIds = @totalQueueItemEventsIds + @countQueueItemEventsIds;
+            SET @totalQueueItemCommentsIds = @totalQueueItemCommentsIds + @countQueueItemCommentsIds;
 
-            SET @message = N' - Ids [ ' + CAST(@curIdStart AS nvarchar(MAX)) + N' / ' + CAST(@curIdEnd AS nvarchar(MAX)) + N' ]: Tenant + User notifications deleted (count = ' + CAST(@countTenantNotificationsIds AS nvarchar(MAX)) + ' + ' + CAST(@countUserNotificationsIds AS nvarchar(MAX)) + ', total deleted = ' + FORMAT(@totalTenantNotificationsIds,'#,0') + ' + ' + FORMAT(@totalUserNotificationsIds,'#,0') + N', ' + CAST(DATEDIFF(MILLISECOND, @loopStart, SYSDATETIME()) AS nvarchar(MAX)) + 'ms)';
+            --SET @message = N' - Ids [ ' + CAST(@curIdStart AS nvarchar(MAX)) + N' / ' + CAST(@curIdEnd AS nvarchar(MAX)) + N' ]: Queue Items deleted (items = ' + CAST(@countQueueItemsIds AS nvarchar(MAX)) + ', events = ' + CAST(@countQueueItemEventsIds AS nvarchar(MAX)) + ', comments = ' + CAST(@countQueueItemCommentsIds AS nvarchar(MAX)) + ', total items = ' + FORMAT(@totalQueueItemsIds,'#,0') + N'), ' + CAST(DATEDIFF(MILLISECOND, @loopStart, SYSDATETIME()) AS nvarchar(MAX)) + 'ms)';
+            SET @message = N' - Ids [ ' + CAST(@curIdStart AS nvarchar(MAX)) + N' / ' + CAST(@curIdEnd AS nvarchar(MAX)) + N' ]: Queue Items deleted (items = ' + CAST(@countQueueItemsIds AS nvarchar(MAX)) + ', total items = ' + FORMAT(@totalQueueItemsIds,'#,0') + N'), ' + CAST(DATEDIFF(MILLISECOND, @loopStart, SYSDATETIME()) AS nvarchar(MAX)) + 'ms)';
             EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 5, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
 
-            IF SYSDATETIME() > @MaxRunDateTime 
+            IF SYSDATETIME() > @maxRunDateTime 
             BEGIN
                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @lineBreak, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
                 SELECT @message = N'TIME OUT:' + (SELECT CAST(DATEDIFF(MINUTE, @startTime, SYSDATETIME()) AS nvarchar(MAX)) ) + N' min (@MaxRunMinutes = ' + ISNULL(CAST(@MaxRunMinutes AS nvarchar(MAX)), N'' ) + N')';
@@ -804,15 +833,13 @@ BEGIN
                 BREAK;
             END 
 
-            SET @minId = @curIdEnd;
-			SET @curIdStart = NULL;
-			SET @curIdEnd = NULL;
+            SET @minId = @curIdEnd+1;
             SET @countErrorRetry = 0;
 			SET @loopStart = SYSDATETIME();
 
-	        INSERT INTO @messages([Date], [Procedure], [Message], [Severity], [State], [Number], [Line])
+            INSERT INTO @messages([Date], [Procedure], [Message], [Severity], [State], [Number], [Line])
             EXEC sp_executesql @stmt = @stmtEmptyLogsStack, @params = @paramsEmptyLogsStack, @LogsStack = @logsStack OUTPUT;
-
+			
         END
 
         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @lineBreak, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
@@ -820,15 +847,21 @@ BEGIN
         SET @message = N'Cleanup finished'
         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @lineSeparator, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
-        SET @message = N'Rows deleted [TenantNotifications]: ' + ISNULL(FORMAT(@totalTenantNotificationsIds,'#,0'), '0');
+        SET @message = N'Rows deleted [QueueItems]: ' + ISNULL(FORMAT(@totalQueueItemsIds,'#,0'), '0');
         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
-        SET @message = N'Rows deleted [UserNotifications]: ' + ISNULL(FORMAT(@totalUserNotificationsIds,'#,0'), '0');
-        EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
+--        SET @message = N'Rows deleted [QueueItemEvents]: ' + ISNULL(FORMAT(@totalQueueItemEventsIds,'#,0'), '0');
+--        EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
+--        SET @message = N'Rows deleted [QueueItemComments]: ' + ISNULL(FORMAT(@totalQueueItemCommentsIds,'#,0'), '0');
+--        EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
 
-        --SET @message = N'Last Id deleted: ' + CAST(ISNULL(@minId-1, '-') AS nvarchar(MAX));
-        --EXEC sp_executesql @stmt = @stmtLogMessage, @params = @paramsLogMessage, @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable;    
+        SET @message = N'Last Id deleted: ' + ISNULL(CAST(NULLIF(@minId-1, -1) AS nvarchar(MAX)), '-');
+        EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;    
         SET @message = N'Elapsed time : ' + CAST(CAST(DATEADD(SECOND, DATEDIFF(SECOND, @startTime, SYSDATETIME()), 0) AS time) AS nvarchar(MAX));
         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
+
+        INSERT INTO @messages([Date], [Procedure], [Message], [Severity], [State], [Number], [Line])
+        EXEC sp_executesql @stmt = @stmtEmptyLogsStack, @params = @paramsEmptyLogsStack, @LogsStack = @logsStack OUTPUT;
+
         ----------------------------------------------------------------------------------------------------
         -- Rebuild Indexes
         ----------------------------------------------------------------------------------------------------
@@ -855,9 +888,8 @@ BEGIN
             EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @lineSeparator, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
             EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = 'Old Runs cleanup', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
             EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @lineSeparator, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
-
             EXEC [Maintenance].[DeleteRuns] @CleanupAfterDays = @SavedMessagesRetentionDays, @RunId = @runId, @Procedure = @procName, @LogsStack = @logsStack OUTPUT;
-        END
+		END
 
 		EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @lineBreak, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
 		EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @lineSeparator, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
@@ -895,12 +927,19 @@ BEGIN
                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @lineSeparator, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
 
-			    SET @message = N'Rows deleted [TenantNotifications]: ' + ISNULL(FORMAT(@totalTenantNotificationsIds,'#,0'), '0');
-                EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
-				SET @message = N'Rows deleted [UserNotifications]: ' + ISNULL(FORMAT(@totalUserNotificationsIds,'#,0'), '0');
+		        SET @message = N'Rows deleted [QueueItems]: ' + ISNULL(FORMAT(@totalQueueItemsIds,'#,0'), '0');
                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
 
-		        SET @message = N'Elapsed time (minutes): ' + CAST(DATEDIFF(MINUTE, @startTime, SYSDATETIME()) AS nvarchar(MAX));
+			    SET @message = N'Rows deleted [QueueItemEvents]: ' + ISNULL(FORMAT(@totalQueueItemEventsIds,'#,0'), '0');
+                EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
+
+		        SET @message = N'Rows deleted [QueueItemComments]: ' + ISNULL(FORMAT(@totalQueueItemCommentsIds,'#,0'), '0');
+                EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
+
+                SET @message = N'Last Id deleted: ' + CAST(ISNULL(@curIdEnd, N'-') AS nvarchar(MAX));
+                EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;    
+
+                SET @message = N'Elapsed time : ' + CAST(CAST(DATEADD(SECOND, DATEDIFF(SECOND, @startTime, SYSDATETIME()), 0) AS time) AS nvarchar(MAX));
                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
 
                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @lineBreak, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
@@ -934,6 +973,6 @@ BEGIN
     ----------------------------------------------------------------------------------------------------
     -- End
     ----------------------------------------------------------------------------------------------------
-    RETURN @returnValue;
+	RETURN @returnValue;
 END
 GO
