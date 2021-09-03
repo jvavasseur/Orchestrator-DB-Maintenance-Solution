@@ -61,5 +61,26 @@
             "path":"_src/Cleanup/Procedure_Maintenance.CleanupNotifications.sql"
          }
       ]
+   },
+   {
+      "name":"Cleanup Queues",
+      "file":"Orchestrator-DB-Maintenance/Orchestrator-DB-Maintenance_Cleanup-Queues.sql",
+      "sources":[
+         {
+            "path":"_src/Schemas/Schema_Maintenance.sql"
+         },
+         {
+            "path":"_src/Runs/Table_Maintenance.Runs.sql"
+         },
+         {
+            "path":"_src/Runs/Table_Maintenance.Messages.sql"
+         },
+         {
+            "path":"_src/Runs/Procedure_*.sql"
+         },
+         {
+            "path":"_src/Cleanup/Procedure_Maintenance.CleanupQueues.sql"
+         }
+      ]
    }
 ]
