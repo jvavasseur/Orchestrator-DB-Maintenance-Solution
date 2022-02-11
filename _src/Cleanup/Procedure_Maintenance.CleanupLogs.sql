@@ -531,7 +531,7 @@ BEGIN
             END
             ELSE
             BEGIN
-                IF (SELECT COUNT(*) FROM [dbo].[Logs]) > 2*1000*1000
+                IF (SELECT COUNT(*) FROM [dbo].[Logs]) > 500*1000
                 BEGIN
                     BEGIN TRY
                         SELECT @MaxId = MAX(Id) FROM [dbo].[Logs] WITH(INDEX([IX_Machine])) WHERE TimeStamp < @MaxCreationTime;
