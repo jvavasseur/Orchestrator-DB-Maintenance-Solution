@@ -351,9 +351,9 @@ GO
 ALTER PROCEDURE [Maintenance].[CleanupLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[CleanupLogs]
--- ### [Version]: 2021-09-03T14:50:15+00:00
+-- ### [Version]: 2022-02-11T13:21:23+00:00
 -- ### [Source]: _src/Cleanup/Procedure_Maintenance.CleanupLogs.sql
--- ### [Hash]: 0fb505c [SHA256-4A9B99D05473D5605402182B3DFFD822820FB4F5F5453CBCDA837C2DBA592AC1]
+-- ### [Hash]: ac2cef0 [SHA256-DEDA4F96355D292A9A25CFD1CE0E235C704A2420FE34B0B4B93FBDB84567416E]
 -- ### [Docs]: https://???.???
 ----------------------------------------------------------------------------------------------------
     @HoursToKeep int = NULL -- i.e. 168h = 7*24h = 7 days => value can't be NULL and must be bigger than 0 if @CleanupBeforeDate is not set
@@ -854,7 +854,7 @@ BEGIN
             END
             ELSE
             BEGIN
-                IF (SELECT COUNT(*) FROM [dbo].[Logs]) > 2*1000*1000
+                IF (SELECT COUNT(*) FROM [dbo].[Logs]) > 500*1000
                 BEGIN
                     BEGIN TRY
                         SELECT @MaxId = MAX(Id) FROM [dbo].[Logs] WITH(INDEX([IX_Machine])) WHERE TimeStamp < @MaxCreationTime;
