@@ -3,9 +3,9 @@ GO
 
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: Schema [Maintenance]
--- ### [Version]: 2021-03-12T09:44:50+01:00
+-- ### [Version]: 2022-02-11T14:24:45+01:00
 -- ### [Source]: _src/Schemas/Schema_Maintenance.sql
--- ### [Hash]: 65d837c [SHA256-0F9CDE68647FA9BE44C43BFD13716BD3D16AEB97F64A2FB979B55EA1239F9B19]
+-- ### [Hash]: 977a791 [SHA256-0F9CDE68647FA9BE44C43BFD13716BD3D16AEB97F64A2FB979B55EA1239F9B19]
 -- ### [Docs]: https://???.???
 ----------------------------------------------------------------------------------------------------
 IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'Maintenance')
@@ -25,9 +25,9 @@ GO
 
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: TABLE [Maintenance].[Runs]
--- ### [Version]: 2021-03-12T09:44:50+01:00
+-- ### [Version]: 2022-02-11T14:24:45+01:00
 -- ### [Source]: _src/Runs/Table_Maintenance.Runs.sql
--- ### [Hash]: 65d837c [SHA256-8F55CD3EB205659CB8F4A11E5D5ED5A12440E40D22A93B18E9289EC368FAF640]
+-- ### [Hash]: 977a791 [SHA256-8F55CD3EB205659CB8F4A11E5D5ED5A12440E40D22A93B18E9289EC368FAF640]
 -- ### [Docs]: https://???.???
 ----------------------------------------------------------------------------------------------------
 IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'Runs' AND SCHEMA_NAME(schema_id) = N'Maintenance')
@@ -69,9 +69,9 @@ GO
 
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: TABLE [Maintenance].[Messages]
--- ### [Version]: 2021-03-12T09:44:50+01:00
+-- ### [Version]: 2022-02-11T14:24:45+01:00
 -- ### [Source]: _src/Runs/Table_Maintenance.Messages.sql
--- ### [Hash]: 65d837c [SHA256-E8CFF249EA3841977F65C278341B910301AACCE921684E10FEDC2F3E740E90C9]
+-- ### [Hash]: 977a791 [SHA256-E8CFF249EA3841977F65C278341B910301AACCE921684E10FEDC2F3E740E90C9]
 -- ### [Docs]: https://???.???
 ----------------------------------------------------------------------------------------------------
 IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'Messages' AND SCHEMA_NAME(schema_id) = N'Maintenance')
@@ -127,9 +127,9 @@ GO
 ALTER PROCEDURE [Maintenance].[AddRunMessage]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[AddRunMessage]
--- ### [Version]: 2021-03-12T09:44:50+01:00
+-- ### [Version]: 2022-02-11T14:24:45+01:00
 -- ### [Source]: _src/Runs/Procedure_Maintenance.AddRunMessage.sql
--- ### [Hash]: 65d837c [SHA256-56C855BB40477A366EB0A7E8AF1188389C774D9075E9F91B2E0374B874DC0EF5]
+-- ### [Hash]: 977a791 [SHA256-56C855BB40477A366EB0A7E8AF1188389C774D9075E9F91B2E0374B874DC0EF5]
 -- ### [Docs]: https://???.???
 ----------------------------------------------------------------------------------------------------
     @RunId int
@@ -219,9 +219,9 @@ GO
 ALTER PROCEDURE [Maintenance].[DeleteRuns]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[DeleteRuns]
--- ### [Version]: 2021-03-12T09:44:50+01:00
+-- ### [Version]: 2022-02-11T14:24:45+01:00
 -- ### [Source]: _src/Runs/Procedure_Maintenance.DeleteRuns.sql
--- ### [Hash]: 65d837c [SHA256-9714C127DDB8BC8F5BBDD204D434DC0706FDA7DC75A28862C4DD7384AF15BBBB]
+-- ### [Hash]: 977a791 [SHA256-9714C127DDB8BC8F5BBDD204D434DC0706FDA7DC75A28862C4DD7384AF15BBBB]
 -- ### [Docs]: https://???.???
 ----------------------------------------------------------------------------------------------------
     @CleanupAfterDays tinyint = 30
@@ -351,9 +351,9 @@ GO
 ALTER PROCEDURE [Maintenance].[CleanupNotifications]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[CleanupNotifications]
--- ### [Version]: 2021-09-03T14:50:15+00:00
+-- ### [Version]: 2022-02-11T14:24:45+01:00
 -- ### [Source]: _src/Cleanup/Procedure_Maintenance.CleanupNotifications.sql
--- ### [Hash]: 0fb505c [SHA256-F743B87F79DD03816AD9D966D0EE2F33B0CD5A39D63DCA8718418EB1469E70EC]
+-- ### [Hash]: 977a791 [SHA256-F743B87F79DD03816AD9D966D0EE2F33B0CD5A39D63DCA8718418EB1469E70EC]
 -- ### [Docs]: https://???.???
 ----------------------------------------------------------------------------------------------------
     @HoursToKeep int = NULL -- i.e. 168h = 7*24h = 7 days => value can't be NULL and must be bigger than 0 if @CleanupBeforeDate is not set
