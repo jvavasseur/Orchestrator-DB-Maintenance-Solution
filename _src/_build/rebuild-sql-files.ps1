@@ -153,7 +153,7 @@ begin{
 					
 								Get-ChildItem @childs | Select-Object -ExpandProperty FullName | ForEach-Object { 
 									$file_commit=$(git log -1 --date=iso-strict --pretty=format:"[ %h, %ad ]" -- $_)
-									Write-Host "$($space*4)+ $_ $file_commit"	
+									Write-Host "$($space*4)+ $_ $file_commit"
 									$regexVersion = '(.*--[\s|\t]+###[\s|\t]+\[[\s|\t]*Version[\s|\t]*\][\s|\t]*:).*$'
 									$regexSource = '(.*--[\s|\t]+###[\s|\t]+\[[\s|\t]*Source[\s|\t]*\][\s|\t]*:).*$'
 									$regexHash = '(.*--[\s|\t]+###[\s|\t]+\[[\s|\t]*Hash[\s|\t]*\][\s|\t]*:).*$'
@@ -182,7 +182,11 @@ begin{
 
 							if(Compare-Object -ReferenceObject $(Get-Content $tempFile -Raw) -DifferenceObject $(Get-Content $file -Raw)){
 								Write-Host "$($space*3)> Replace file $file"
-								Get-Content -Path $tempFile | Set-Content -Path $file
+								(Get-Content -Path $tempFile) <#-join "`r`n"#> | Set-Content -Path $file #-NoNewline
+#								(Get-Content -Path $tempFile) -join "`r`n" | Set-Content -Path "$($file)1" -NoNewline
+#								(Get-Content -Path $tempFile) -join "`r" | Set-Content -Path "$($file)2" -NoNewline
+#								(Get-Content -Path $tempFile) -join "`n" | Set-Content -Path "$($file)3" -NoNewline
+#								(Get-Content -Path $tempFile) -join "" | Set-Content -Path "$($file)4" -NoNewline
 							} else {
 								Write-Host "$($space*3)> Skip file $file (no differences)"
 							}
@@ -202,7 +206,7 @@ begin{
 			}
 			catch{
 				$ErrorCount++
-				Write-Host "::error::Start-RebuildFromConfigFile unhandled exception"		-ForegroundColor Red	
+				Write-Host "::error::Start-RebuildFromConfigFile unhandled exception" -ForegroundColor Red	
 				$message = $PSItem.Exception.Message
 				write-host $message
 				$local:ErrorActionPreference = "Stop"
