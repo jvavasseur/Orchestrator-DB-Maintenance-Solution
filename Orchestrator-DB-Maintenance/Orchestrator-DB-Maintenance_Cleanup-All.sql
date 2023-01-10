@@ -351,9 +351,9 @@ GO
 ALTER PROCEDURE [Maintenance].[CleanupLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[CleanupLogs]
--- ### [Version]: 2022-02-11T14:24:45+01:00
+-- ### [Version]: 2023-01-10T15:39:33+00:00
 -- ### [Source]: _src/Cleanup/Procedure_Maintenance.CleanupLogs.sql
--- ### [Hash]: 977a791 [SHA256-DEDA4F96355D292A9A25CFD1CE0E235C704A2420FE34B0B4B93FBDB84567416E]
+-- ### [Hash]: d59b8ed [SHA256-6F9628155B49380C8B6FC67A6CC6E85AF7DC88D9DC22D0CF3BB1529C6DA0FD74]
 -- ### [Docs]: https://???.???
 ----------------------------------------------------------------------------------------------------
     @HoursToKeep int = NULL -- i.e. 168h = 7*24h = 7 days => value can't be NULL and must be bigger than 0 if @CleanupBeforeDate is not set
@@ -440,7 +440,8 @@ BEGIN
         DECLARE @paramsGetProcInfo nvarchar(MAX) = N'@procid int, @info nvarchar(MAX), @output nvarchar(MAX) OUTPUT'
         DECLARE @stmtGetProcInfo nvarchar(MAX) = N'
             DECLARE @definition nvarchar(MAX) = OBJECT_DEFINITION(@procid), @keyword nvarchar(MAX) = REPLICATE(''-'', 2) + SPACE(1) + REPLICATE(''#'', 3) + SPACE(1) + QUOTENAME(LTRIM(RTRIM(@info))) + '':'';
-            SET @output = ''=''+ LTRIM(RTRIM( SUBSTRING(@definition, NULLIF(CHARINDEX(@keyword, @definition), 0 ) + LEN(@keyword), CHARINDEX( CHAR(13) , @definition, CHARINDEX(@keyword, @definition) + LEN(@keyword) + 1) - CHARINDEX(@keyword, @definition) - LEN(@keyword) ))) + ''='';
+			DECLARE @eol char(1) = IIF(CHARINDEX( CHAR(13) , @definition) > 0, CHAR(13), CHAR(10));
+			SET @output = ''''+ LTRIM(RTRIM( SUBSTRING(@definition, NULLIF(CHARINDEX(@keyword, @definition), 0 ) + LEN(@keyword), CHARINDEX( @eol , @definition, CHARINDEX(@keyword, @definition) + LEN(@keyword) + 1) - CHARINDEX(@keyword, @definition) - LEN(@keyword) ))) + '''';
         ';
         DECLARE @procSchemaName nvarchar(MAX) = COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?');
         DECLARE @procObjecttName nvarchar(MAX) = COALESCE(OBJECT_NAME(@@PROCID), N'?');
@@ -533,13 +534,14 @@ BEGIN
             , ( N'Engine Edition = ' + ISNULL(CAST(@engineEdition AS nvarchar(MAX)), N''), 10, 1)
             , ( N'ProductLevel = ' + ISNULL(CAST(SERVERPROPERTY('ProductLevel') AS nvarchar(MAX)), N'?'), 10, 1)
             , ( N'Database name = ' + QUOTENAME(DB_NAME(DB_ID())), 10, 1)
-            , ( N'Compatibility Level = ' + @productVersion, 10, 1)
+            , ( N'Compatibility Level = ' + (SELECT CAST([compatibility_level] AS nvarchar(MAX)) FROM sys.databases WHERE database_id = DB_ID()), 10, 1)
             , ( N'Procedure object name = ' + QUOTENAME(@procObjecttName), 10, 1)
             , ( N'Procedure schema name = ' + QUOTENAME(@procSchemaName), 10, 1)
+            , ( N'Procedure version = ' + ISNULL(@versionDatetime, N'?'), 10, 1)
         ;
        
-        INSERT INTO @messages([Message], Severity, [State])
-        SELECT 'Compatibility Level = ' + CAST([compatibility_level] AS nvarchar(MAX)), 10, 1 FROM sys.databases WHERE database_id = DB_ID()
+--        INSERT INTO @messages([Message], Severity, [State])
+--        SELECT 'Compatibility Level = ' + CAST([compatibility_level] AS nvarchar(MAX)), 10, 1 FROM sys.databases WHERE database_id = DB_ID()
         ;
 
         ----------------------------------------------------------------------------------------------------
@@ -1016,7 +1018,8 @@ BEGIN
         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @lineSeparator, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @LogsStack = @logsStack OUTPUT;
 		IF @levelVerbose >= @VerboseBelowLevel 
         BEGIN
-            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = N'Cleanup in progress... (Verbose not set)', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = 0, @LogsStack = @logsStack OUTPUT;
+            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = N'Cleanup in progress...', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = 0, @LogsStack = @logsStack OUTPUT;
+            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = N'... (Verbose not set, no progress)', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = 0, @LogsStack = @logsStack OUTPUT;
         END
 
         INSERT INTO @messages([Date], [Procedure], [Message], [Severity], [State], [Number], [Line])
