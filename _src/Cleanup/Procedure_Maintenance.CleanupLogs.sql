@@ -37,7 +37,7 @@ ALTER PROCEDURE [Maintenance].[CleanupLogs]
     , @CleanupBeforeDate datetime = NULL -- Use either @CleanupBeforeDate or @HoursToKeep BUT not both
     , @RowsDeletedForEachLoop int = 10000 -- Don't go above 50.000 (min = 1000, Max = 100.000)
     , @CleanupBelowId bigint = NULL -- Provide Max Log Id to procedure
-   , @MaxRunMinutes int = NULL -- NULL or 0 = unlimited
+    , @MaxRunMinutes int = NULL -- NULL or 0 = unlimited
     -- 
     , @DryRunOnly nvarchar(MAX) = NULL -- Y{es} or N{o} => Only Check Parameters (default if NULL = Y)
     /* Error Handling */

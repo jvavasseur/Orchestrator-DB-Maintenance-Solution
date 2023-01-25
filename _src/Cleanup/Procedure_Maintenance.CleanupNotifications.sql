@@ -119,8 +119,9 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         DECLARE @paramsGetProcInfo nvarchar(MAX) = N'@procid int, @info sysname, @output nvarchar(MAX) OUTPUT'
         DECLARE @stmtGetProcInfo nvarchar(MAX) = N'
-            DECLARE @definition nvarchar(MAX) = OBJECT_DEFINITION(@procid), @keyword sysname = REPLICATE(''-'', 2) + SPACE(1) + REPLICATE(''#'', 3) + SPACE(1) + QUOTENAME(LTRIM(RTRIM(@info))) + '':'';
-            SET @output = ''=''+ LTRIM(RTRIM( SUBSTRING(@definition, NULLIF(CHARINDEX(@keyword, @definition), 0 ) + LEN(@keyword), CHARINDEX( CHAR(13) , @definition, CHARINDEX(@keyword, @definition) + LEN(@keyword) + 1) - CHARINDEX(@keyword, @definition) - LEN(@keyword) ))) + ''='';
+            DECLARE @definition nvarchar(MAX) = OBJECT_DEFINITION(@procid), @keyword nvarchar(MAX) = REPLICATE(''-'', 2) + SPACE(1) + REPLICATE(''#'', 3) + SPACE(1) + QUOTENAME(LTRIM(RTRIM(@info))) + '':'';
+			DECLARE @eol char(1) = IIF(CHARINDEX( CHAR(13) , @definition) > 0, CHAR(13), CHAR(10));
+			SET @output = ''''+ LTRIM(RTRIM( SUBSTRING(@definition, NULLIF(CHARINDEX(@keyword, @definition), 0 ) + LEN(@keyword), CHARINDEX( @eol , @definition, CHARINDEX(@keyword, @definition) + LEN(@keyword) + 1) - CHARINDEX(@keyword, @definition) - LEN(@keyword) ))) + '''';
         ';
         DECLARE @procSchemaName sysname = COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?');
         DECLARE @procObjecttName sysname = COALESCE(OBJECT_NAME(@@PROCID), N'?');
