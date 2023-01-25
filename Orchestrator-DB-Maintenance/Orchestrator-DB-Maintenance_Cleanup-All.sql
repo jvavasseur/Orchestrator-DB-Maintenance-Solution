@@ -351,16 +351,16 @@ GO
 ALTER PROCEDURE [Maintenance].[CleanupLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[CleanupLogs]
--- ### [Version]: 2023-01-10T15:39:33+00:00
+-- ### [Version]: 2023-01-25T16:25:58+00:00
 -- ### [Source]: _src/Cleanup/Procedure_Maintenance.CleanupLogs.sql
--- ### [Hash]: d59b8ed [SHA256-6F9628155B49380C8B6FC67A6CC6E85AF7DC88D9DC22D0CF3BB1529C6DA0FD74]
+-- ### [Hash]: ea9f425 [SHA256-70B20E15516B6AB302B390400E7AAA30BDF1DDB49766E58F39831F67484E5AEE]
 -- ### [Docs]: https://???.???
 ----------------------------------------------------------------------------------------------------
     @HoursToKeep int = NULL -- i.e. 168h = 7*24h = 7 days => value can't be NULL and must be bigger than 0 if @CleanupBeforeDate is not set
     , @CleanupBeforeDate datetime = NULL -- Use either @CleanupBeforeDate or @HoursToKeep BUT not both
     , @RowsDeletedForEachLoop int = 10000 -- Don't go above 50.000 (min = 1000, Max = 100.000)
     , @CleanupBelowId bigint = NULL -- Provide Max Log Id to procedure
-   , @MaxRunMinutes int = NULL -- NULL or 0 = unlimited
+    , @MaxRunMinutes int = NULL -- NULL or 0 = unlimited
     -- 
     , @DryRunOnly nvarchar(MAX) = NULL -- Y{es} or N{o} => Only Check Parameters (default if NULL = Y)
     /* Error Handling */
@@ -1309,9 +1309,9 @@ GO
 ALTER PROCEDURE [Maintenance].[CleanupNotifications]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[CleanupNotifications]
--- ### [Version]: 2022-02-11T14:24:45+01:00
+-- ### [Version]: 2023-01-25T16:25:58+00:00
 -- ### [Source]: _src/Cleanup/Procedure_Maintenance.CleanupNotifications.sql
--- ### [Hash]: 977a791 [SHA256-F743B87F79DD03816AD9D966D0EE2F33B0CD5A39D63DCA8718418EB1469E70EC]
+-- ### [Hash]: ea9f425 [SHA256-8E162ACC5DDF5C07F518C8858DEF2EF2BBB3BB3DD32B71B5F7EC7A8E39C2051A]
 -- ### [Docs]: https://???.???
 ----------------------------------------------------------------------------------------------------
     @HoursToKeep int = NULL -- i.e. 168h = 7*24h = 7 days => value can't be NULL and must be bigger than 0 if @CleanupBeforeDate is not set
@@ -1400,8 +1400,9 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         DECLARE @paramsGetProcInfo nvarchar(MAX) = N'@procid int, @info sysname, @output nvarchar(MAX) OUTPUT'
         DECLARE @stmtGetProcInfo nvarchar(MAX) = N'
-            DECLARE @definition nvarchar(MAX) = OBJECT_DEFINITION(@procid), @keyword sysname = REPLICATE(''-'', 2) + SPACE(1) + REPLICATE(''#'', 3) + SPACE(1) + QUOTENAME(LTRIM(RTRIM(@info))) + '':'';
-            SET @output = ''=''+ LTRIM(RTRIM( SUBSTRING(@definition, NULLIF(CHARINDEX(@keyword, @definition), 0 ) + LEN(@keyword), CHARINDEX( CHAR(13) , @definition, CHARINDEX(@keyword, @definition) + LEN(@keyword) + 1) - CHARINDEX(@keyword, @definition) - LEN(@keyword) ))) + ''='';
+            DECLARE @definition nvarchar(MAX) = OBJECT_DEFINITION(@procid), @keyword nvarchar(MAX) = REPLICATE(''-'', 2) + SPACE(1) + REPLICATE(''#'', 3) + SPACE(1) + QUOTENAME(LTRIM(RTRIM(@info))) + '':'';
+			DECLARE @eol char(1) = IIF(CHARINDEX( CHAR(13) , @definition) > 0, CHAR(13), CHAR(10));
+			SET @output = ''''+ LTRIM(RTRIM( SUBSTRING(@definition, NULLIF(CHARINDEX(@keyword, @definition), 0 ) + LEN(@keyword), CHARINDEX( @eol , @definition, CHARINDEX(@keyword, @definition) + LEN(@keyword) + 1) - CHARINDEX(@keyword, @definition) - LEN(@keyword) ))) + '''';
         ';
         DECLARE @procSchemaName sysname = COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?');
         DECLARE @procObjecttName sysname = COALESCE(OBJECT_NAME(@@PROCID), N'?');
@@ -2249,9 +2250,9 @@ GO
 ALTER PROCEDURE [Maintenance].[CleanupQueues]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[CleanupQueues]
--- ### [Version]: 2022-02-11T14:24:45+01:00
+-- ### [Version]: 2023-01-25T16:25:58+00:00
 -- ### [Source]: _src/Cleanup/Procedure_Maintenance.CleanupQueues.sql
--- ### [Hash]: 977a791 [SHA256-DBBA24834FEB4DA2963A665F5DC54AE19CE9D37F154C0C66F30221C62417A8F2]
+-- ### [Hash]: ea9f425 [SHA256-4CCFB7B2693B163D4B31775FF2A9879C48B3682F088ADFC806629DFED41D43E8]
 -- ### [Docs]: https://???.???
 ----------------------------------------------------------------------------------------------------
     @HoursToKeep int = NULL -- i.e. 168h = 7*24h = 7 days => value can't be NULL and must be bigger than 0 if @CleanupBeforeDate is not set
@@ -2343,7 +2344,8 @@ BEGIN
         DECLARE @paramsGetProcInfo nvarchar(MAX) = N'@procid int, @info nvarchar(MAX), @output nvarchar(MAX) OUTPUT'
         DECLARE @stmtGetProcInfo nvarchar(MAX) = N'
             DECLARE @definition nvarchar(MAX) = OBJECT_DEFINITION(@procid), @keyword nvarchar(MAX) = REPLICATE(''-'', 2) + SPACE(1) + REPLICATE(''#'', 3) + SPACE(1) + QUOTENAME(LTRIM(RTRIM(@info))) + '':'';
-            SET @output = ''=''+ LTRIM(RTRIM( SUBSTRING(@definition, NULLIF(CHARINDEX(@keyword, @definition), 0 ) + LEN(@keyword), CHARINDEX( CHAR(13) , @definition, CHARINDEX(@keyword, @definition) + LEN(@keyword) + 1) - CHARINDEX(@keyword, @definition) - LEN(@keyword) ))) + ''='';
+			DECLARE @eol char(1) = IIF(CHARINDEX( CHAR(13) , @definition) > 0, CHAR(13), CHAR(10));
+			SET @output = ''''+ LTRIM(RTRIM( SUBSTRING(@definition, NULLIF(CHARINDEX(@keyword, @definition), 0 ) + LEN(@keyword), CHARINDEX( @eol , @definition, CHARINDEX(@keyword, @definition) + LEN(@keyword) + 1) - CHARINDEX(@keyword, @definition) - LEN(@keyword) ))) + '''';
         ';
         DECLARE @procSchemaName nvarchar(MAX) = COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?');
         DECLARE @procObjecttName nvarchar(MAX) = COALESCE(OBJECT_NAME(@@PROCID), N'?');

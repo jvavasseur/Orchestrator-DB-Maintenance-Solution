@@ -351,16 +351,16 @@ GO
 ALTER PROCEDURE [Maintenance].[CleanupLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[CleanupLogs]
--- ### [Version]: 2023-01-10T15:39:33+00:00
+-- ### [Version]: 2023-01-25T16:25:58+00:00
 -- ### [Source]: _src/Cleanup/Procedure_Maintenance.CleanupLogs.sql
--- ### [Hash]: d59b8ed [SHA256-6F9628155B49380C8B6FC67A6CC6E85AF7DC88D9DC22D0CF3BB1529C6DA0FD74]
+-- ### [Hash]: ea9f425 [SHA256-70B20E15516B6AB302B390400E7AAA30BDF1DDB49766E58F39831F67484E5AEE]
 -- ### [Docs]: https://???.???
 ----------------------------------------------------------------------------------------------------
     @HoursToKeep int = NULL -- i.e. 168h = 7*24h = 7 days => value can't be NULL and must be bigger than 0 if @CleanupBeforeDate is not set
     , @CleanupBeforeDate datetime = NULL -- Use either @CleanupBeforeDate or @HoursToKeep BUT not both
     , @RowsDeletedForEachLoop int = 10000 -- Don't go above 50.000 (min = 1000, Max = 100.000)
     , @CleanupBelowId bigint = NULL -- Provide Max Log Id to procedure
-   , @MaxRunMinutes int = NULL -- NULL or 0 = unlimited
+    , @MaxRunMinutes int = NULL -- NULL or 0 = unlimited
     -- 
     , @DryRunOnly nvarchar(MAX) = NULL -- Y{es} or N{o} => Only Check Parameters (default if NULL = Y)
     /* Error Handling */
