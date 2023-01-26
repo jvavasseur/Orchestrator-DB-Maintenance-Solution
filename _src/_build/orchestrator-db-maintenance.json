@@ -21,6 +21,48 @@
       ]
    },
    {
+      "name":"Cleanup Ledger",
+      "file":"Orchestrator-DB-Maintenance/Orchestrator-DB-Maintenance_Cleanup-Ledger.sql",
+      "sources":[
+         {
+            "path":"_src/Schemas/Schema_Maintenance.sql"
+         },
+         {
+            "path":"_src/Runs/Table_Maintenance.Runs.sql"
+         },
+         {
+            "path":"_src/Runs/Table_Maintenance.Messages.sql"
+         },
+         {
+            "path":"_src/Runs/Procedure_*.sql"
+         },
+         {
+            "path":"_src/Cleanup/Procedure_Maintenance.CleanupLedger.sql"
+         }
+      ]
+   },
+   {
+      "name":"Cleanup LedgerDeliveries",
+      "file":"Orchestrator-DB-Maintenance/Orchestrator-DB-Maintenance_Cleanup-LedgerDeliveries.sql",
+      "sources":[
+         {
+            "path":"_src/Schemas/Schema_Maintenance.sql"
+         },
+         {
+            "path":"_src/Runs/Table_Maintenance.Runs.sql"
+         },
+         {
+            "path":"_src/Runs/Table_Maintenance.Messages.sql"
+         },
+         {
+            "path":"_src/Runs/Procedure_*.sql"
+         },
+         {
+            "path":"_src/Cleanup/Procedure_Maintenance.CleanupLedgerDeliveries.sql"
+         }
+      ]
+   },
+   {
       "name":"Cleanup Logs",
       "file":"Orchestrator-DB-Maintenance/Orchestrator-DB-Maintenance_Cleanup-Logs.sql",
       "sources":[
