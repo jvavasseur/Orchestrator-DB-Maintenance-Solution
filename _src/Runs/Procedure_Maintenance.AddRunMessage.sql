@@ -34,7 +34,7 @@ ALTER PROCEDURE [Maintenance].[AddRunMessage]
     , @VerboseLevel tinyint
 	, @LogToTable bit
     , @RaiseError bit = 1
-    , @LogsStack xml = NULL OUTPUT
+    , @MessagesStack xml = NULL OUTPUT
 AS
 BEGIN
     SET ARITHABORT ON;
@@ -54,7 +54,7 @@ BEGIN
         SET @VerboseLevel = ISNULL(@VerboseLevel, 10);
         SET @Procedure = ISNULL(@Procedure, QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')));
         SET @date = SYSDATETIME();
-        SET @LogsStack = COALESCE(@logsStack, N'<messages></messages>');
+        SET @MessagesStack = COALESCE(@MessagesStack, N'<messages></messages>');
         SET @Message = COALESCE(@Message, N'');
 
         IF @LogToTable = 1 
@@ -64,7 +64,7 @@ BEGIN
         END
 
         SET @log = (  SELECT * FROM (SELECT SYSDATETIME(), @Procedure, @Message, @Severity, @state, @Number, @Line) x([Date], [Procedure], [Message], [Severity], [State], [Number], [Line]) FOR XML PATH('message') )
-        SET @logsStack.modify('insert sql:variable("@log") as last into (/messages)[1]')
+        SET @MessagesStack.modify('insert sql:variable("@log") as last into (/messages)[1]')
 
         IF @Severity >= @VerboseLevel 
         BEGIN

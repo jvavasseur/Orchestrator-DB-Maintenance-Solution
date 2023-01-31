@@ -28,7 +28,7 @@ ALTER PROCEDURE [Maintenance].[DeleteRuns]
     @CleanupAfterDays tinyint = 30
     , @RunId int = NULL
     , @Procedure nvarchar(max) = NULL
-    , @LogsStack xml = NULL OUTPUT
+    , @MessagesStack xml = NULL OUTPUT
 AS
 BEGIN
     SET ARITHABORT ON;
@@ -63,11 +63,11 @@ BEGIN
                     , (@localRunId, @Procedure, N'Delete Runs before: ' + CONVERT(nvarchar(20), DATEADD(DAY, - @CleanupAfterDays, SYSDATETIME()), 121), 10, 1)
             ;*/
 
-            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @Procedure, @Message = N'Runs cleanup started', @Severity = 10, @State = 1, @VerboseLevel = 10, @LogToTable = 1, @LogsStack = @logsStack OUTPUT;
+            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @Procedure, @Message = N'Runs cleanup started', @Severity = 10, @State = 1, @VerboseLevel = 10, @LogToTable = 1, @MessagesStack = @MessagesStack OUTPUT;
             SET @message = N'Keep Runs from past days: ' + CAST(@CleanupAfterDays AS nvarchar(10));
-            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @Procedure, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = 10, @LogToTable = 1, @LogsStack = @logsStack OUTPUT;
+            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @Procedure, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = 10, @LogToTable = 1, @MessagesStack = @MessagesStack OUTPUT;
             SET @message =  N'Delete Runs before: ' + CONVERT(nvarchar(20), DATEADD(DAY, - @CleanupAfterDays, SYSDATETIME()), 121);
-            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @Procedure, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = 10, @LogToTable = 1, @LogsStack = @logsStack OUTPUT;
+            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @Procedure, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = 10, @LogToTable = 1, @MessagesStack = @MessagesStack OUTPUT;
 
             BEGIN TRAN
 
@@ -81,8 +81,8 @@ BEGIN
                 , (@localRunId, @Procedure, N'Runs Cleanup Finished', 10, 1);
 */
             SET @message = N'Runs deleted: ' + CAST(@count AS nvarchar(10));
-            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @Procedure, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = 10, @LogToTable = 1, @LogsStack = @logsStack OUTPUT;
-            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @Procedure, @Message = N'Runs Cleanup Finished', @Severity = 10, @State = 1, @VerboseLevel = 10, @LogToTable = 1, @LogsStack = @logsStack OUTPUT;
+            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @Procedure, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = 10, @LogToTable = 1, @MessagesStack = @MessagesStack OUTPUT;
+            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @Procedure, @Message = N'Runs Cleanup Finished', @Severity = 10, @State = 1, @VerboseLevel = 10, @LogToTable = 1, @MessagesStack = @MessagesStack OUTPUT;
 
             UPDATE [Maintenance].[Runs] SET [EndDate] = SYSDATETIME(), [ErrorStatus] = 0 WHERE Id = @localRunId AND @RunId IS NULL;
         END TRY
@@ -93,7 +93,7 @@ BEGIN
             IF @localRunId IS NOT NULL
             BEGIN
                 SET @message = N'Error: ' + @ERROR_MESSAGE;
-                EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @Procedure, @Message = @message, @Severity = @ERROR_SEVERITY, @State = @ERROR_STATE, @VerboseLevel = 10, @LogToTable = 1, @RaiseError = 0, @LogsStack = @logsStack OUTPUT;
+                EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @Procedure, @Message = @message, @Severity = @ERROR_SEVERITY, @State = @ERROR_STATE, @VerboseLevel = 10, @LogToTable = 1, @RaiseError = 0, @MessagesStack = @MessagesStack OUTPUT;
             END; 
 
             THROW;
@@ -111,7 +111,7 @@ BEGIN
   --              (@localRunId, @Procedure, N'Runs Cleanup Finished with error(s)', 16, 1);
                 
             SET @message = N'Runs Cleanup Finished with error(s)';
-            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @Procedure, @Message = @message, @Severity = @ERROR_SEVERITY, @State = @ERROR_STATE, @VerboseLevel = 10, @LogToTable = 1, @RaiseError = 0, @LogsStack = @logsStack OUTPUT;
+            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @Procedure, @Message = @message, @Severity = @ERROR_SEVERITY, @State = @ERROR_STATE, @VerboseLevel = 10, @LogToTable = 1, @RaiseError = 0, @MessagesStack = @MessagesStack OUTPUT;
 
             UPDATE [Maintenance].[Runs] SET [EndDate] = SYSDATETIME(), [ErrorStatus] = 4 WHERE Id = @localRunId;
         END;
