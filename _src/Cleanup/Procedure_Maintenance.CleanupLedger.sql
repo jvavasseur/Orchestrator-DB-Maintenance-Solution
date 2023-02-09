@@ -817,7 +817,7 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         -- Rebuild Indexes
         ----------------------------------------------------------------------------------------------------
-        IF @indexRebuild = 1 
+        /*IF @indexRebuild = 1 
         BEGIN 
             -- NOT IMPLEMENTED: rebuild index
             EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @lineSeparator, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
@@ -830,7 +830,7 @@ BEGIN
             INSERT INTO @messages([Date], [Procedure], [Message], [Severity], [State], [Number], [Line])
             EXEC sp_executesql @stmt = @stmtEmptyMessagesStack, @params = @paramsEmptyMessagesStack, @MessagesStack = @MessagesStack OUTPUT;
         END
-
+		*/
         ----------------------------------------------------------------------------------------------------
         -- Runs Cleanup
         ----------------------------------------------------------------------------------------------------
