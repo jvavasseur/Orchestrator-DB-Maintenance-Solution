@@ -760,9 +760,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ASyncCleanupLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ASyncCleanupLogs]
--- ### [Version]: 2023-09-06T14:49:31+02:00
+-- ### [Version]: 2023-09-06T18:30:17+02:00
 -- ### [Source]: _src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.ASyncCleanupLogs.sql
--- ### [Hash]: 3491f17 [SHA256-106BF63E300325E27F44B966D9E4319F7BED9E5F891105A4FC81318337404CBA]
+-- ### [Hash]: 8a11cb3 [SHA256-A4A8749B99622BD610B69227364C43A3E0952C8B275E46CE89A50736F829F903]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -831,9 +831,6 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         -- Count row Ids
         ----------------------------------------------------------------------------------------------------
---        DECLARE @countRowIds bigint;
---        DECLARE @totalRowIds bigint;
---        DECLARE @globalRowIds bigint;
         DECLARE @countIds bigint;
         DECLARE @totalIds bigint;
         DECLARE @globalIds bigint;
@@ -948,9 +945,6 @@ BEGIN
         -- Get Proc Version
 --        EXEC sp_executesql @stmt = @stmtGetProcInfo, @params = @paramsGetProcInfo, @procid = @@PROCID, @info = N'Version', @output = @versionDatetime OUTPUT;
 
--- xxxxxxxxxxxxxx
-select @defaultDeleteRows = 200, @RowsDeletedForEachLoop = 200, @minDeleteRows = 10--, @defaultCountFilters = 7; -- xxxxxxxxxx
-;
         -- Get SQL Server Server Version
         WITH release (id, position, version) AS
         (
@@ -1399,26 +1393,6 @@ select @defaultDeleteRows = 200, @RowsDeletedForEachLoop = 200, @minDeleteRows =
         SET @message = SPACE(@tab * 1) + 'Rows deleted = ' + ISNULL(CAST(@globalIds AS nvarchar(100)), 0);
         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
 
-/*
-truncate table [Maintenance].[ASyncStatus_Logs]
-update [Maintenance].[ASyncStatus_Logs] set IsDeleted = 0, FirstASyncId = null, lastASyncId = null
-update [Maintenance].[ASyncStatus_Logs] set IsDeleted = 0  where syncid <> 1
-update [Maintenance].[Sync_Logs] set IsDeleted = 1, isSynced = 1 where id = 1
-update [Maintenance].[Sync_Logs] set IsDeleted = 0, isSynced = 0 where id = 1
-
-select 'ASyncStatus_Logs', lgs.* from [Maintenance].[ASyncStatus_Logs] lgs
-
-select count(*), count(distinct id) from Maintenance.delete_logs lgs --19200
-where exists(select 1 from dbo.logs where id = lgs.id)
-select count(*), 19200 - 1280 from dbo.logs --19200
-
-select * from Maintenance.sync_logs
-select * from Maintenance.archive_logs
-
-select 'ASyncStatus_Logs', lgs.*, '---', snc.* from [Maintenance].[ASyncStatus_Logs] lgs
-INNER JOIN #tempListSync snc ON snc.Id = lgs.SyncId
-*/ 
-
         INSERT INTO @messages([Date], [Procedure], [Message], [Severity], [State], [Number], [Line])
         EXEC sp_executesql @stmt = @stmtEmptyMessagesStack, @params = @paramsEmptyMessagesStack, @MessagesStack = @MessagesStack OUTPUT;
 
@@ -1511,7 +1485,3 @@ INNER JOIN #tempListSync snc ON snc.Id = lgs.SyncId
     RETURN @returnValue;
 END
 GO
-
-
-EXEC  [Maintenance].[ASyncCleanupLogs]
---select * from sys.synonyms
