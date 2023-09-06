@@ -36,7 +36,7 @@ jobs:
       - name: Rebuild files
         shell: pwsh
         run: |
-          ./_src/_build/rebuild-sql-files.ps1 ./_src/_build/orchestrator-db-maintenance.json, ./_src/_build/Archive_*DB.json  #, ./_src/_build/orchestrator-db-diagnostic.json
+          ./_src/_build/rebuild-sql-files.ps1 ${{ vars.JSONFILES_BUILDLIST }}
 
       # Check Differences before commit
       - name: Diff
