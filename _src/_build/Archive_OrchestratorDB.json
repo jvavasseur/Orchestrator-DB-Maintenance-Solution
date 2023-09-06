@@ -1,0 +1,26 @@
+[
+   {
+      "Name":"Orchestrator Archive ALL (Source = Orchestrator DB)",
+      "file":"Orchestrator-DB-Maintenance/Maintenance-Orchestrator-OrchestratorDB-Archive_All.sql",
+      "sources":[
+         { "path":"_src/Schemas/Schema_Maintenance.sql"}
+         , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
+         , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
+         , { "path":"_src/Runs/Procedure_*.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Table_OrchestratorDB.Maintenance.ASyncStatus_Logs.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.ASyncCleanupLogs.sql"}
+      ]
+   },
+   {
+      "Name":"Orchestrator Archive -= Logs =- (Source = Orchestrator DB)",
+      "file":"Orchestrator-DB-Maintenance/Maintenance-Orchestrator-OrchestratorDB-Archive-Logs.sql",
+      "sources":[
+         { "path":"_src/Schemas/Schema_Maintenance.sql"}
+         , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
+         , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
+         , { "path":"_src/Runs/Procedure_*.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Table_OrchestratorDB.Maintenance.ASyncStatus_Logs.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.ASyncCleanupLogs.sql"}
+      ]
+   }
+]
