@@ -70,6 +70,8 @@ jobs:
           Write-Host 'Event: ${{github.event_name}}'
           if ( '${{github.ref}}' -eq 'refs/heads/master' )
           {
+            Write-Host "Pull..."
+            git pull
             Write-Host "Push to: ${{github.ref}}"
             git push
           } else {
