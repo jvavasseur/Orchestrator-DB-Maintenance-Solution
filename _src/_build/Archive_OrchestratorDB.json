@@ -8,6 +8,8 @@
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
          , { "path":"_src/Archive/OrchestratorDB/Table_OrchestratorDB.Maintenance.ASyncStatus_Logs.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjects.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsLogs.sql"}
          , { "path":"_src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.ASyncCleanupLogs.sql"}
       ]
    },
@@ -20,6 +22,8 @@
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
          , { "path":"_src/Archive/OrchestratorDB/Table_OrchestratorDB.Maintenance.ASyncStatus_Logs.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjects.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsLogs.sql"}
          , { "path":"_src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.ASyncCleanupLogs.sql"}
       ]
    }
