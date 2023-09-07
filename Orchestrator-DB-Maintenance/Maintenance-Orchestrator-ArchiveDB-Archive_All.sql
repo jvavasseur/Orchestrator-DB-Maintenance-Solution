@@ -5598,9 +5598,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ArchiveAuditLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ArchiveAuditLogs]
--- ### [Version]: 2023-09-07T18:02:09+02:00
+-- ### [Version]: 2023-09-07T18:14:12+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.ArchiveAuditLogs.sql
--- ### [Hash]: 90145a7 [SHA256-50E9D77B46D44C93824D0019A5A1290E9C2EDCBF1EDADAE86AE10B85D983B0C9]
+-- ### [Hash]: 914e4af [SHA256-B9B5D3B9E2140F724975A2FBDCA8E09CD3D494ACA99BAB590B21FA62DC89DD5F]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -6537,6 +6537,7 @@ BEGIN
                         SELECT tempSyncId, tempId FROM #tempListIds ids                                                                      --|
                         WHERE NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_AuditLogs] WHERE Id = ids.tempId) AND tempNoDelay = 0;          --|
                                                                                                                                              --|
+                        DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_AuditLogsEntities] src ON src.AuditLogsId = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
                         DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_AuditLogs] src ON src.Id = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
                                                                                                                                              --|
                         -- Update current Id(s)                                                                                              --|
