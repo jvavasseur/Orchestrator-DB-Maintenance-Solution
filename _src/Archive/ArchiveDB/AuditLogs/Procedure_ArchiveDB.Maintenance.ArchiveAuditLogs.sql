@@ -962,6 +962,7 @@ BEGIN
                         SELECT tempSyncId, tempId FROM #tempListIds ids                                                                      --|
                         WHERE NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_AuditLogs] WHERE Id = ids.tempId) AND tempNoDelay = 0;          --|
                                                                                                                                              --|
+                        DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_AuditLogsEntities] src ON src.AuditLogsId = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
                         DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_AuditLogs] src ON src.Id = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
                                                                                                                                              --|
                         -- Update current Id(s)                                                                                              --|
