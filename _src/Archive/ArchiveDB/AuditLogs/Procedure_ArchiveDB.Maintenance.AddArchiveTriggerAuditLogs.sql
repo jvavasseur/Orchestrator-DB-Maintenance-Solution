@@ -63,9 +63,8 @@ BEGIN
         DECLARE @dryRun bit;
 
         DECLARE @startTime datetime = SYSDATETIME();
---SET @StartTime = N'20230401 00:00:00';     
-DECLARE @startTimeFloat float(53);
-SELECT @startTimeFloat = CAST(@startTime AS float(53));
+        DECLARE @startTimeFloat float(53);
+        SELECT @startTimeFloat = CAST(@startTime AS float(53));
 
         DECLARE @triggerTime datetime;
         DECLARE @triggerFloatingTime float(53);

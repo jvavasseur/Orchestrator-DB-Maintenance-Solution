@@ -6,22 +6,22 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- DROP PROCEDURE [Maintenance].[ValidateArchiveObjectsLogs]
+-- DROP PROCEDURE [Maintenance].[ValidateArchiveObjectsAuditLogs]
 ----------------------------------------------------------------------------------------------------
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[ValidateArchiveObjectsLogs]') AND type in (N'P'))
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[ValidateArchiveObjectsAuditLogs]') AND type in (N'P'))
 BEGIN
-    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[ValidateArchiveObjectsLogs] AS'
-    PRINT '  + CREATE PROCEDURE: [Maintenance].[ValidateArchiveObjectsLogs]';
+    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[ValidateArchiveObjectsAuditLogs] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[ValidateArchiveObjectsAuditLogs]';
 END
-ELSE PRINT '  = PROCEDURE [Maintenance].[ValidateArchiveObjectsLogs] already exists' 
+ELSE PRINT '  = PROCEDURE [Maintenance].[ValidateArchiveObjectsAuditLogs] already exists' 
 GO
 
-PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[ValidateArchiveObjectsLogs]'
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[ValidateArchiveObjectsAuditLogs]'
 GO
 
-ALTER PROCEDURE [Maintenance].[ValidateArchiveObjectsLogs]
+ALTER PROCEDURE [Maintenance].[ValidateArchiveObjectsAuditLogs]
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: PROCEDURE [Maintenance].[ValidateArchiveObjectsLogs]
+-- ### [Object]: PROCEDURE [Maintenance].[ValidateArchiveObjectsAuditLogs]
 -- ### [Version]: 2020-10-01 00:00:00                                                         
 -- ### [Source]: ??????
 -- ### [Hash]: ??????
@@ -31,14 +31,18 @@ ALTER PROCEDURE [Maintenance].[ValidateArchiveObjectsLogs]
 -- !!! ~~~~~~~~~ SQL Server >= 2016 SP1
 ----------------------------------------------------------------------------------------------------
 	@ArchiveTableFullParts nvarchar(256) = NULL
+	, @SourceEntitiesTableFullParts nvarchar(256) = NULL
+	, @ArchiveEntitiesTableFullParts nvarchar(256) = NULL
 	, @SourceTableFullParts nvarchar(256) = NULL
     , @ASyncStatusTableFullParts nvarchar(256) = NULL
     , @ExcludeColumns nvarchar(MAX) = NULL
+    , @ExcludeEntitiesColumns nvarchar(MAX) = NULL
     , @IgnoreMissingColumns nvarchar(MAX) = NULL
     , @CreateOrUpdateSynonyms bit = 0
     , @CreateTable bit = 0
     , @UpdateTable bit = 0
     , @SourceColumns nvarchar(MAX) = NULL OUTPUT
+    , @SourceEntitiesColumns nvarchar(MAX) = NULL OUTPUT
     , @IsValid bit = 0 OUTPUT
     , @Messages nvarchar(MAX) = NULL OUTPUT
 AS
@@ -49,17 +53,24 @@ BEGIN
         SET ARITHABORT ON;
         SET NOCOUNT ON;
         SET NUMERIC_ROUNDABORT OFF;
-
         ----------------------------------------------------------------------------------------------------
         -- Settings
         ----------------------------------------------------------------------------------------------------
-        DECLARE @synonymSourceName nvarchar(256) = N'Synonym_Source_Logs';
+        DECLARE @synonymSourceName nvarchar(256) = N'Synonym_Source_AuditLogs';
         DECLARE @synonymSourceSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymArchiveName nvarchar(256) = N'Synonym_Archive_Logs';
+        DECLARE @synonymArchiveName nvarchar(256) = N'Synonym_Archive_AuditLogs';
         DECLARE @synonymArchiveSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_Logs';
+        DECLARE @synonymSourceEntitiesName nvarchar(256) = N'Synonym_Source_AuditLogEntities';
+        DECLARE @synonymSourceEntitiesSchema nvarchar(256) = N'Maintenance';
+        DECLARE @synonymArchiveEntitiesName nvarchar(256) = N'Synonym_Archive_AuditLogsEntities';
+        DECLARE @synonymArchiveEntitiesSchema nvarchar(256) = N'Maintenance';
+        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_AuditLogs';
         DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
         DECLARE @clusteredName nvarchar(128) = N'Id';
+        DECLARE @auditLogsValid bit = 0;
+        DECLARE @auditLogsEntitiesValid bit = 0;
+        DECLARE @auditLogsMessages nvarchar(MAX);
+        DECLARE @auditLogsEntitiesMessages nvarchar(MAX);
         ----------------------------------------------------------------------------------------------------      
         -- Message / Error Handling
         ----------------------------------------------------------------------------------------------------
@@ -86,13 +97,47 @@ BEGIN
             , @CreateTable = @CreateTable
             , @UpdateTable = @UpdateTable
             , @SourceColumns = @SourceColumns OUTPUT
-            , @IsValid = @IsValid OUTPUT
-            , @Messages = @Messages OUTPUT
+            , @IsValid = @auditLogsValid OUTPUT
+            , @Messages = @auditLogsMessages  OUTPUT
         ;
+        EXEC [Maintenance].[ValidateArchiveObjects]
+            @SynonymSourceName = @synonymSourceEntitiesName
+            , @SynonymSourceSchema = @synonymSourceEntitiesSchema
+            , @SynonymArchiveName = @synonymArchiveEntitiesName
+            , @SynonymArchiveSchema = @synonymArchiveEntitiesSchema
+            , @synonymASyncStatusName = @synonymASyncStatusName
+            , @synonymASyncStatusSchema = @synonymASyncStatusSchema
+            , @ClusteredName = @clusteredName
+            , @ArchiveTableFullParts = @ArchiveEntitiesTableFullParts
+            , @SourceTableFullParts = @SourceEntitiesTableFullParts
+            , @ExcludeColumns = @ExcludeEntitiesColumns
+            , @IgnoreMissingColumns = @IgnoreMissingColumns
+            , @ASyncStatusTableFullParts = NULL
+            , @CreateOrUpdateSynonyms = @CreateOrUpdateSynonyms
+            , @CreateTable = @CreateTable
+            , @UpdateTable = @UpdateTable
+            , @SourceColumns = @SourceEntitiesColumns OUTPUT
+            , @IsValid = @auditLogsEntitiesValid OUTPUT
+            , @Messages = @auditLogsEntitiesMessages OUTPUT
+        ;
+        SELECT @IsValid = IIF(@auditLogsValid = 1 AND @auditLogsEntitiesValid = 1, 1, 0);
+
+    SET @Messages = --ISNULL(
+    ( 
+        SELECT [Procedure] = QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')), [Message], [Severity], [State] 
+        FROM (
+            SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@auditLogsMessages, N'$') WITH ([Procedure] nvarchar(128) N'$.Procedure', [Message] nvarchar(128) N'$.Message', [Severity] int, [State] smallint)
+            UNION
+            SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@auditLogsEntitiesMessages, N'$') WITH ([Procedure] nvarchar(128) N'$.Procedure', [Message] nvarchar(128) N'$.Message', [Severity] int, [State] smallint)
+        ) jsn
+        FOR JSON PATH
+    );
+
+
     END TRY
     BEGIN CATCH
         SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();
-        SET @message = N'ERROR[CH0]: error(s) occured while checking source and archive objects';
+        SET @message = N'ERROR[CH0]: error(s) occured while checking source and archive Audit Logs objects';
         SET @Messages = 
         ( 
             SELECT [Procedure] = QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')), [Message], [Severity], [State] 
@@ -107,3 +152,4 @@ BEGIN
     RETURN 0;
 END
 GO
+
