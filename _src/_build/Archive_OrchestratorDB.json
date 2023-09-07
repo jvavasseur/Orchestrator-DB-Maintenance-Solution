@@ -7,11 +7,12 @@
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
-         , { "path":"_src/Archive/OrchestratorDB/Table_OrchestratorDB.Maintenance.ASyncStatus_Logs.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Logs/Table_OrchestratorDB.Maintenance.ASyncStatus_Logs.sql"}
          , { "path":"_src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjects.sql"}
-         , { "path":"_src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsLogs.sql"}
-         , { "path":"_src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.ASyncCleanupLogs.sql"}
-         , { "path":"_src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjects.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Logs/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsLogs.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Logs/Procedure_OrchestratorDB.Maintenance.ASyncCleanupLogs.sql"}
+
+         , { "path":"_src/Archive/OrchestratorDB/AuditLogs/Table_OrchestratorDB.Maintenance.ASyncStatus_AuditLogs.sql"}
          , { "path":"_src/Archive/OrchestratorDB/AuditLogs/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsAuditLogs.sql"}
          , { "path":"_src/Archive/OrchestratorDB/AuditLogs/Procedure_OrchestratorDB.Maintenance.ASyncCleanupAuditLogs.sql"}
       ]
