@@ -7,22 +7,22 @@ GO
 
 
 ----------------------------------------------------------------------------------------------------
--- DROP PROCEDURE [Maintenance].[ParseJsonArchiveAuditLogs]
+-- DROP PROCEDURE [Maintenance].[ParseJsonArchiveRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[ParseJsonArchiveAuditLogs]') AND type in (N'P'))
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[ParseJsonArchiveRobotLicenseLogs]') AND type in (N'P'))
 BEGIN
-        EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[ParseJsonArchiveAuditLogs] AS'
-    PRINT '  + CREATE PROCEDURE: [Maintenance].[ParseJsonArchiveAuditLogs]';
+        EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[ParseJsonArchiveRobotLicenseLogs] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[ParseJsonArchiveRobotLicenseLogs]';
 END
-ELSE PRINT '  = PROCEDURE [Maintenance].[ParseJsonArchiveAuditLogs] already exists' 
+ELSE PRINT '  = PROCEDURE [Maintenance].[ParseJsonArchiveRobotLicenseLogs] already exists' 
 GO
 
-PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[ParseJsonArchiveAuditLogs]'
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[ParseJsonArchiveRobotLicenseLogs]'
 GO
 
-ALTER PROCEDURE [Maintenance].[ParseJsonArchiveAuditLogs]
+ALTER PROCEDURE [Maintenance].[ParseJsonArchiveRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: PROCEDURE [Maintenance].[ParseJsonArchiveAuditLogs]
+-- ### [Object]: PROCEDURE [Maintenance].[ParseJsonArchiveRobotLicenseLogs]
 -- ### [Version]: 2020-10-01 00:00:00                                                         
 -- ### [Source]: ??????
 -- ### [Hash]: ??????
