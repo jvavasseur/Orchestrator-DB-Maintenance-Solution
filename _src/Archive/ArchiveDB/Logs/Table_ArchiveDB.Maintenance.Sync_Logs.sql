@@ -48,3 +48,4 @@ BEGIN
 	ALTER TABLE [Maintenance].[Sync_Logs] CHECK CONSTRAINT [FK_Maintenance.Sync_Logs-Archive_Logs]
 END
 ELSE PRINT '  = Table already exists: [Maintenance].[Sync_Logs]';
+GO

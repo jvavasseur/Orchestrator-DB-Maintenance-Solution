@@ -32,23 +32,23 @@ BEGIN
 		, [TargetTimestamp] [datetime] NULL
 		, [CurrentId] [bigint] NULL
 		, [RepeatArchive] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_AuditLogs.RepeatArchive] DEFAULT 0
-		, [RepeatOffsetHours] [smallint] NULL CONSTRAINT [DF_Maintenance.Archive.AuditLogs.RepeatOffsetHours] CHECK (RepeatOffsetHours IS NULL OR RepeatOffsetHours > 0)
+		, [RepeatOffsetHours] [smallint] NULL CONSTRAINT [DF_Maintenance.Archive_AuditLogs.RepeatOffsetHours] CHECK (RepeatOffsetHours IS NULL OR RepeatOffsetHours > 0)
 		, [RepeatUntil] [datetime] NULL --CONSTRAINT [DF_Maintenance.Archive_AuditLogs.AddNextArchives] DEFAULT 0
 		-- Status
-		, [CreationDate] [datetime] NOT NULL CONSTRAINT [DF_Maintenance.Archive.AuditLogs_CreationDate] DEFAULT SYSDATETIME()
-		, [IsDryRun] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive.IsDryRun] DEFAULT 0
-		, [IsSuccess] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive.IsSuccess] DEFAULT 0
-		, [IsError] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive.IsError] DEFAULT 0
-		, [IsCanceled] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive.IsCanceled] DEFAULT 0
+		, [CreationDate] [datetime] NOT NULL CONSTRAINT [DF_Maintenance.Archive_AuditLogs.CreationDate] DEFAULT SYSDATETIME()
+		, [IsDryRun] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_AuditLogs.IsDryRun] DEFAULT 0
+		, [IsSuccess] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_AuditLogs.IsSuccess] DEFAULT 0
+		, [IsError] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_AuditLogs.IsError] DEFAULT 0
+		, [IsCanceled] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_AuditLogs.IsCanceled] DEFAULT 0
 		, [Message] nvarchar(MAX) NULL
 		, [CountValidFilters] int NULL
 		, [CountDuplicateFilters] int NULL
 		-- Execution
-		, [IsArchived] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive.IsArchived] DEFAULT 0
+		, [IsArchived] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_AuditLogs.IsArchived] DEFAULT 0
 		, [ArchivedOnDate] [datetime] NULL
-		, [IsDeleted] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive.IsDeleted] DEFAULT 0
+		, [IsDeleted] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_AuditLogs.IsDeleted] DEFAULT 0
 		, [DeletedOnDate] [datetime] NULL
-		, [IsFinished] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive.IsFinished] DEFAULT 0
+		, [IsFinished] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_AuditLogs.IsFinished] DEFAULT 0
 		, [FinishedOnDate] [datetime] NULL
 		, [ToDo] AS IIF(IsArchived <> 1 AND IsFinished <> 1 AND IsDryRun <> 1 AND IsError <> 1, 1, 0)
 		, CONSTRAINT [PK_Maintenance.Archive_AuditLogs] PRIMARY KEY CLUSTERED ([Id] ASC)

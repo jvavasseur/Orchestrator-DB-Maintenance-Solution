@@ -7,10 +7,15 @@
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
-         , { "path":"_src/Archive/OrchestratorDB/Logs/Table_OrchestratorDB.Maintenance.ASyncStatus_Logs.sql"}
          , { "path":"_src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjects.sql"}
+
+         , { "path":"_src/Archive/OrchestratorDB/Logs/Table_OrchestratorDB.Maintenance.ASyncStatus_Logs.sql"}
          , { "path":"_src/Archive/OrchestratorDB/Logs/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsLogs.sql"}
          , { "path":"_src/Archive/OrchestratorDB/Logs/Procedure_OrchestratorDB.Maintenance.ASyncCleanupLogs.sql"}
+
+         , { "path":"_src/Archive/OrchestratorDB/Jobs/Table_OrchestratorDB.Maintenance.ASyncStatus_Jobs.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Jobs/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsJobs.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Jobs/Procedure_OrchestratorDB.Maintenance.ASyncCleanupJobs.sql"}
 
          , { "path":"_src/Archive/OrchestratorDB/AuditLogs/Table_OrchestratorDB.Maintenance.ASyncStatus_AuditLogs.sql"}
          , { "path":"_src/Archive/OrchestratorDB/AuditLogs/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsAuditLogs.sql"}
@@ -33,6 +38,20 @@
          , { "path":"_src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjects.sql"}
          , { "path":"_src/Archive/OrchestratorDB/Logs/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsLogs.sql"}
          , { "path":"_src/Archive/OrchestratorDB/Logs/Procedure_OrchestratorDB.Maintenance.ASyncCleanupLogs.sql"}
+      ]
+   },
+   {
+      "Name":"Orchestrator Archive -= Jobs =- (Source = Orchestrator DB)",
+      "file":"Orchestrator-DB-Maintenance/Maintenance-Orchestrator-OrchestratorDB-Archive-Jobs.sql",
+      "sources":[
+         { "path":"_src/Schemas/Schema_Maintenance.sql"}
+         , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
+         , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
+         , { "path":"_src/Runs/Procedure_*.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Jobs/Table_OrchestratorDB.Maintenance.ASyncStatus_Jobs.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjects.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Jobs/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsJobs.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Jobs/Procedure_OrchestratorDB.Maintenance.ASyncCleanupJobs.sql"}
       ]
    },
    {

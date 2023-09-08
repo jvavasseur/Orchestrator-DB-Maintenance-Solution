@@ -6,22 +6,22 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- DROP PROCEDURE [Maintenance].[AddArchiveTriggerRobotLicenseLogs]
+-- DROP PROCEDURE [Maintenance].[AddArchiveTriggerJobs]
 ----------------------------------------------------------------------------------------------------
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[AddArchiveTriggerRobotLicenseLogs]') AND type in (N'P'))
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[AddArchiveTriggerJobs]') AND type in (N'P'))
 BEGIN
-    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[AddArchiveTriggerRobotLicenseLogs] AS'
-    PRINT '  + CREATE PROCEDURE: [Maintenance].[AddArchiveTriggerRobotLicenseLogs]';
+    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[AddArchiveTriggerJobs] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[AddArchiveTriggerJobs]';
 END
-ELSE PRINT '  = PROCEDURE [Maintenance].[AddArchiveTriggerRobotLicenseLogs] already exists' 
+ELSE PRINT '  = PROCEDURE [Maintenance].[AddArchiveTriggerJobs] already exists' 
 GO
 
-PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[AddArchiveTriggerRobotLicenseLogs]'
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[AddArchiveTriggerJobs]'
 GO
 
-ALTER PROCEDURE [Maintenance].[AddArchiveTriggerRobotLicenseLogs]
+ALTER PROCEDURE [Maintenance].[AddArchiveTriggerJobs]
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: PROCEDURE [Maintenance].[AddArchiveTriggerRobotLicenseLogs]
+-- ### [Object]: PROCEDURE [Maintenance].[AddArchiveTriggerJobs]
 -- ### [Version]: 2020-10-01 00:00:00                                                         
 -- ### [Source]: ??????
 -- ### [Hash]: ??????
@@ -63,8 +63,9 @@ BEGIN
         DECLARE @dryRun bit;
 
         DECLARE @startTime datetime = SYSDATETIME();
-        DECLARE @startTimeFloat float(53);
-        SELECT @startTimeFloat = CAST(@startTime AS float(53));
+--SET @StartTime = N'20230401 00:00:00';     
+DECLARE @startTimeFloat float(53);
+SELECT @startTimeFloat = CAST(@startTime AS float(53));
 
         DECLARE @triggerTime datetime;
         DECLARE @triggerFloatingTime float(53);
@@ -86,7 +87,7 @@ BEGIN
         -- Archive / Filters
         ----------------------------------------------------------------------------------------------------
         DECLARE @Ids TABLE(Id bigint);
-        DECLARE @listFilters TABLE([syncId] bigint, [tenants] int, [deleteOnly] bit, [archiveDate] datetime, [deleteDate] datetime, [next] datetime)
+        DECLARE @listFilters TABLE([syncId] bigint, [tenants] int, [state] int, [deleteOnly] bit, [archiveDate] datetime, [deleteDate] datetime, [next] datetime)
         DECLARE @countValidFilters int, @countDuplicateFilters int;
         DECLARE @targetTimestamp datetime;
         DECLARE @archiveId bigint;
@@ -174,9 +175,9 @@ BEGIN
         -- Get Proc Version
 /*
         EXEC sp_executesql @stmt = @stmtGetProcInfo, @params = @paramsGetProcInfo, @procid = @@PROCID, @info = N'Version', @output = @versionDatetime OUTPUT;
-        INSERT INTO [Maintenance].[Runs]([Type], [Info], [StartTime]) SELECT N'Add Archive RobotLicenseLogs', N'PROCEDURE ' + @procName, @startTime;
-        INSERT INTO @messages ([Message], Severity, [State])   
-        SELECT 'Add Archive RobotLicenseLogs...' , 10, 1;
+        INSERT INTO [Maintenance].[Runs]([Type], [Info], [StartTime]) SELECT N'Add Archive Jobs', N'PROCEDURE ' + @procName, @startTime;
+        INSERT INTO @messages ([Message], Severity, [State]) 
+        SELECT 'Add Archive Jobs...' , 10, 1;
 */
         ----------------------------------------------------------------------------------------------------
         -- Create new Run Id
@@ -188,7 +189,7 @@ BEGIN
         
         IF @SavedToRunId IS NULL OR NOT EXISTS(SELECT 1 FROM [Maintenance].[Runs] WHERE Id = @SavedToRunId AND EndDate IS NULL)
         BEGIN
-            INSERT INTO [Maintenance].[Runs]([Type], [Info], [StartTime]) SELECT N'Add Archive RobotLicenseLogs Trigger', N'PROCEDURE ' + @procName, @startTime;
+            INSERT INTO [Maintenance].[Runs]([Type], [Info], [StartTime]) SELECT N'Add Archive Jobs Trigger', N'PROCEDURE ' + @procName, @startTime;
             SELECT @runId = @@IDENTITY, @SavedToRunId = @@IDENTITY;
             INSERT INTO @messages ([Message], Severity, [State]) VALUES 
                 (SPACE(@tab+ @space * 1) + N'Messages saved to new Run Id: ' + CONVERT(nvarchar(MAX), @runId), 10, 1);
@@ -301,7 +302,7 @@ BEGIN
                 SELECT @json_filters = UPPER(@json_filters);
                 INSERT INTO @messages ([Message], Severity, [State]) SELECT SPACE(@tab+ @space * 1) + N'@Filters keyword used: ' + @json_filters, 10, 1
                 INSERT INTO @messages ([Message], Severity, [State]) VALUES (SPACE(@tab+ @space * 1) + N'Create JSON string and parameters...', 10, 1)
-                SELECT @json_filters = ( SELECT [tenants] = N'#' + [tenants] + N'#' FROM (VALUES(N'ACTIVE_TENANTS'), (N'DELETED_TENANTS')) t([tenants]) WHERE @json_filters = N'ALL' OR @json_filters = N'#ALL#' OR @json_filters = [tenants] OR @json_filters = N'#'+ [tenants] + N'#' FOR JSON PATH )
+                SELECT @json_filters = ( SELECT [tenants] = N'#' + [tenants] + N'#', [states] = JSON_QUERY( N'[{ "archive": "all"}]' ) FROM (VALUES(N'ACTIVE_TENANTS'), (N'DELETED_TENANTS')) t([tenants]) WHERE @json_filters = N'ALL' OR @json_filters = N'#ALL#' OR @json_filters = [tenants] OR @json_filters = N'#'+ [tenants] + N'#' FOR JSON PATH )
 
                 INSERT INTO @messages ([Message], Severity, [State]) SELECT SPACE(@tab+ @space * 1) + N'Resulting JSON string: ' + @json_filters, 10, 1
             END
@@ -312,10 +313,10 @@ BEGIN
 
             BEGIN TRY            
                 INSERT INTO @messages ([Message], Severity, [State]) VALUES (SPACE(@tab+ @space * 1) + N'Checking @Filters...', 10, 1)
-                EXEC [Maintenance].[ParseJsonArchiveRobotLicenseLogs] @Filters = @json_filters, @Settings = @json_settings OUTPUT, @Messages = @json_errors OUTPUT, @IsValid = @json_IsValid OUTPUT, @AfterHours = @globalAfterHours, @DeleteDelayHhours = @globalDeleteDelay;
+                EXEC [Maintenance].[ParseJsonArchiveJobs] @Filters = @json_filters, @Settings = @json_settings OUTPUT, @Messages = @json_errors OUTPUT, @IsValid = @json_IsValid OUTPUT, @AfterHours = @globalAfterHours, @DeleteDelayHhours = @globalDeleteDelay;
             END TRY
             BEGIN CATCH
-                SET @message = N'ERROR: error(s) occurcered while validating settings with [Maintenance].[ParseJsonArchiveRobotLicenseLogs]'
+                SET @message = N'ERROR: error(s) occurcered while validating settings with [Maintenance].[ParseJsonArchiveJobs]'
                 INSERT INTO @messages ([Message], Severity, [State]) VALUES
                         (ERROR_MESSAGE(), 10, 1)
                         , (@message, 16, 1)
@@ -340,10 +341,10 @@ BEGIN
 
         SELECT @errorCount = COUNT(*) FROM @messages WHERE severity >= 16;
         ----------------------------------------------------------------------------------------------------
-        -- Add new Archive RobotLicenseLogs
+        -- Add new Archive Jobs
         ----------------------------------------------------------------------------------------------------
         BEGIN TRY
-            INSERT INTO [Maintenance].[Archive_RobotLicenseLogs]([ParentArchiveId], [CurrentRunId], [PreviousRunIds], [Name], [Definition], [ArchiveTriggerTime], [ArchiveAfterHours], [DeleteDelayHours], [TargetId], [TargetTimestamp], [RepeatArchive], [RepeatOffsetHours], [RepeatUntil]
+            INSERT INTO [Maintenance].[Archive_Jobs]([ParentArchiveId], [CurrentRunId], [PreviousRunIds], [Name], [Definition], [ArchiveTriggerTime], [ArchiveAfterHours], [DeleteDelayHours], [TargetId], [TargetTimestamp], [RepeatArchive], [RepeatOffsetHours], [RepeatUntil]
                 -- , [AddNextArchive], [NextOffsetHours]
                 , [IsDryRun], [IsSuccess], [IsError], [IsCanceled], [Message], [IsFinished], [FinishedOnDate]
                 , [CountValidFilters], [CountDuplicateFilters] )
@@ -353,10 +354,10 @@ BEGIN
                 , 0, 0
             SET @archiveId = @@IDENTITY;
             
-            INSERT INTO @messages ([Message], Severity, [State]) VALUES (SPACE(@tab+ @space * 1) + N'Archive RobotLicenseLogs Trigger created (Id = ' + CAST(@archiveId AS nvarchar(100)) + N')' + IIF(@errorCount > 0, N' with error(s)', N'') + N'.', 10, 1);
+            INSERT INTO @messages ([Message], Severity, [State]) VALUES (SPACE(@tab+ @space * 1) + N'Archive Jobs Trigger created (Id = ' + CAST(@archiveId AS nvarchar(100)) + N')' + IIF(@errorCount > 0, N' with error(s)', N'') + N'.', 10, 1);
         END TRY
         BEGIN CATCH
-            SET @message = N'ERROR: error(s) occurcered while adding Archive RobotLicenseLogs trigger to [Maintenance].[Archive_RobotLicenseLogs]'
+            SET @message = N'ERROR: error(s) occurcered while adding Archive Jobs trigger to [Maintenance].[Archive_Jobs]'
             INSERT INTO @messages ([Message], Severity, [State]) VALUES
                     (ERROR_MESSAGE(), 10, 1)
                     , (@message, 16, 1)
@@ -370,13 +371,13 @@ BEGIN
 
             BEGIN TRY
                 -- retrieve parsed filters and update target dates
-                INSERT @listFilters ([tenants], [deleteOnly], [archiveDate], [deleteDate])
-                SELECT [tenants] = [t], [deleteOnly] = [o]
+                INSERT @listFilters ([tenants], [state], [deleteOnly], [archiveDate], [deleteDate])
+                SELECT [tenants] = [t], [states] = [s], [deleteOnly] = [o]
                     , [TargetTimestamp] = CAST(@triggerTime -ABS(@floatingHour * [h]) AS datetime) 
                     , [DeleteAfterDatetime] = CAST(@triggerTime - ABS(@floatingHour * [h]) + ABS(@floatingHour * [d]) AS datetime) 
-                FROM OPENJSON(@json_settings) WITH ([t] int, [l] int, [o] int, [h] int, [d] int) jsn
+                FROM OPENJSON(@json_settings) WITH ([t] int, [s] int, [o] int, [h] int, [d] int) jsn
 
-                SELECT @countValidFilters = COUNT(*) FROM @listFilters lst WHERE NOT EXISTS (SELECT 1 FROM [Maintenance].[Filter_RobotLicenseLogs] flt WHERE flt.TenantId = lst.tenants AND flt.TargetTimestamp >= lst.archiveDate);
+                SELECT @countValidFilters = COUNT(*) FROM @listFilters lst WHERE NOT EXISTS (SELECT 1 FROM [Maintenance].[Filter_Jobs] flt WHERE flt.TenantId = lst.tenants AND flt.StateId = lst.[state] AND flt.TargetTimestamp >= lst.archiveDate);
                 SELECT @countDuplicateFilters = COUNT(*) - @countValidFilters, @targetTimestamp = MAX(archiveDate) FROM @listFilters;
 
                 IF @countValidFilters > 0
@@ -384,22 +385,22 @@ BEGIN
                     BEGIN TRAN
 
                     -- insert archive sync by target Delete date
-                    INSERT INTO [Maintenance].[Sync_RobotLicenseLogs](ArchiveId, DeleteAfterDatetime)
+                    INSERT INTO [Maintenance].[Sync_Jobs](ArchiveId, DeleteAfterDatetime)
                     OUTPUT inserted.Id INTO @Ids(Id)
                     SELECT DISTINCT @archiveId, deleteDate FROM @listFilters ORDER BY deleteDate DESC
 
                     -- match filters with inserted Sync Id
                     UPDATE lst SET syncId = ids.Id
                     FROM @Ids ids 
-                    INNER JOIN [Maintenance].[Sync_RobotLicenseLogs] snc ON snc.Id = ids.Id
+                    INNER JOIN [Maintenance].[Sync_Jobs] snc ON snc.Id = ids.Id
                     INNER JOIN @listFilters lst ON lst.deleteDate = snc.DeleteAfterDatetime
 
                     -- insert valid filter(s)
-                    INSERT INTO [Maintenance].[Filter_RobotLicenseLogs]([SyncId],[TenantId], [DeleteOnly], [TargetTimestamp], [PreviousTimestamp])
-                    SELECT lst.syncId, lst.tenants, lst.deleteOnly, lst.archiveDate, ISNULL(last.TargetTimestamp, 0) -- 0 => 19010101
+                    INSERT INTO [Maintenance].[Filter_Jobs]([SyncId],[TenantId], [StateId], [DeleteOnly], [TargetTimestamp], [PreviousTimestamp])
+                    SELECT lst.syncId, lst.tenants, lst.[state], lst.deleteOnly, lst.archiveDate, ISNULL(last.TargetTimestamp, 0) -- 0 => 19010101
                     FROM @listFilters lst
-                    OUTER APPLY (SELECT MAX(TargetTimestamp) FROM [Maintenance].[Filter_RobotLicenseLogs] flt WHERE flt.TenantId = lst.tenants AND flt.TargetTimestamp < lst.archiveDate) last(TargetTimestamp) -- retrieve previous target date
-                    WHERE NOT EXISTS (SELECT 1 FROM [Maintenance].[Filter_RobotLicenseLogs] flt WHERE flt.TenantId = lst.tenants AND flt.TargetTimestamp >= lst.archiveDate) -- remove existing filter(s) with a newer date
+                    OUTER APPLY (SELECT MAX(TargetTimestamp) FROM [Maintenance].[Filter_Jobs] flt WHERE flt.TenantId = lst.tenants AND flt.StateId = lst.[state] AND flt.TargetTimestamp < lst.archiveDate) last(TargetTimestamp) -- retrieve previous target date
+                    WHERE NOT EXISTS (SELECT 1 FROM [Maintenance].[Filter_Jobs] flt WHERE flt.TenantId = lst.tenants AND flt.StateId = lst.[state] AND flt.TargetTimestamp >= lst.archiveDate) -- remove existing filter(s) with a newer date
 
                     SET @message = SPACE(@tab+ @space * 1) + N'Valid Filter(s) added: ' + CAST(@countValidFilters AS nvarchar(100)) + N' , duplicate(s) found (' + CAST(@countDuplicateFilters AS nvarchar(100)) + N')';
                     INSERT INTO @messages ([Message], Severity, [State]) VALUES (@message, 10, 1);
@@ -412,7 +413,7 @@ BEGIN
                     INSERT INTO @messages ([Message], Severity, [State]) VALUES (@message, 10, 1)
                 END
                 -- update valid and duplicate filter(s) count
-                UPDATE arc SET [CountValidFilters] = @countValidFilters, [CountDuplicateFilters] = @countDuplicateFilters, [TargetTimestamp] = @targetTimestamp FROM [Maintenance].[Archive_RobotLicenseLogs] arc WHERE arc.Id = @archiveId;
+                UPDATE arc SET [CountValidFilters] = @countValidFilters, [CountDuplicateFilters] = @countDuplicateFilters, [TargetTimestamp] = @targetTimestamp FROM [Maintenance].[Archive_Jobs] arc WHERE arc.Id = @archiveId;
 
                 INSERT INTO @messages ([Message], Severity, [State])
                 SELECT SPACE(@tab+ @space * 1) + N'Repeat enabled every [' + CAST(@RepeatOffsetHours AS nvarchar(100)) + N'] hour(s)' + IIF(@RepeatUntil IS NOT NULL, N' until [' + CONVERT(nvarchar(100), @RepeatUntil, 120) + N']', N''), 10, 1 WHERE @RepeatArchive = 1
@@ -503,7 +504,7 @@ BEGIN
         END
 
         --DELETE FROM @messages;
-        SELECT @Message = SPACE(@tab+ @space * 0) + 'Valid Archive RobotLicenseLogs Trigger added (SUCCESS)';
+        SELECT @Message = SPACE(@tab+ @space * 0) + 'Valid Archive Jobs Trigger added (SUCCESS)';
 		EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @Message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
 
         INSERT INTO @messages([Date], [Procedure], [Message], [Severity], [State], [Number], [Line])
@@ -528,24 +529,24 @@ BEGIN
             IF @dryRun <> 0 
             BEGIN 
                 -- Output Message result set
-                EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = 'Test Archive RobotLicenseLogs Trigger added (DRY RUN)', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
+                EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = 'Test Archive Jobs Trigger added (DRY RUN)', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
             END
             ELSE 
             BEGIN
                 SET @message = N'Execution finished with error(s)'
                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
-                EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = 'Invalid Archive RobotLicenseLogs Trigger added (FAIL)', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
+                EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = 'Invalid Archive Jobs Trigger added (FAIL)', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
                 SET @errorCount = @errorCount + 1;
                 SET @returnValue = 4;
             END
         END
         ELSE
         BEGIN
-            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = 'Invalid Archive RobotLicenseLogs Trigger added (INCORRECT PARAMETERS)', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
+            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = 'Invalid Archive Jobs Trigger added (INCORRECT PARAMETERS)', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
         END
 
             UPDATE arc SET [CountValidFilters] = 0, [CountDuplicateFilters] = 0, [IsDryRun] = @dryRun, [IsError] = @errorCount, [IsFinished] = 1, [FinishedOnDate] = SYSDATETIME()
-            FROM [Maintenance].[Archive_RobotLicenseLogs] arc WHERE arc.Id = @archiveId;
+            FROM [Maintenance].[Archive_Jobs] arc WHERE arc.Id = @archiveId;
         RAISERROR(@ERROR_MESSAGE, @ERROR_SEVERITY, @ERROR_STATE);
 
         SET @returnValue = ISNULL(@returnValue, 255);

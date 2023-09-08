@@ -7,16 +7,27 @@
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjects.sql"}
+
          , { "path":"_src/Archive/ArchiveDB/Logs/Table_ArchiveDB.Maintenance.Archive_Logs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Logs/Table_ArchiveDB.Maintenance.Sync_Logs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Logs/Table_ArchiveDB.Maintenance.Filter_Logs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Logs/Table_ArchiveDB.Maintenance.Delete_Logs.sql"}
-         , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjects.sql"}
          , { "path":"_src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjectsLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.ParseJsonArchiveLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.AddArchiveTriggerLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.ArchiveLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.CleanupSyncedLogs.sql"}
+
+         , { "path":"_src/Archive/ArchiveDB/Jobs/Table_ArchiveDB.Maintenance.Archive_Jobs.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Jobs/Table_ArchiveDB.Maintenance.Sync_Jobs.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Jobs/Table_ArchiveDB.Maintenance.Filter_Jobs.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Jobs/Table_ArchiveDB.Maintenance.Delete_Jobs.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Jobs/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjectsJobs.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Jobs/Procedure_ArchiveDB.Maintenance.ParseJsonArchiveJobs.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Jobs/Procedure_ArchiveDB.Maintenance.AddArchiveTriggerJobs.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Jobs/Procedure_ArchiveDB.Maintenance.ArchiveJobs.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Jobs/Procedure_ArchiveDB.Maintenance.CleanupSyncedJobs.sql"}
 
          , { "path":"_src/Archive/ArchiveDB/AuditLogs/Table_ArchiveDB.Maintenance.Archive_AuditLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/AuditLogs/Table_ArchiveDB.Maintenance.Sync_AuditLogs.sql"}
@@ -57,6 +68,26 @@
          , { "path":"_src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.AddArchiveTriggerLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.ArchiveLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.CleanupSyncedLogs.sql"}
+      ]
+   },
+   {
+      "Name":"Orchestrator Archive -= Jobs =- (Target = Archive DB)",
+      "file":"Orchestrator-DB-Maintenance/Maintenance-Orchestrator-ArchiveDB-Archive-Jobs.sql",
+      "sources":[
+         { "path":"_src/Schemas/Schema_Maintenance.sql"}
+         , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
+         , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
+         , { "path":"_src/Runs/Procedure_*.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Jobs/Table_ArchiveDB.Maintenance.Archive_Jobs.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Jobs/Table_ArchiveDB.Maintenance.Sync_Jobs.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Jobs/Table_ArchiveDB.Maintenance.Filter_Jobs.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Jobs/Table_ArchiveDB.Maintenance.Delete_Jobs.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjects.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Jobs/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjectsJobs.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Jobs/Procedure_ArchiveDB.Maintenance.ParseJsonArchiveJobs.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Jobs/Procedure_ArchiveDB.Maintenance.AddArchiveTriggerJobs.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Jobs/Procedure_ArchiveDB.Maintenance.ArchiveJobs.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Jobs/Procedure_ArchiveDB.Maintenance.CleanupSyncedJobs.sql"}
       ]
    },
    {

@@ -37,3 +37,4 @@ BEGIN
 	ALTER TABLE [Maintenance].[Filter_RobotLicenseLogs] CHECK CONSTRAINT [FK_Maintenance.Filter_RobotLicenseLogs-Sync_RobotLicenseLogs]
 END
 ELSE PRINT '  = Table already exists: [Maintenance].[Filter_RobotLicenseLogs]';
+GO

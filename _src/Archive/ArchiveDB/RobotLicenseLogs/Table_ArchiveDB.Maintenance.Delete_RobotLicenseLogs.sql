@@ -31,3 +31,4 @@ BEGIN
 	ALTER TABLE [Maintenance].[Delete_RobotLicenseLogs] CHECK CONSTRAINT [FK_Maintenance.Delete_RobotLicenseLogs-Sync_RobotLicenseLogs]
 END
 ELSE PRINT '  = Table already exists: [Maintenance].[Delete_RobotLicenseLogs]';
+GO

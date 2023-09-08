@@ -37,3 +37,4 @@ BEGIN
 	ALTER TABLE [Maintenance].[Filter_AuditLogs] CHECK CONSTRAINT [FK_Maintenance.Filter_AuditLogs-Sync_AuditLogs]
 END
 ELSE PRINT '  = Table already exists: [Maintenance].[Filter_AuditLogs]';
+GO

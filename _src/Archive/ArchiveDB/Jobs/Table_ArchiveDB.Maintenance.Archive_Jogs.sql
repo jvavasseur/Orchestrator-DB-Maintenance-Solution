@@ -6,7 +6,7 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: TABLE [Maintenance].[Archive_Logs]
+-- ### [Object]: TABLE [Maintenance].[Archive_Jobs]
 -- ### [Version]: 2023-07-01 00:00:00                                                         
 -- ### [Source]: ??????
 -- ### [Hash]: ??????
@@ -14,10 +14,10 @@ GO
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
 ----------------------------------------------------------------------------------------------------
-IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'Archive_Logs' AND SCHEMA_NAME(schema_id) = N'Maintenance')
+IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'Archive_Jobs' AND SCHEMA_NAME(schema_id) = N'Maintenance')
 BEGIN
-    PRINT '  + CREATE TABLE: [Maintenance].[Archive_Logs]';
-	CREATE TABLE [Maintenance].[Archive_Logs](
+    PRINT '  + CREATE TABLE: [Maintenance].[Archive_Jobs]';
+	CREATE TABLE [Maintenance].[Archive_Jobs](
 		[Id] [bigint] IDENTITY(0,1) NOT NULL
 		, [ParentArchiveId] [bigint]
 		, [CurrentRunId] [bigint] NULL
@@ -31,29 +31,29 @@ BEGIN
 		, [TargetId] [bigint] NULL
 		, [TargetTimestamp] [datetime] NULL
 		, [CurrentId] [bigint] NULL
-		, [RepeatArchive] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Logs.RepeatArchive] DEFAULT 0
-		, [RepeatOffsetHours] [smallint] NULL CONSTRAINT [DF_Maintenance.Archive_Logs.RepeatOffsetHours] CHECK (RepeatOffsetHours IS NULL OR RepeatOffsetHours > 0)
-		, [RepeatUntil] [datetime] NULL --CONSTRAINT [DF_Maintenance.Archive_Logs.AddNextArchives] DEFAULT 0
+		, [RepeatArchive] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Jobs.RepeatArchive] DEFAULT 0
+		, [RepeatOffsetHours] [smallint] NULL CONSTRAINT [DF_Maintenance.Archive_Jobs.RepeatOffsetHours] CHECK (RepeatOffsetHours IS NULL OR RepeatOffsetHours > 0)
+		, [RepeatUntil] [datetime] NULL --CONSTRAINT [DF_Maintenance.Archive_Jobs.AddNextArchives] DEFAULT 0
 		-- Status
-		, [CreationDate] [datetime] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Logs.CreationDate] DEFAULT SYSDATETIME()
-		, [IsDryRun] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Logs.IsDryRun] DEFAULT 0
-		, [IsSuccess] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Logs.IsSuccess] DEFAULT 0
-		, [IsError] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Logs.IsError] DEFAULT 0
-		, [IsCanceled] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Logs.IsCanceled] DEFAULT 0
+		, [CreationDate] [datetime] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Jobs.CreationDate] DEFAULT SYSDATETIME()
+		, [IsDryRun] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Jobs.IsDryRun] DEFAULT 0
+		, [IsSuccess] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Jobs.IsSuccess] DEFAULT 0
+		, [IsError] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Jobs.IsError] DEFAULT 0
+		, [IsCanceled] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Jobs.IsCanceled] DEFAULT 0
 		, [Message] nvarchar(MAX) NULL
 		, [CountValidFilters] int NULL
 		, [CountDuplicateFilters] int NULL
 		-- Execution
-		, [IsArchived] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Logs.IsArchived] DEFAULT 0
+		, [IsArchived] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Jobs.IsArchived] DEFAULT 0
 		, [ArchivedOnDate] [datetime] NULL
-		, [IsDeleted] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Logs.IsDeleted] DEFAULT 0
+		, [IsDeleted] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Jobs.IsDeleted] DEFAULT 0
 		, [DeletedOnDate] [datetime] NULL
-		, [IsFinished] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Logs.IsFinished] DEFAULT 0
+		, [IsFinished] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Jobs.IsFinished] DEFAULT 0
 		, [FinishedOnDate] [datetime] NULL
 		, [ToDo] AS IIF(IsArchived <> 1 AND IsFinished <> 1 AND IsDryRun <> 1 AND IsError <> 1, 1, 0)
-		, CONSTRAINT [PK_Maintenance.Archive_Logs] PRIMARY KEY CLUSTERED ([Id] ASC)
+		, CONSTRAINT [PK_Maintenance.Archive_Jobs] PRIMARY KEY CLUSTERED ([Id] ASC)
 			WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 	) ON [PRIMARY]
 END
-ELSE PRINT '  = Table already exists: [Maintenance].[Archive_Logs]';
+ELSE PRINT '  = Table already exists: [Maintenance].[Archive_Jobs]';
 GO

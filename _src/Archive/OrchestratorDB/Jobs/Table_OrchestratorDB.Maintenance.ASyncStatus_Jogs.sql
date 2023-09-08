@@ -6,7 +6,7 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: TABLE [Maintenance].[Delete_Logs]
+-- ### [Object]: TABLE [Maintenance].[ASyncStatus_Jobs]
 -- ### [Version]: 2023-07-01 00:00:00                                                         
 -- ### [Source]: ??????
 -- ### [Hash]: ??????
@@ -14,21 +14,18 @@ GO
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
 ----------------------------------------------------------------------------------------------------
-IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'Delete_Logs' AND SCHEMA_NAME(schema_id) = N'Maintenance')
+IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'ASyncStatus_Jobs' AND SCHEMA_NAME(schema_id) = N'Maintenance')
 BEGIN
-    PRINT '  + CREATE TABLE: [Maintenance].[Delete_Logs]';
-	CREATE TABLE [Maintenance].[Delete_Logs](
-		[SyncId] [bigint] NOT NULL
-		, [Id] [bigint] NOT NULL
-		, CONSTRAINT [PK_Delete_Logs] PRIMARY KEY CLUSTERED ([SyncId] ASC, [Id] ASC)
-			WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-		, INDEX [UX_Maintenance.Delete_Logs.Id] UNIQUE NONCLUSTERED (Id)		
-	) ON [PRIMARY]
+    PRINT '  + CREATE TABLE: [Maintenance].[ASyncStatus_Jobs]';
 
-	ALTER TABLE [Maintenance].[Delete_Logs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Delete_Logs-Sync_Logs] FOREIGN KEY([SyncId])
-	REFERENCES [Maintenance].[Sync_Logs] ([Id])
-	
-	ALTER TABLE [Maintenance].[Delete_Logs] CHECK CONSTRAINT [FK_Maintenance.Delete_Logs-Sync_Logs]
+	CREATE TABLE [Maintenance].[ASyncStatus_Jobs](
+		[SyncId] [bigint] NOT NULL
+		, [IsDeleted] [bit] NOT NULL CONSTRAINT [DF_Maintenance.ASyncStatus_Jobs.IsDeleted] DEFAULT 0
+		, [DeletedOnDate] [datetime] NULL
+		, [FirstASyncId] [bigint] NULL
+		, [LastAsyncId] [bigint] NULL
+		, CONSTRAINT [PK_Maintenance.ASyncStatus_Jobs] PRIMARY KEY CLUSTERED ([SyncId] ASC)
+			WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+	) ON [PRIMARY]
 END
-ELSE PRINT '  = Table already exists: [Maintenance].[Delete_Logs]';
-GO
+ELSE PRINT '  = Table already exists: [Maintenance].[ASyncStatus_Jobs]';
