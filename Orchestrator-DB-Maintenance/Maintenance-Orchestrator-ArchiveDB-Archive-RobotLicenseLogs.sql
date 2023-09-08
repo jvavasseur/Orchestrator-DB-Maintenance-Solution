@@ -329,18 +329,18 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: TABLE [Maintenance].[Archive_AuditLogs]
--- ### [Version]: 2023-09-07T15:05:21+02:00
--- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Table_ArchiveDB.Maintenance.Archive_AuditLogs.sql
--- ### [Hash]: 30c2b77 [SHA256-D0030A7D3FA082B05C5F98084D8B9858E1117B8EB8E53E20D44F70CC7EEF8FFA]
+-- ### [Object]: TABLE [Maintenance].[Archive_RobotLicenseLogs]
+-- ### [Version]: 2023-09-07T18:38:18+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/RobotLicenseLogs/Table_ArchiveDB.Maintenance.Archive_RobotLicenseLogs.sql
+-- ### [Hash]: b0839d6 [SHA256-1C9350B81D00B3FB06EAEBF5693539238643B258D03FD4A0BE971497D385B126]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
 ----------------------------------------------------------------------------------------------------
-IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'Archive_AuditLogs' AND SCHEMA_NAME(schema_id) = N'Maintenance')
+IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'Archive_RobotLicenseLogs' AND SCHEMA_NAME(schema_id) = N'Maintenance')
 BEGIN
-    PRINT '  + CREATE TABLE: [Maintenance].[Archive_AuditLogs]';
-	CREATE TABLE [Maintenance].[Archive_AuditLogs](
+    PRINT '  + CREATE TABLE: [Maintenance].[Archive_RobotLicenseLogs]';
+	CREATE TABLE [Maintenance].[Archive_RobotLicenseLogs](
 		[Id] [bigint] IDENTITY(0,1) NOT NULL
 		, [ParentArchiveId] [bigint]
 		, [CurrentRunId] [bigint] NULL
@@ -354,11 +354,11 @@ BEGIN
 		, [TargetId] [bigint] NULL
 		, [TargetTimestamp] [datetime] NULL
 		, [CurrentId] [bigint] NULL
-		, [RepeatArchive] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_AuditLogs.RepeatArchive] DEFAULT 0
-		, [RepeatOffsetHours] [smallint] NULL CONSTRAINT [DF_Maintenance.Archive.AuditLogs.RepeatOffsetHours] CHECK (RepeatOffsetHours IS NULL OR RepeatOffsetHours > 0)
-		, [RepeatUntil] [datetime] NULL --CONSTRAINT [DF_Maintenance.Archive_AuditLogs.AddNextArchives] DEFAULT 0
+		, [RepeatArchive] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_RobotLicenseLogs.RepeatArchive] DEFAULT 0
+		, [RepeatOffsetHours] [smallint] NULL CONSTRAINT [DF_Maintenance.Archive.RobotLicenseLogs.RepeatOffsetHours] CHECK (RepeatOffsetHours IS NULL OR RepeatOffsetHours > 0)
+		, [RepeatUntil] [datetime] NULL --CONSTRAINT [DF_Maintenance.Archive_RobotLicenseLogs.AddNextArchives] DEFAULT 0
 		-- Status
-		, [CreationDate] [datetime] NOT NULL CONSTRAINT [DF_Maintenance.Archive.AuditLogs_CreationDate] DEFAULT SYSDATETIME()
+		, [CreationDate] [datetime] NOT NULL CONSTRAINT [DF_Maintenance.Archive.RobotLicenseLogs_CreationDate] DEFAULT SYSDATETIME()
 		, [IsDryRun] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive.IsDryRun] DEFAULT 0
 		, [IsSuccess] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive.IsSuccess] DEFAULT 0
 		, [IsError] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive.IsError] DEFAULT 0
@@ -374,11 +374,11 @@ BEGIN
 		, [IsFinished] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive.IsFinished] DEFAULT 0
 		, [FinishedOnDate] [datetime] NULL
 		, [ToDo] AS IIF(IsArchived <> 1 AND IsFinished <> 1 AND IsDryRun <> 1 AND IsError <> 1, 1, 0)
-		, CONSTRAINT [PK_Maintenance.Archive_AuditLogs] PRIMARY KEY CLUSTERED ([Id] ASC)
+		, CONSTRAINT [PK_Maintenance.Archive_RobotLicenseLogs] PRIMARY KEY CLUSTERED ([Id] ASC)
 			WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 	) ON [PRIMARY]
 END
-ELSE PRINT '  = Table already exists: [Maintenance].[Archive_AuditLogs]';
+ELSE PRINT '  = Table already exists: [Maintenance].[Archive_RobotLicenseLogs]';
 GO
 
 SET ANSI_NULLS ON;
@@ -389,46 +389,48 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: TABLE [Maintenance].[Sync_AuditLogs]
+-- ### [Object]: TABLE [Maintenance].[Sync_RobotLicenseLogs]
 -- ### [Version]: 2023-09-07T18:38:18+02:00
--- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Table_ArchiveDB.Maintenance.Sync_AuditLogs.sql
--- ### [Hash]: b0839d6 [SHA256-C20D641082BF07EC8331864908748F005E9AB0CF1C98C4A6C1F1F892B994BBEA]
+-- ### [Source]: _src/Archive/ArchiveDB/RobotLicenseLogs/Table_ArchiveDB.Maintenance.Sync_RobotLicenseLogs.sql
+-- ### [Hash]: b0839d6 [SHA256-0D22BC47D7FD304A8842449C366394A064DD4CAE05C53F1A471A738B6B20F443]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
 ----------------------------------------------------------------------------------------------------
-IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'Sync_AuditLogs' AND SCHEMA_NAME(schema_id) = N'Maintenance')
+IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'Sync_RobotLicenseLogs' AND SCHEMA_NAME(schema_id) = N'Maintenance')
 BEGIN
-    PRINT '  + CREATE TABLE: [Maintenance].[Sync_AuditLogs]';
+    PRINT '  + CREATE TABLE: [Maintenance].[Sync_RobotLicenseLogs]';
 
-	CREATE TABLE [Maintenance].[Sync_AuditLogs](
+	CREATE TABLE [Maintenance].[Sync_RobotLicenseLogs](
 		[Id] [bigint] IDENTITY(0,1) NOT NULL
 		, [ArchiveId] [bigint] NOT NULL
 		, [DeleteAfterDatetime] [datetime] NOT NULL
-		, [IsArchived] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Sync_AuditLogs.IsArchived] DEFAULT 0
-		, [IsDeleted] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Sync_AuditLogs.IsDeleted] DEFAULT 0
+		, [IsArchived] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Sync_RobotLicenseLogs.IsArchived] DEFAULT 0
+		, [IsDeleted] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Sync_RobotLicenseLogs.IsDeleted] DEFAULT 0
 		, [DeletedOnDate] [datetime] NULL
-		, [IsSynced] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Sync_AuditLogs.IsSynced] DEFAULT 0
+		, [IsSynced] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Sync_RobotLicenseLogs.IsSynced] DEFAULT 0
 		, [SyncedOnDate] [datetime] NULL
-		, [RowcountDeleted] [bigint] NOT NULL CONSTRAINT [DF_Maintenance.Sync_AuditLogs.RowcountDeleted] DEFAULT 0
+		, [RowcountDeleted] [bigint] NOT NULL CONSTRAINT [DF_Maintenance.Sync_RobotLicenseLogs.RowcountDeleted] DEFAULT 0
 		, [FirstASyncId] [bigint] NULL
 		, [LastAsyncId] [bigint] NULL
 		, [CountASyncIds] [bigint] NULL
-		, CONSTRAINT [PK_Maintenance.Sync_AuditLogs] PRIMARY KEY CLUSTERED ([Id] ASC)
+		, CONSTRAINT [PK_Maintenance.Sync_RobotLicenseLogs] PRIMARY KEY CLUSTERED ([Id] ASC)
 			WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-		, INDEX [IX_Maintenance.Sync_AuditLogs.NotDeleted] (DeleteAfterDatetime) WHERE [Id] < 0
+--		, INDEX [IX_Maintenance.Sync_RobotLicenseLogs.NotSync] (DeleteAfterDatetime) WHERE [Id] < 0
+		, INDEX [IX_Maintenance.Sync_RobotLicenseLogs.NotDeleted] (DeleteAfterDatetime) WHERE [Id] < 0
 	) ON [PRIMARY]
 
-	CREATE UNIQUE NONCLUSTERED INDEX [IX_Maintenance.Sync_AuditLogs.NotDeleted] ON [Maintenance].[Sync_AuditLogs] (DeleteAfterDatetime) INCLUDE ([Id], [FirstASyncId], [LastAsyncId],  [CountASyncIds], [IsDeleted], [IsSynced]) 
+	CREATE UNIQUE NONCLUSTERED INDEX [IX_Maintenance.Sync_RobotLicenseLogs.NotDeleted] ON [Maintenance].[Sync_RobotLicenseLogs] (DeleteAfterDatetime) INCLUDE ([Id], [FirstASyncId], [LastAsyncId],  [CountASyncIds], [IsDeleted], [IsSynced]) 
 		WHERE CountASyncIds > 0 AND IsArchived = 1 AND [IsDeleted] <> 1 WITH ( DROP_EXISTING = ON );
+--	CREATE UNIQUE NONCLUSTERED INDEX [IX_Maintenance.Sync_RobotLicenseLogs.NotSync] ON [Maintenance].[Sync_RobotLicenseLogs] (DeleteAfterDatetime) INCLUDE ([FirstASyncId], [LastAsyncId], [Id]) WHERE IsArchived = 1 AND [IsDeleted] = 1 AND IsSynced <> 1 WITH ( DROP_EXISTING = ON );
 
-	ALTER TABLE [Maintenance].[Sync_AuditLogs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Sync_AuditLogs-Archive_AuditLogs] FOREIGN KEY([ArchiveId])
-	REFERENCES [Maintenance].[Archive_AuditLogs] ([Id])
+	ALTER TABLE [Maintenance].[Sync_RobotLicenseLogs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Sync_RobotLicenseLogs-Archive_RobotLicenseLogs] FOREIGN KEY([ArchiveId])
+	REFERENCES [Maintenance].[Archive_RobotLicenseLogs] ([Id])
 	ON DELETE CASCADE
 
-	ALTER TABLE [Maintenance].[Sync_AuditLogs] CHECK CONSTRAINT [FK_Maintenance.Sync_AuditLogs-Archive_AuditLogs]
+	ALTER TABLE [Maintenance].[Sync_RobotLicenseLogs] CHECK CONSTRAINT [FK_Maintenance.Sync_RobotLicenseLogs-Archive_RobotLicenseLogs]
 END
-ELSE PRINT '  = Table already exists: [Maintenance].[Sync_AuditLogs]';
+ELSE PRINT '  = Table already exists: [Maintenance].[Sync_RobotLicenseLogs]';
 
 SET ANSI_NULLS ON;
 GO
@@ -438,37 +440,37 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: TABLE [Maintenance].[Filter_AuditLogs]
--- ### [Version]: 2023-09-07T15:05:21+02:00
--- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Table_ArchiveDB.Maintenance.Filter_AuditLogs.sql
--- ### [Hash]: 30c2b77 [SHA256-26237EB17675007A00B354D607DAB5F464D3B1B5510D6651BA742A510348C4BC]
+-- ### [Object]: TABLE [Maintenance].[Filter_RobotLicenseLogs]
+-- ### [Version]: 2023-09-07T18:38:18+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/RobotLicenseLogs/Table_ArchiveDB.Maintenance.Filter_RobotLicenseLogs.sql
+-- ### [Hash]: b0839d6 [SHA256-6726C4524FC98E4D4FA6FC81DF496721BBC2D4C17709D1BFC39DC84006BEF6EA]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
 ----------------------------------------------------------------------------------------------------
-IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'Filter_AuditLogs' AND SCHEMA_NAME(schema_id) = N'Maintenance')
+IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'Filter_RobotLicenseLogs' AND SCHEMA_NAME(schema_id) = N'Maintenance')
 BEGIN
-    PRINT '  + CREATE TABLE: [Maintenance].[Filter_AuditLogs]';
-	CREATE TABLE [Maintenance].[Filter_AuditLogs](
+    PRINT '  + CREATE TABLE: [Maintenance].[Filter_RobotLicenseLogs]';
+	CREATE TABLE [Maintenance].[Filter_RobotLicenseLogs](
 		[SyncId] [bigint] NOT NULL,
 		[TenantId] [int] NOT NULL,
 		[DeleteOnly] [bit] NOT NULL,
 		[TargetTimestamp] [datetime] NOT NULL,
 		[PreviousTimestamp] [datetime] NOT NULL,
-		[IsArchived] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Filter_AuditLogs.IsArchived] DEFAULT 0,
+		[IsArchived] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Filter_RobotLicenseLogs.IsArchived] DEFAULT 0,
 		[CurrentId] [bigint] NULL,
 		[TargetId] [bigint] NULL,
-		CONSTRAINT [PK_Maintenance.Filter_AuditLogs] PRIMARY KEY CLUSTERED ([SyncId] ASC, [TenantId] ASC
+		CONSTRAINT [PK_Maintenance.Filter_RobotLicenseLogs] PRIMARY KEY CLUSTERED ([SyncId] ASC, [TenantId] ASC
 			WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-		, INDEX [IX_Maintenance.Filter_AuditLogs.LastId] NONCLUSTERED (TenantId, LevelId, TargetId) WHERE IsArchived = 1 AND [TargetId] IS NOT NULL AND [CurrentId] IS NOT NULL --AND [CurrentId] = [TargetId]
+		, INDEX [IX_Maintenance.Filter_RobotLicenseLogs.LastId] NONCLUSTERED (TenantId, LevelId, TargetId) WHERE IsArchived = 1 AND [TargetId] IS NOT NULL AND [CurrentId] IS NOT NULL --AND [CurrentId] = [TargetId]
 	) ON [PRIMARY]
 
-	ALTER TABLE [Maintenance].[Filter_AuditLogs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Filter_AuditLogs-Sync_AuditLogs] FOREIGN KEY([SyncId])
-	REFERENCES [Maintenance].[Sync_AuditLogs] ([Id])
+	ALTER TABLE [Maintenance].[Filter_RobotLicenseLogs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Filter_RobotLicenseLogs-Sync_RobotLicenseLogs] FOREIGN KEY([SyncId])
+	REFERENCES [Maintenance].[Sync_RobotLicenseLogs] ([Id])
 
-	ALTER TABLE [Maintenance].[Filter_AuditLogs] CHECK CONSTRAINT [FK_Maintenance.Filter_AuditLogs-Sync_AuditLogs]
+	ALTER TABLE [Maintenance].[Filter_RobotLicenseLogs] CHECK CONSTRAINT [FK_Maintenance.Filter_RobotLicenseLogs-Sync_RobotLicenseLogs]
 END
-ELSE PRINT '  = Table already exists: [Maintenance].[Filter_AuditLogs]';
+ELSE PRINT '  = Table already exists: [Maintenance].[Filter_RobotLicenseLogs]';
 
 SET ANSI_NULLS ON;
 GO
@@ -478,31 +480,31 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: TABLE [Maintenance].[Delete_AuditLogs]
--- ### [Version]: 2023-09-07T15:05:21+02:00
--- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Table_ArchiveDB.Maintenance.Delete_AuditLogs.sql
--- ### [Hash]: 30c2b77 [SHA256-DD9F12C3B95DFE2CE31BAB63F3B064A8FAC915446463E99858DDE026D400CCA0]
+-- ### [Object]: TABLE [Maintenance].[Delete_RobotLicenseLogs]
+-- ### [Version]: 2023-09-07T18:38:18+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/RobotLicenseLogs/Table_ArchiveDB.Maintenance.Delete_RobotLicenseLogs.sql
+-- ### [Hash]: b0839d6 [SHA256-B59BE97716AAADB556C81DF8E08A2F1F37E88C22551254AC33782E816FE980B1]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
 ----------------------------------------------------------------------------------------------------
-IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'Delete_AuditLogs' AND SCHEMA_NAME(schema_id) = N'Maintenance')
+IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'Delete_RobotLicenseLogs' AND SCHEMA_NAME(schema_id) = N'Maintenance')
 BEGIN
-    PRINT '  + CREATE TABLE: [Maintenance].[Delete_AuditLogs]';
-	CREATE TABLE [Maintenance].[Delete_AuditLogs](
+    PRINT '  + CREATE TABLE: [Maintenance].[Delete_RobotLicenseLogs]';
+	CREATE TABLE [Maintenance].[Delete_RobotLicenseLogs](
 		[SyncId] [bigint] NOT NULL
 		, [Id] [bigint] NOT NULL
-		, CONSTRAINT [PK_Delete_AuditLogs] PRIMARY KEY CLUSTERED ([SyncId] ASC, [Id] ASC)
+		, CONSTRAINT [PK_Delete_RobotLicenseLogs] PRIMARY KEY CLUSTERED ([SyncId] ASC, [Id] ASC)
 			WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-		, INDEX [UX_Maintenance.Delete_AuditLogs.Id] UNIQUE NONCLUSTERED (Id)		
+		, INDEX [UX_Maintenance.Delete_RobotLicenseLogs.Id] UNIQUE NONCLUSTERED (Id)		
 	) ON [PRIMARY]
 
-	ALTER TABLE [Maintenance].[Delete_AuditLogs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Delete_AuditLogs-Sync_AuditLogs] FOREIGN KEY([SyncId])
-	REFERENCES [Maintenance].[Sync_AuditLogs] ([Id])
+	ALTER TABLE [Maintenance].[Delete_RobotLicenseLogs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Delete_RobotLicenseLogs-Sync_RobotLicenseLogs] FOREIGN KEY([SyncId])
+	REFERENCES [Maintenance].[Sync_RobotLicenseLogs] ([Id])
 	
-	ALTER TABLE [Maintenance].[Delete_AuditLogs] CHECK CONSTRAINT [FK_Maintenance.Delete_AuditLogs-Sync_AuditLogs]
+	ALTER TABLE [Maintenance].[Delete_RobotLicenseLogs] CHECK CONSTRAINT [FK_Maintenance.Delete_RobotLicenseLogs-Sync_RobotLicenseLogs]
 END
-ELSE PRINT '  = Table already exists: [Maintenance].[Delete_AuditLogs]';
+ELSE PRINT '  = Table already exists: [Maintenance].[Delete_RobotLicenseLogs]';
 
 SET ANSI_NULLS ON;
 GO
@@ -953,43 +955,39 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- DROP PROCEDURE [Maintenance].[ValidateArchiveObjectsAuditLogs]
+-- DROP PROCEDURE [Maintenance].[ValidateArchiveObjectsRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[ValidateArchiveObjectsAuditLogs]') AND type in (N'P'))
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[ValidateArchiveObjectsRobotLicenseLogs]') AND type in (N'P'))
 BEGIN
-    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[ValidateArchiveObjectsAuditLogs] AS'
-    PRINT '  + CREATE PROCEDURE: [Maintenance].[ValidateArchiveObjectsAuditLogs]';
+    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[ValidateArchiveObjectsRobotLicenseLogs] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[ValidateArchiveObjectsRobotLicenseLogs]';
 END
-ELSE PRINT '  = PROCEDURE [Maintenance].[ValidateArchiveObjectsAuditLogs] already exists' 
+ELSE PRINT '  = PROCEDURE [Maintenance].[ValidateArchiveObjectsRobotLicenseLogs] already exists' 
 GO
 
-PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[ValidateArchiveObjectsAuditLogs]'
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[ValidateArchiveObjectsRobotLicenseLogs]'
 GO
 
-ALTER PROCEDURE [Maintenance].[ValidateArchiveObjectsAuditLogs]
+ALTER PROCEDURE [Maintenance].[ValidateArchiveObjectsRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: PROCEDURE [Maintenance].[ValidateArchiveObjectsAuditLogs]
--- ### [Version]: 2023-09-07T18:02:09+02:00
--- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjectsAuditLogs.sql
--- ### [Hash]: 90145a7 [SHA256-78DFC722B2F3AA64794FD6A736E10AF25350B5EB1E39B110C24EA6D35BBB8B84]
+-- ### [Object]: PROCEDURE [Maintenance].[ValidateArchiveObjectsRobotLicenseLogs]
+-- ### [Version]: 2023-09-07T18:38:18+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/RobotLicenseLogs/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjectsRobotLicenseLogs.sql
+-- ### [Hash]: b0839d6 [SHA256-FB3F9BEADD6511BAF11596359827BDCA23F3B6D43C9D869CCC0D7ECA0140D186]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
 -- !!! ~~~~~~~~~ SQL Server >= 2016 SP1
 ----------------------------------------------------------------------------------------------------
 	@ArchiveTableFullParts nvarchar(256) = NULL
-	, @SourceEntitiesTableFullParts nvarchar(256) = NULL
-	, @ArchiveEntitiesTableFullParts nvarchar(256) = NULL
 	, @SourceTableFullParts nvarchar(256) = NULL
     , @ASyncStatusTableFullParts nvarchar(256) = NULL
     , @ExcludeColumns nvarchar(MAX) = NULL
-    , @ExcludeEntitiesColumns nvarchar(MAX) = NULL
     , @IgnoreMissingColumns nvarchar(MAX) = NULL
     , @CreateOrUpdateSynonyms bit = 0
     , @CreateTable bit = 0
     , @UpdateTable bit = 0
     , @SourceColumns nvarchar(MAX) = NULL OUTPUT
-    , @SourceEntitiesColumns nvarchar(MAX) = NULL OUTPUT
     , @IsValid bit = 0 OUTPUT
     , @Messages nvarchar(MAX) = NULL OUTPUT
 AS
@@ -1003,21 +1001,13 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         -- Settings
         ----------------------------------------------------------------------------------------------------
-        DECLARE @synonymSourceName nvarchar(256) = N'Synonym_Source_AuditLogs';
+        DECLARE @synonymSourceName nvarchar(256) = N'Synonym_Source_RobotLicenseLogs';
         DECLARE @synonymSourceSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymArchiveName nvarchar(256) = N'Synonym_Archive_AuditLogs';
+        DECLARE @synonymArchiveName nvarchar(256) = N'Synonym_Archive_RobotLicenseLogs';
         DECLARE @synonymArchiveSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymSourceEntitiesName nvarchar(256) = N'Synonym_Source_AuditLogEntities';
-        DECLARE @synonymSourceEntitiesSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymArchiveEntitiesName nvarchar(256) = N'Synonym_Archive_AuditLogsEntities';
-        DECLARE @synonymArchiveEntitiesSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_AuditLogs';
+        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_RobotLicenseLogs';
         DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
         DECLARE @clusteredName nvarchar(128) = N'Id';
-        DECLARE @auditLogsValid bit = 0;
-        DECLARE @auditLogsEntitiesValid bit = 0;
-        DECLARE @auditLogsMessages nvarchar(MAX);
-        DECLARE @auditLogsEntitiesMessages nvarchar(MAX);
         ----------------------------------------------------------------------------------------------------      
         -- Message / Error Handling
         ----------------------------------------------------------------------------------------------------
@@ -1044,43 +1034,9 @@ BEGIN
             , @CreateTable = @CreateTable
             , @UpdateTable = @UpdateTable
             , @SourceColumns = @SourceColumns OUTPUT
-            , @IsValid = @auditLogsValid OUTPUT
-            , @Messages = @auditLogsMessages  OUTPUT
+            , @IsValid = @IsValid OUTPUT
+            , @Messages = @Messages  OUTPUT
         ;
-        EXEC [Maintenance].[ValidateArchiveObjects]
-            @SynonymSourceName = @synonymSourceEntitiesName
-            , @SynonymSourceSchema = @synonymSourceEntitiesSchema
-            , @SynonymArchiveName = @synonymArchiveEntitiesName
-            , @SynonymArchiveSchema = @synonymArchiveEntitiesSchema
-            , @synonymASyncStatusName = @synonymASyncStatusName
-            , @synonymASyncStatusSchema = @synonymASyncStatusSchema
-            , @ClusteredName = @clusteredName
-            , @ArchiveTableFullParts = @ArchiveEntitiesTableFullParts
-            , @SourceTableFullParts = @SourceEntitiesTableFullParts
-            , @ExcludeColumns = @ExcludeEntitiesColumns
-            , @IgnoreMissingColumns = @IgnoreMissingColumns
-            , @ASyncStatusTableFullParts = NULL
-            , @CreateOrUpdateSynonyms = @CreateOrUpdateSynonyms
-            , @CreateTable = @CreateTable
-            , @UpdateTable = @UpdateTable
-            , @SourceColumns = @SourceEntitiesColumns OUTPUT
-            , @IsValid = @auditLogsEntitiesValid OUTPUT
-            , @Messages = @auditLogsEntitiesMessages OUTPUT
-        ;
-        SELECT @IsValid = IIF(@auditLogsValid = 1 AND @auditLogsEntitiesValid = 1, 1, 0);
-
-    SET @Messages = --ISNULL(
-    ( 
-        SELECT [Procedure] = QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')), [Message], [Severity], [State] 
-        FROM (
-            SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@auditLogsMessages, N'$') WITH ([Procedure] nvarchar(128) N'$.Procedure', [Message] nvarchar(128) N'$.Message', [Severity] int, [State] smallint)
-            UNION
-            SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@auditLogsEntitiesMessages, N'$') WITH ([Procedure] nvarchar(128) N'$.Procedure', [Message] nvarchar(128) N'$.Message', [Severity] int, [State] smallint)
-        ) jsn
-        FOR JSON PATH
-    );
-
-
     END TRY
     BEGIN CATCH
         SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();
@@ -1109,25 +1065,25 @@ GO
 
 
 ----------------------------------------------------------------------------------------------------
--- DROP PROCEDURE [Maintenance].[ParseJsonArchiveAuditLogs]
+-- DROP PROCEDURE [Maintenance].[ParseJsonArchiveRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[ParseJsonArchiveAuditLogs]') AND type in (N'P'))
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[ParseJsonArchiveRobotLicenseLogs]') AND type in (N'P'))
 BEGIN
-        EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[ParseJsonArchiveAuditLogs] AS'
-    PRINT '  + CREATE PROCEDURE: [Maintenance].[ParseJsonArchiveAuditLogs]';
+        EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[ParseJsonArchiveRobotLicenseLogs] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[ParseJsonArchiveRobotLicenseLogs]';
 END
-ELSE PRINT '  = PROCEDURE [Maintenance].[ParseJsonArchiveAuditLogs] already exists' 
+ELSE PRINT '  = PROCEDURE [Maintenance].[ParseJsonArchiveRobotLicenseLogs] already exists' 
 GO
 
-PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[ParseJsonArchiveAuditLogs]'
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[ParseJsonArchiveRobotLicenseLogs]'
 GO
 
-ALTER PROCEDURE [Maintenance].[ParseJsonArchiveAuditLogs]
+ALTER PROCEDURE [Maintenance].[ParseJsonArchiveRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: PROCEDURE [Maintenance].[ParseJsonArchiveAuditLogs]
+-- ### [Object]: PROCEDURE [Maintenance].[ParseJsonArchiveRobotLicenseLogs]
 -- ### [Version]: 2023-09-07T18:38:18+02:00
--- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.ParseJsonArchiveAuditLogs.sql
--- ### [Hash]: b0839d6 [SHA256-449C40742B1BDB440179148575164EBD7B67A94106976D254DC4220CB54BD89C]
+-- ### [Source]: _src/Archive/ArchiveDB/RobotLicenseLogs/Procedure_ArchiveDB.Maintenance.ParseJsonArchiveRobotLicenseLogs.sql
+-- ### [Hash]: b0839d6 [SHA256-8B519448588B67E8CCE360C4012A4F036C72502113BCE8D4CC8156DFCF7D4106]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -1571,9 +1527,9 @@ GO
 ALTER PROCEDURE [Maintenance].[AddArchiveTriggerAuditLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[AddArchiveTriggerAuditLogs]
--- ### [Version]: 2023-09-07T18:02:09+02:00
--- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.AddArchiveTriggerAuditLogs.sql
--- ### [Hash]: 90145a7 [SHA256-D13ADA854E8759A471DA41A52F3C9B189B96FFE98A2F10771B531FF9D4FCC768]
+-- ### [Version]: 2023-09-07T18:38:18+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/RobotLicenseLogs/Procedure_ArchiveDB.Maintenance.AddArchiveTriggerRobotLicenseLogs.sql
+-- ### [Hash]: b0839d6 [SHA256-D13ADA854E8759A471DA41A52F3C9B189B96FFE98A2F10771B531FF9D4FCC768]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -2126,26 +2082,26 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- DROP PROCEDURE [Maintenance].[ArchiveAuditLogs]
+-- DROP PROCEDURE [Maintenance].[ArchiveRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
 
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[ArchiveAuditLogs]') AND type in (N'P'))
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[ArchiveRobotLicenseLogs]') AND type in (N'P'))
 BEGIN
-    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[ArchiveAuditLogs] AS'
-    PRINT '  + CREATE PROCEDURE: [Maintenance].[ArchiveAuditLogs]';
+    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[ArchiveRobotLicenseLogs] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[ArchiveRobotLicenseLogs]';
 END
-ELSE PRINT '  = PROCEDURE [Maintenance].[ArchiveAuditLogs] already exists' 
+ELSE PRINT '  = PROCEDURE [Maintenance].[ArchiveRobotLicenseLogs] already exists' 
 GO
 
-PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[ArchiveAuditLogs]'
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[ArchiveRobotLicenseLogs]'
 GO  
 
-ALTER PROCEDURE [Maintenance].[ArchiveAuditLogs]
+ALTER PROCEDURE [Maintenance].[ArchiveRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: PROCEDURE [Maintenance].[ArchiveAuditLogs]
--- ### [Version]: 2023-09-07T18:14:12+02:00
--- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.ArchiveAuditLogs.sql
--- ### [Hash]: 914e4af [SHA256-B9B5D3B9E2140F724975A2FBDCA8E09CD3D494ACA99BAB590B21FA62DC89DD5F]
+-- ### [Object]: PROCEDURE [Maintenance].[ArchiveRobotLicenseLogs]
+-- ### [Version]: 2023-09-07T18:38:18+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/RobotLicenseLogs/Procedure_ArchiveDB.Maintenance.ArchiveRobotLicenseLogs.sql
+-- ### [Hash]: b0839d6 [SHA256-CADE253C9A3A1B0F1DB00DCABC1675168ACD34F5BF2444F08579C66D8633F692]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -2167,7 +2123,6 @@ ALTER PROCEDURE [Maintenance].[ArchiveAuditLogs]
     , @CreateArchiveTable nvarchar(MAX) = NULL -- Y{es} or N{o} => Archive table refered by Synonym is create when missing (default if NULL or empty = N)
     , @UpdateArchiveTable nvarchar(MAX) = NULL -- Y{es} or N{o} => Archive table refered by Synonym is update when column(s) are missing (default if NULL or empty = N)
     , @ExcludeColumns nvarchar(MAX) = NULL -- JSON string with array of string with column name(s)
-    , @ExcludeEntitiesColumns nvarchar(MAX) = NULL -- JSON string with array of string with column name(s)
     /* Error Handling */
     , @OnErrorRetry tinyint = NULL -- between 0 and 20 => retry up to 20 times (default if NULL = 10)
     , @OnErrorWaitMillisecond smallint = 1000 -- wait for milliseconds between each Retry (default if NULL = 1000ms)
@@ -2231,8 +2186,6 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         DECLARE @archivedColumns nvarchar(MAX);
         DECLARE @sqlArchive nvarchar(MAX);
-        DECLARE @archivedEntitiesColumns nvarchar(MAX);
-        DECLARE @sqlArchiveEntities nvarchar(MAX);
         ----------------------------------------------------------------------------------------------------
         -- Delete 
         ----------------------------------------------------------------------------------------------------
@@ -2316,12 +2269,10 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         DECLARE @synonymMessages nvarchar(MAX);
         DECLARE @sourceColumns nvarchar(MAX);
-        DECLARE @sourceEntitiesColumns nvarchar(MAX);
         DECLARE @synonymIsValid bit;
         DECLARE @synonymCreateTable bit;
         DECLARE @synonymUpdateTable bit;
         DECLARE @synonymExcludeColumns nvarchar(MAX) 
-        DECLARE @synonymExcludeEntitiesColumns nvarchar(MAX) 
         ----------------------------------------------------------------------------------------------------      
         -- Message / Error Handling
         ----------------------------------------------------------------------------------------------------
@@ -2488,11 +2439,6 @@ BEGIN
         IF ISJSON(@synonymExcludeColumns) = 0 
         INSERT INTO @messages ([Message], Severity, [State]) SELECT N'ERROR: @synonymExcludeColumns is not a valid JSON string with an array of string(s) ["col1", "col2", ...]', 16, 1 WHERE ISJSON(@synonymExcludeColumns) = 0;
 
-        -- Check Exclude Entities columns
-        SELECT @synonymExcludeEntitiesColumns = NULLIF(LTRIM(RTRIM(@ExcludeEntitiesColumns)), N'');
-        IF ISJSON(@synonymExcludeEntitiesColumns) = 0 
-        INSERT INTO @messages ([Message], Severity, [State]) SELECT N'ERROR: @synonymExcludeEntitiesColumns is not a valid JSON string with an array of string(s) ["col1", "col2", ...]', 16, 1 WHERE ISJSON(@synonymExcludeEntitiesColumns) = 0;
-
 		----------------------------------------------------------------------------------------------------
         -- Check Output Settings
         ----------------------------------------------------------------------------------------------------
@@ -2509,11 +2455,11 @@ BEGIN
 		----------------------------------------------------------------------------------------------------
         -- Check Permissions
         ----------------------------------------------------------------------------------------------------
-/*        -- Check SELECT & DELETE permission on [dbo].[AuditLogs]
+/*        -- Check SELECT & DELETE permission on [dbo].[RobotLicenseLogs]
         INSERT INTO @messages ([Message], Severity, [State])
         SELECT 'Permission not effectively granted: ' + UPPER(p.permission_name), 10, 1
         FROM (VALUES(N'', N'SELECT'), (N'', N'DELETE')) AS p (subentity_name, permission_name)
-        LEFT JOIN sys.fn_my_permissions(N'[dbo].[AuditLogs]', N'OBJECT') eff ON eff.subentity_name = p.subentity_name AND eff.permission_name = p.permission_name
+        LEFT JOIN sys.fn_my_permissions(N'[dbo].[RobotLicenseLogs]', N'OBJECT') eff ON eff.subentity_name = p.subentity_name AND eff.permission_name = p.permission_name
         WHERE eff.permission_name IS NULL
         ORDER BY p.permission_name;
 */
@@ -2521,7 +2467,7 @@ BEGIN
         BEGIN
             INSERT INTO @messages ([Message], Severity, [State]) VALUES
                 (N'Error: missing permission', 10, 1)
-                , (N'SELECT and DELETE permissions are required on [dbo].[AuditLogs] table', 16, 1);
+                , (N'SELECT and DELETE permissions are required on [dbo].[RobotLicenseLogs] table', 16, 1);
         END
 
         -- Check @SaveMessagesToTable parameter
@@ -2646,7 +2592,7 @@ BEGIN
         
         IF @SavedToRunId IS NULL OR NOT EXISTS(SELECT 1 FROM [Maintenance].[Runs] WHERE Id = @SavedToRunId AND EndDate IS NULL)
         BEGIN
-            INSERT INTO [Maintenance].[Runs]([Type], [Info], [StartTime]) SELECT N'Add Archive AuditLogs Trigger', N'PROCEDURE ' + @procName, @startTime;
+            INSERT INTO [Maintenance].[Runs]([Type], [Info], [StartTime]) SELECT N'Add Archive RobotLicenseLogs Trigger', N'PROCEDURE ' + @procName, @startTime;
             SELECT @runId = @@IDENTITY, @SavedToRunId = @@IDENTITY;
             INSERT INTO @messages ([Message], Severity, [State]) VALUES 
                 (N'Messages saved to new Run Id: ' + CONVERT(nvarchar(MAX), @runId), 10, 1);
@@ -2660,8 +2606,8 @@ BEGIN
         BEGIN
             -- Check Synonyms and source/Archive tables
             BEGIN TRY            
-                EXEC [Maintenance].[ValidateArchiveObjectsAuditLogs] @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT, @CreateTable = @synonymCreateTable, @UpdateTable = @synonymUpdateTable, @SourceColumns = @sourceColumns OUTPUT, @ExcludeColumns = @synonymExcludeColumns, @sourceEntitiesColumns = @sourceEntitiesColumns OUTPUT, @synonymExcludeEntitiesColumns = @synonymExcludeEntitiesColumns OUTPUT;
-
+                EXEC [Maintenance].[ValidateArchiveObjectsRobotLicenseLogs] @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT, @CreateTable = @synonymCreateTable, @UpdateTable = @synonymUpdateTable, @SourceColumns = @sourceColumns OUTPUT, @ExcludeColumns = @synonymExcludeColumns;
+                
                 INSERT INTO @messages ([Procedure], [Message], Severity, [State])
                 SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@synonymMessages, N'$') WITH ([Procedure] nvarchar(MAX), [Message] nvarchar(MAX), [Severity] tinyint, [State] tinyint);
 
@@ -2687,11 +2633,11 @@ BEGIN
                 SELECT @archivedColumns = NULL;
                 SELECT @archivedColumns = COALESCE(@archivedColumns + N', ' + QUOTENAME([value]), QUOTENAME([value])) FROM OPENJSON(@sourceColumns)
                 SELECT @sqlArchive = N'
-                    INSERT INTO [Maintenance].[Synonym_Archive_AuditLogs](' + @archivedColumns + N')
+                    INSERT INTO [Maintenance].[Synonym_Archive_RobotLicenseLogs](' + @archivedColumns + N')
                     SELECT ' + @archivedColumns + N' 
                     FROM #tempListIds ids
-                    INNER JOIN [Maintenance].[Synonym_Source_AuditLogs] src ON ids.tempId = src.Id
-                    WHERE tempDeleteOnly = 0 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Synonym_Archive_AuditLogs] WHERE Id = ids.tempId)';
+                    INNER JOIN [Maintenance].[Synonym_Source_RobotLicenseLogs] src ON ids.tempId = src.Id
+                    WHERE tempDeleteOnly = 0 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Synonym_Archive_RobotLicenseLogs] WHERE Id = ids.tempId)';
                 INSERT INTO @messages ([Message], Severity, [State]) VALUES 
                 (N'Archive query: ' + ISNULL(@sqlArchive, N'-'), 10, 1);
             END TRY
@@ -2701,30 +2647,6 @@ BEGIN
                 -- Save Unknwon Errror
                 INSERT INTO @messages ([Message], Severity, [State]) VALUES 
                     (N'ERORR: error(s) occured while preparing archive SQL query', 16, 1);
-                THROW;
-            END CATCH
-        END
-        -- Prepare Entities columns and archive query
-        IF NOT EXISTS(SELECT 1 FROM @messages WHERE severity > 10)
-        BEGIN
-            BEGIN TRY
-                SELECT @archivedEntitiesColumns = NULL;
-                SELECT @archivedEntitiesColumns = COALESCE(@archivedEntitiesColumns + N', ' + QUOTENAME([value]), QUOTENAME([value])) FROM OPENJSON(@sourceEntitiesColumns)
-                SELECT @sqlArchive = N'
-                    INSERT INTO [Maintenance].[Synonym_Archive_AuditLogsEntities](' + @archivedEntitiesColumns + N')
-                    SELECT ' + @archivedEntitiesColumns + N' 
-                    FROM #tempListIds ids
-                    INNER JOIN [Maintenance].[Synonym_Source_AuditLogsEntities] src ON ids.tempId = src.AuditLogId
-                    WHERE tempDeleteOnly = 0 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Synonym_Archive_AuditLogsEntities] WHERE Id = ids.tempId)';
-                INSERT INTO @messages ([Message], Severity, [State]) VALUES 
-                (N'Archive Entities query: ' + ISNULL(@sqlArchive, N'-'), 10, 1);
-            END TRY
-            BEGIN CATCH
-                -- Get Unknown error
-                SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();
-                -- Save Unknwon Errror
-                INSERT INTO @messages ([Message], Severity, [State]) VALUES 
-                    (N'ERORR: error(s) occured while preparing archive Entities SQL query', 16, 1);
                 THROW;
             END CATCH
         END
@@ -2843,16 +2765,16 @@ BEGIN
                 SELECT TOP(@topLoopFilters) snc.ArchiveId, flt.SyncId, CurrentId = ISNULL(flt.CurrentId, 0), flt.TargetId, flt.TargetTimeStamp, flt.PreviousTimestamp , flt.TenantId, flt.DeleteOnly
                     , IIF( @deleteIfNoDelay = 1 AND (snc.DeleteAfterDatetime = flt.TargetTimestamp OR @ignoreDelay = 1), 1, 0)
                     , OrderId = ROW_NUMBER() OVER(PARTITION BY flt.TenantId ORDER BY flt.TargetTimeStamp ASC)
-                FROM [Maintenance].[Filter_AuditLogs] flt 
-                INNER JOIN [Maintenance].[Sync_AuditLogs] snc ON snc.Id = flt.SyncId
-                INNER JOIN [Maintenance].[Archive_AuditLogs] arc ON arc.Id = snc.ArchiveId
+                FROM [Maintenance].[Filter_RobotLicenseLogs] flt 
+                INNER JOIN [Maintenance].[Sync_RobotLicenseLogs] snc ON snc.Id = flt.SyncId
+                INNER JOIN [Maintenance].[Archive_RobotLicenseLogs] arc ON arc.Id = snc.ArchiveId
                 WHERE flt.IsArchived = 0 AND snc.IsArchived = 0 AND (flt.TargetId IS NULL OR flt.CurrentId IS NULL OR flt.CurrentId < flt.TargetId) AND arc.ToDo = 1 AND arc.ArchiveTriggerTime < @StartTime
                 ORDER BY flt.PreviousTimestamp ASC, TargetTimestamp ASC;
 
                 SELECT @countFilterIds = ISNULL(COUNT(*), 0), @countArchiveIds = ISNULL(COUNT(DISTINCT ArchiveId), 0) FROM #tempListFilters;
                 SELECT @targetTimestamp = MAX(TargetTimeStamp) FROM #tempListFilters WHERE TargetTimeStamp IS NOT NULL;
 
-                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_AuditLogs] WITH(INDEX([IX_Machine])) WHERE TimeStamp <= @targetTimestamp;
+                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_RobotLicenseLogs] WITH(INDEX([IX_Machine])) WHERE TimeStamp <= @targetTimestamp;
                 DECLARE @maxTargetId bigint;
 
                 SELECT @maxTargetId = MAX(ISNULL(TargetId, 0)) FROM #tempListFilters;
@@ -2877,9 +2799,9 @@ BEGIN
 
                 INSERT INTO #tempRepeatTriggersTable(Id, [Name], [Definition], ArchiveTriggerTime, ArchiveAfterHours, DeleteDelayHours, RepeatArchive, RepeatOffsetHours, RepeatUntil, CountValidFilters)
                 SELECT Id, [Name]/*, [PreviousRunIds]*/, [Definition]/*, TargetTimestamp*/, CAST( CAST(ArchiveTriggerTime AS float(53)) + ABS(@floatingHour * RepeatOffsetHours) AS datetime), ArchiveAfterHours, DeleteDelayHours, RepeatArchive, RepeatOffsetHours, RepeatUntil, CountValidFilters
-                FROM [Maintenance].[Archive_AuditLogs] arc 
+                FROM [Maintenance].[Archive_RobotLicenseLogs] arc 
                 WHERE arc.[ToDo] = 1 AND arc.RepeatArchive = 1 AND (RepeatUntil IS NULL OR RepeatUntil >= CAST( CAST(ArchiveTriggerTime AS float(53)) + ABS(@floatingHour * RepeatOffsetHours) AS datetime))
-                    AND NOT EXISTS (SELECT  1 FROM [Maintenance].[Archive_AuditLogs] WHERE Id > arc.Id AND ParentArchiveId = arc.Id) 
+                    AND NOT EXISTS (SELECT  1 FROM [Maintenance].[Archive_RobotLicenseLogs] WHERE Id > arc.Id AND ParentArchiveId = arc.Id) 
                     AND ( (arc.CountValidFilters = 0 AND arc.[TargetTimestamp] <= ISNULL(@targetTimestamp, SYSDATETIME())) OR EXISTS(SELECT 1 FROM #tempListFilters WHERE ArchiveId = arc.Id) ) 
                 ORDER BY Id ASC;
 
@@ -2895,7 +2817,7 @@ BEGIN
                             UNION ALL SELECT [runid], [message], [timestamp] FROM OPENJSON(PreviousRunIds) WITH ([runid] nvarchar(MAX) N'$.runid', [message] nvarchar(MAX) N'$.message', [timestamp] datetime2 N'$.timestamp')
                         ) v FOR JSON PATH
                     )
-                    FROM [Maintenance].[Archive_AuditLogs] arc 
+                    FROM [Maintenance].[Archive_RobotLicenseLogs] arc 
                     INNER JOIN #tempRepeatTriggersTable tbl ON tbl.Id = arc.Id;
 
                     IF CURSOR_STATUS('local', 'CursorRepeatClose') >= 0 CLOSE CursorRepeatClose;
@@ -2917,7 +2839,7 @@ BEGIN
                                 SET @message = SPACE(@tab * 2) + N'Repeat Archive Id [' + CAST(@cursorId AS nvarchar(100)) + N'] on ' + CONVERT(nvarchar(100), @cursorArchiveTriggerTime, 120);
                                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
 
-                                EXEC [Maintenance].[AddArchiveTriggerAuditLogs] @SavedTorunId = @runId, @DryRunOnly = 0, @Name = @cursorName, @ArchiveTriggerTime = @cursorArchiveTriggerTime, @ArchiveAfterHours = @cursorArchiveAfterHours, @DeleteDelayHours = @cursorDeleteDelayHours, @Filters = @cursorDefinition, @RepeatArchive = @cursorRepeatArchive, @RepeatOffsetHours = @cursorRepeatOffsetHours, @RepeatUntil = @cursorRepeatUntil, @ParentArchiveId = @cursorId
+                                EXEC [Maintenance].[AddArchiveTriggerRobotLicenseLogs] @SavedTorunId = @runId, @DryRunOnly = 0, @Name = @cursorName, @ArchiveTriggerTime = @cursorArchiveTriggerTime, @ArchiveAfterHours = @cursorArchiveAfterHours, @DeleteDelayHours = @cursorDeleteDelayHours, @Filters = @cursorDefinition, @RepeatArchive = @cursorRepeatArchive, @RepeatOffsetHours = @cursorRepeatOffsetHours, @RepeatUntil = @cursorRepeatUntil, @ParentArchiveId = @cursorId
                             END
                             FETCH CursorRepeatClose INTO @cursorId, @cursorName, @cursorDefinition, @cursorArchiveTriggerTime, @cursorArchiveAfterHours, @cursorDeleteDelayHours, @cursorRepeatArchive, @cursorRepeatOffsetHours, @cursorRepeatUntil, @cursorCountValidFilters
                         END
@@ -2947,16 +2869,16 @@ BEGIN
 
             IF @countFilterIds < 1
             BEGIN
-                SET @message = SPACE(@tab * 1) + N'No remaining filters found in [Maintenance].[Filter_AuditLogs]'
+                SET @message = SPACE(@tab * 1) + N'No remaining filters found in [Maintenance].[Filter_RobotLicenseLogs]'
                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
             END
             ELSE
             BEGIN
                 -- Update status for Archive with no valid filter
-                IF EXISTS (SELECT 1 FROM [Maintenance].[Archive_AuditLogs] arc WHERE arc.[ToDo] = 1 AND arc.CountValidFilters = 0 AND arc.[TargetTimestamp] < @targetTimestamp)
+                IF EXISTS (SELECT 1 FROM [Maintenance].[Archive_RobotLicenseLogs] arc WHERE arc.[ToDo] = 1 AND arc.CountValidFilters = 0 AND arc.[TargetTimestamp] < @targetTimestamp)
                 BEGIN
                     SELECT @message = NULL;
-                    SELECT  @message = COALESCE(@message + ', ' + CAST(Id AS nvarchar(100)), CAST(Id AS nvarchar(100)) ) FROM [Maintenance].[Archive_AuditLogs] arc WHERE arc.[ToDo] = 1 AND arc.CountValidFilters = 0 AND arc.[TargetTimestamp] <= @targetTimestamp ORDER BY Id;
+                    SELECT  @message = COALESCE(@message + ', ' + CAST(Id AS nvarchar(100)), CAST(Id AS nvarchar(100)) ) FROM [Maintenance].[Archive_RobotLicenseLogs] arc WHERE arc.[ToDo] = 1 AND arc.CountValidFilters = 0 AND arc.[TargetTimestamp] <= @targetTimestamp ORDER BY Id;
                     SET @message = SPACE(@tab * 1) + N'Close Archive Trigger(s) with no filter(s): ' + @message;
                     EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
 
@@ -2967,7 +2889,7 @@ BEGIN
                             UNION ALL SELECT [runid], [message], [timestamp] FROM OPENJSON(PreviousRunIds) WITH ([runid] nvarchar(MAX) N'$.runid', [message] nvarchar(MAX) N'$.message', [timestamp] datetime2 N'$.timestamp')
                         ) v FOR JSON PATH
                     )
-                    FROM [Maintenance].[Archive_AuditLogs] arc WHERE arc.[ToDo] = 1 AND arc.CountValidFilters = 0 AND arc.[TargetTimestamp] <= @targetTimestamp;
+                    FROM [Maintenance].[Archive_RobotLicenseLogs] arc WHERE arc.[ToDo] = 1 AND arc.CountValidFilters = 0 AND arc.[TargetTimestamp] <= @targetTimestamp;
                 END    
 
                 SET @message =  SPACE(@tab * 1) + N'Archive Filter(s) found: ' + ISNULL(CAST(@countFilterIds AS nvarchar(100)), N'-');
@@ -2991,14 +2913,14 @@ BEGIN
                     BEGIN TRAN;                                                                                      --|
                                                                                                                      --|
                     UPDATE flt SET TargetId = lst.TargetId                                                           --|
-                    FROM [Maintenance].[Filter_AuditLogs] flt                                                        --|
+                    FROM [Maintenance].[Filter_RobotLicenseLogs] flt                                                        --|
                     INNER JOIN #tempListFilters lst ON lst.SyncId = flt.SyncId AND lst.TenantId = flt.TenantId;      --|
                                                                                                                      --|
                     -- Add Last Current Id to each 1st filter per Tenant from most recent Archiving trigger(s) per Tenant
                     UPDATE lst SET LastId = oap.LastId FROM #tempListFilters lst                                     --|
                     CROSS APPLY (                                                                                    --|
                         SELECT LastId = MAX(TargetId)                                                                --|
-                        FROM [Maintenance].[Filter_AuditLogs] flt                                                    --|
+                        FROM [Maintenance].[Filter_RobotLicenseLogs] flt                                                    --|
                         WHERE flt.TenantId = lst.TenantId AND flt.IsArchived = 1 AND flt.CurrentId = flt.TargetId    --|
                     ) oap                                                                                            --|
                     WHERE lst.OrderId = 1;                                                                           --|
@@ -3009,7 +2931,7 @@ BEGIN
                             UNION ALL SELECT [runid], [message], [timestamp] FROM OPENJSON(PreviousRunIds) WITH ([runid] nvarchar(MAX) N'$.runid', [message] nvarchar(MAX) N'$.message', [timestamp] datetime2 N'$.timestamp')
                         ) v FOR JSON PATH                                                                            --|
                     ), CurrentRunId = @runid                                                                         --|
-                    FROM [Maintenance].[Archive_AuditLogs] arc                                                       --|
+                    FROM [Maintenance].[Archive_RobotLicenseLogs] arc                                                       --|
                     WHERE EXISTS (SELECT 1 FROM #tempListFilters WHERE ArchiveId = arc.Id);                          --|
                                                                                                                      --|
                     IF @@TRANCOUNT > 0 COMMIT;                                                                       --|
@@ -3049,8 +2971,9 @@ BEGIN
                         INSERT INTO #tempListIds(tempId, tempSyncId, tempDeleteOnly, tempNoDelay)
                         SELECT TOP(@maxLoopDeleteRows) src.Id, flt.SyncId, flt.DeleteOnly, flt.NoDelay
                         FROM #tempListFilters flt
-                        INNER JOIN [Maintenance].[Synonym_Source_AuditLogs] src ON src.TenantId = flt.TenantId
-                        WHERE ( (src.TimeStamp > flt.PreviousTimestamp AND src.TimeStamp <= flt.TargetTimestamp) OR (flt.LastId IS NOT NULL AND src.TimeStamp <= flt.PreviousTimestamp AND src.Id > flt.LastId ) ) AND src.Id >= flt.CurrentId AND src.Id <= @maxId AND src.Id >= @currentId
+                        INNER JOIN [Maintenance].[Synonym_Source_RobotLicenseLogs] src ON src.TenantId = flt.TenantId
+                        WHERE ( (src.EndDate > flt.PreviousTimestamp AND src.EndDate <= flt.TargetTimestamp) OR (flt.LastId IS NOT NULL AND src.EndDate <= flt.PreviousTimestamp AND src.Id > flt.LastId ) ) AND src.Id >= flt.CurrentId AND src.Id <= @maxId AND src.Id >= @currentId
+                            AND EndDate IS NOT NULL
                         ORDER BY src.Id ASC;
  
                         SELECT @countRowIds = @@ROWCOUNT;
@@ -3064,7 +2987,7 @@ BEGIN
                             -- If nothing left, save status...
                             -- Update IsArchived when current Id(s) reach Target Id
                             UPDATE flt SET CurrentId = @maxId, IsArchived = 1
-                            FROM [Maintenance].[Filter_AuditLogs] flt
+                            FROM [Maintenance].[Filter_RobotLicenseLogs] flt
                             INNER JOIN #tempListFilters lst ON lst.TenantId = flt.TenantId AND lst.SyncId = flt.SyncId --AND flt.CurrentId >= flt.TargetId
 
                             SELECT @filtersArchived = @@ROWCOUNT, @globalFiltersArchived = ISNULL(@globalFiltersArchived, 0) + @@ROWCOUNT;
@@ -3075,19 +2998,17 @@ BEGIN
                         -----------------------------------------------------------------------------------------------------------------------+
                         BEGIN TRAN                                                                                                           --|
                         EXEC sp_executesql @stmt = @sqlArchive;                                                                              --|
-                        EXEC sp_executesql @stmt = @sqlArchiveEntities;                                                                     --|
                                                                                                                                              --|
                         -- Add Delete info                                                                                                   --|
-                        INSERT INTO [Maintenance].[Delete_AuditLogs](SyncId, Id)                                                             --|
+                        INSERT INTO [Maintenance].[Delete_RobotLicenseLogs](SyncId, Id)                                                      --|
                         SELECT tempSyncId, tempId FROM #tempListIds ids                                                                      --|
-                        WHERE NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_AuditLogs] WHERE Id = ids.tempId) AND tempNoDelay = 0;          --|
+                        WHERE NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_RobotLicenseLogs] WHERE Id = ids.tempId) AND tempNoDelay = 0;   --|
                                                                                                                                              --|
-                        DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_AuditLogsEntities] src ON src.AuditLogsId = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
-                        DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_AuditLogs] src ON src.Id = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
+                        DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_RobotLicenseLogs] src ON src.Id = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
                                                                                                                                              --|
                         -- Update current Id(s)                                                                                              --|
                         UPDATE flt SET CurrentId = @currentLoopId                                                                            --|
-                        FROM [Maintenance].[Filter_AuditLogs] flt                                                                            --|
+                        FROM [Maintenance].[Filter_RobotLicenseLogs] flt                                                                     --|
                         INNER JOIN #tempListFilters lst ON lst.TenantId = flt.TenantId AND lst.SyncId = flt.SyncId                           --|
                         WHERE @currentLoopId IS NOT NULL;                                                                                    --|
                                                                                                                                              --|
@@ -3136,45 +3057,45 @@ BEGIN
 
                 -- Update Sync status when all filters are Archived
                 UPDATE snc SET IsArchived = 1
-                    , IsDeleted = IIF( @deleteIfNoDelay = 1 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_AuditLogs] WHERE syncId = snc.Id), 1, 0)
-                    , DeletedOnDate = IIF( @deleteIfNoDelay = 1 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_AuditLogs] WHERE syncId = snc.Id), SYSDATETIME(), NULL)
-                    , IsSynced = IIF( @deleteIfNoDelay = 1 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_AuditLogs] WHERE syncId = snc.Id), 1, 0)
-                    , SyncedOnDate = IIF( @deleteIfNoDelay = 1 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_AuditLogs] WHERE syncId = snc.Id), SYSDATETIME(), NULL)
-                    , FirstASyncId = (SELECT MIN(Id) FROM [Maintenance].[Delete_AuditLogs] WHERE syncId = snc.Id)
-                    , LastASyncId = (SELECT MAX(Id) FROM [Maintenance].[Delete_AuditLogs] WHERE syncId = snc.Id)
-                    , CountASyncIds = (SELECT COUNT(*) FROM [Maintenance].[Delete_AuditLogs] WHERE syncId = snc.Id)
-                FROM [Maintenance].[Sync_AuditLogs] snc
-                INNER JOIN [Maintenance].[Archive_AuditLogs] arc ON arc.Id = snc.ArchiveId
+                    , IsDeleted = IIF( @deleteIfNoDelay = 1 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_RobotLicenseLogs] WHERE syncId = snc.Id), 1, 0)
+                    , DeletedOnDate = IIF( @deleteIfNoDelay = 1 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_RobotLicenseLogs] WHERE syncId = snc.Id), SYSDATETIME(), NULL)
+                    , IsSynced = IIF( @deleteIfNoDelay = 1 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_RobotLicenseLogs] WHERE syncId = snc.Id), 1, 0)
+                    , SyncedOnDate = IIF( @deleteIfNoDelay = 1 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_RobotLicenseLogs] WHERE syncId = snc.Id), SYSDATETIME(), NULL)
+                    , FirstASyncId = (SELECT MIN(Id) FROM [Maintenance].[Delete_RobotLicenseLogs] WHERE syncId = snc.Id)
+                    , LastASyncId = (SELECT MAX(Id) FROM [Maintenance].[Delete_RobotLicenseLogs] WHERE syncId = snc.Id)
+                    , CountASyncIds = (SELECT COUNT(*) FROM [Maintenance].[Delete_RobotLicenseLogs] WHERE syncId = snc.Id)
+                FROM [Maintenance].[Sync_RobotLicenseLogs] snc
+                INNER JOIN [Maintenance].[Archive_RobotLicenseLogs] arc ON arc.Id = snc.ArchiveId
                 WHERE EXISTS(SELECT 1 FROM #tempListFilters WHERE SyncId = snc.Id) AND
-                    NOT EXISTS (SELECT 1 FROM [Maintenance].[Filter_AuditLogs] WHERE SyncId = snc.Id AND IsArchived = 0);
+                    NOT EXISTS (SELECT 1 FROM [Maintenance].[Filter_RobotLicenseLogs] WHERE SyncId = snc.Id AND IsArchived = 0);
                 SELECT @syncArchived = @@ROWCOUNT;
 
                 -- Update Archive status when all sync and filters are archived
                 UPDATE arc SET IsArchived = 1, ArchivedOnDate = SYSDATETIME()
-                    , IsDeleted = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_AuditLogs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), 1, 0)
-                    , DeletedOnDate = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_AuditLogs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), SYSDATETIME(), NULL)
-                    , IsFinished = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_AuditLogs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), 1, 0)
-                    , FinishedOnDate = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_AuditLogs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), SYSDATETIME(), NULL)
-                    , IsSuccess = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_AuditLogs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), 1, 0)
-                    , [Message] = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_AuditLogs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), N'Cleanup finished', 'Archiving finished')
+                    , IsDeleted = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_RobotLicenseLogs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), 1, 0)
+                    , DeletedOnDate = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_RobotLicenseLogs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), SYSDATETIME(), NULL)
+                    , IsFinished = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_RobotLicenseLogs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), 1, 0)
+                    , FinishedOnDate = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_RobotLicenseLogs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), SYSDATETIME(), NULL)
+                    , IsSuccess = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_RobotLicenseLogs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), 1, 0)
+                    , [Message] = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_RobotLicenseLogs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), N'Cleanup finished', 'Archiving finished')
                     , PreviousRunIds = (
                         SELECT [runid], [message], [timestamp] FROM (
-                            SELECT [runid] = @runId, [message] = N'Cleanup finished', [timestamp] = SYSDATETIME() WHERE NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_AuditLogs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0)
+                            SELECT [runid] = @runId, [message] = N'Cleanup finished', [timestamp] = SYSDATETIME() WHERE NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_RobotLicenseLogs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0)
                             UNION ALL SELECT [runid] = @runId, [message] = N'All Archive Filter(s) finished]', [timestamp] = SYSDATETIME()
                             UNION ALL SELECT [runid], [message], [timestamp] FROM OPENJSON(PreviousRunIds) WITH ([runid] nvarchar(MAX) N'$.runid', [message] nvarchar(MAX) N'$.message', [timestamp] datetime2 N'$.timestamp')
                         ) v FOR JSON PATH
                     )
-                FROM [Maintenance].[Archive_AuditLogs] arc
+                FROM [Maintenance].[Archive_RobotLicenseLogs] arc
                 INNER JOIN #tempListFilters lst ON lst.ArchiveId = arc.Id
-                WHERE NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_AuditLogs] WHERE ArchiveId = lst.ArchiveId AND IsArchived = 0);
+                WHERE NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_RobotLicenseLogs] WHERE ArchiveId = lst.ArchiveId AND IsArchived = 0);
 
                 SELECT @triggerArchived = @@ROWCOUNT, @globalTriggerArchived = ISNULL(@globalTriggerArchived, 0) + @@ROWCOUNT;
 
-                SELECT @message = SPACE(@tab * 2) + N'Archive Filter(s) finished: ' + CAST(ISNULL(@filtersArchived, 0) AS nvarchar(100)) + N' / ' + CAST(ISNULL(@countFilterIds, 0) AS nvarchar(100)) + N' (remaining filters = '+ CAST(ISNULL(COUNT(*), 0) AS nvarchar(100)) + N')' FROM [Maintenance].[Filter_AuditLogs] WHERE IsArchived <> 1;
+                SELECT @message = SPACE(@tab * 2) + N'Archive Filter(s) finished: ' + CAST(ISNULL(@filtersArchived, 0) AS nvarchar(100)) + N' / ' + CAST(ISNULL(@countFilterIds, 0) AS nvarchar(100)) + N' (remaining filters = '+ CAST(ISNULL(COUNT(*), 0) AS nvarchar(100)) + N')' FROM [Maintenance].[Filter_RobotLicenseLogs] WHERE IsArchived <> 1;
                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
                 SELECT @message = SPACE(@tab * 2) + N'Archive Sync(s) finished: ' + ISNULL(CAST(@syncArchived AS nvarchar(100)), N'-');
                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
-                SELECT @message = SPACE(@tab * 1) + N'Archive(s) finished: ' + ISNULL(CAST(@triggerArchived AS nvarchar(100)), N'-') + N' (in progress = ' + CAST(@countArchiveIds - ISNULL(@triggerArchived, 0) AS nvarchar(100)) + N', to do = '+ CAST(ISNULL(COUNT(*), 0) AS nvarchar(100)) + N')' FROM [Maintenance].[Archive_AuditLogs] WHERE [Todo] = 1 AND ArchiveTriggerTime < @StartTime;
+                SELECT @message = SPACE(@tab * 1) + N'Archive(s) finished: ' + ISNULL(CAST(@triggerArchived AS nvarchar(100)), N'-') + N' (in progress = ' + CAST(@countArchiveIds - ISNULL(@triggerArchived, 0) AS nvarchar(100)) + N', to do = '+ CAST(ISNULL(COUNT(*), 0) AS nvarchar(100)) + N')' FROM [Maintenance].[Archive_RobotLicenseLogs] WHERE [Todo] = 1 AND ArchiveTriggerTime < @StartTime;
                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
             END
 
@@ -3204,14 +3125,14 @@ BEGIN
         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
 
         SELECT @message = SPACE(@tab * 1) + 'Remaining Archive Trigger(s): ' + CAST(COUNT(*) AS nvarchar(100)) + IIF(COUNT(*) > 0, N' (outstanding = '+ CAST(SUM(IIF(arc.ArchiveTriggerTime < @startTime, 1, 0)) AS nvarchar(100)) + N', upcoming = ' + CAST(SUM(IIF(arc.ArchiveTriggerTime >= @startTime, 1, 0)) AS nvarchar(100)) + N')', '')
-        FROM [Maintenance].[Archive_AuditLogs] arc
+        FROM [Maintenance].[Archive_RobotLicenseLogs] arc
         WHERE arc.ToDo = 1
         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
 
         SELECT @message = SPACE(@tab * 1) + 'Remaining Filter(s): ' + CAST(COUNT(*) AS nvarchar(100)) + IIF(COUNT(*) > 0, N' (outstanding = '+ CAST(SUM(IIF(arc.ArchiveTriggerTime < @startTime, 1, 0)) AS nvarchar(100)) + N', upcoming = ' + CAST(SUM(IIF(arc.ArchiveTriggerTime >= @startTime, 1, 0)) AS nvarchar(100)) + N')', '')
-        FROM [Maintenance].[Filter_AuditLogs] flt 
-        INNER JOIN [Maintenance].[Sync_AuditLogs] snc ON snc.Id = flt.SyncId
-        INNER JOIN [Maintenance].[Archive_AuditLogs] arc ON arc.Id = snc.ArchiveId 
+        FROM [Maintenance].[Filter_RobotLicenseLogs] flt 
+        INNER JOIN [Maintenance].[Sync_RobotLicenseLogs] snc ON snc.Id = flt.SyncId
+        INNER JOIN [Maintenance].[Archive_RobotLicenseLogs] arc ON arc.Id = snc.ArchiveId 
         WHERE flt.IsArchived = 0 AND snc.IsArchived = 0 AND (flt.TargetId IS NULL OR flt.CurrentId IS NULL OR flt.CurrentId < flt.TargetId) AND arc.ToDo = 1 --AND arc.ArchiveTriggerTime < @StartTime
         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
 
@@ -3316,26 +3237,26 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- DROP PROCEDURE [Maintenance].[CleanupSyncedAuditLogs]
+-- DROP PROCEDURE [Maintenance].[CleanupSyncedRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
 
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[CleanupSyncedAuditLogs]') AND type in (N'P'))
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[CleanupSyncedRobotLicenseLogs]') AND type in (N'P'))
 BEGIN
-    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[CleanupSyncedAuditLogs] AS'
-    PRINT '  + CREATE PROCEDURE: [Maintenance].[CleanupSyncedAuditLogs]';
+    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[CleanupSyncedRobotLicenseLogs] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[CleanupSyncedRobotLicenseLogs]';
 END
-ELSE PRINT '  = PROCEDURE [Maintenance].[CleanupSyncedAuditLogs] already exists' 
+ELSE PRINT '  = PROCEDURE [Maintenance].[CleanupSyncedRobotLicenseLogs] already exists' 
 GO
 
-PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[CleanupSyncedAuditLogs]'
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[CleanupSyncedRobotLicenseLogs]'
 GO  
 
-ALTER PROCEDURE [Maintenance].[CleanupSyncedAuditLogs]
+ALTER PROCEDURE [Maintenance].[CleanupSyncedRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: PROCEDURE [Maintenance].[CleanupSyncedAuditLogs]
--- ### [Version]: 2023-09-07T18:02:09+02:00
--- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.CleanupSyncedAuditLogs.sql
--- ### [Hash]: 90145a7 [SHA256-750B785561ACED23E119526B6F269934AB5649250B5F6FE73D7FC6C1D849E36E]
+-- ### [Object]: PROCEDURE [Maintenance].[CleanupSyncedRobotLicenseLogs]
+-- ### [Version]: 2023-09-07T18:38:18+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/RobotLicenseLogs/Procedure_ArchiveDB.Maintenance.CleanupSyncedRobotLicenseLogs.sql
+-- ### [Hash]: b0839d6 [SHA256-CF5EA15EAC64BB1CFD634FEA8A62658B7723600D337CC29F0C27F9D3E6D68F20]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -3586,11 +3507,11 @@ BEGIN
 		----------------------------------------------------------------------------------------------------
         -- Check Permissions
         ----------------------------------------------------------------------------------------------------
-        -- Check SELECT & DELETE permission on [dbo].[AuditLogs]
+        -- Check SELECT & DELETE permission on [dbo].[RobotLicenseLogs]
         INSERT INTO @messages ([Message], Severity, [State])
         SELECT 'Permission not effectively granted: ' + UPPER(p.permission_name), 10, 1
         FROM (VALUES(N'', N'SELECT'), (N'', N'DELETE')) AS p (subentity_name, permission_name)
-        LEFT JOIN sys.fn_my_permissions(N'[dbo].[AuditLogs]', N'OBJECT') eff ON eff.subentity_name = p.subentity_name AND eff.permission_name = p.permission_name
+        LEFT JOIN sys.fn_my_permissions(N'[dbo].[RobotLicenseLogs]', N'OBJECT') eff ON eff.subentity_name = p.subentity_name AND eff.permission_name = p.permission_name
         WHERE eff.permission_name IS NULL
         ORDER BY p.permission_name;
 
@@ -3598,7 +3519,7 @@ BEGIN
         BEGIN
             INSERT INTO @messages ([Message], Severity, [State]) VALUES
                 (N'Error: missing permission', 10, 1)
-                , (N'SELECT and DELETE permissions are required on [dbo].[AuditLogs] table', 16, 1);
+                , (N'SELECT and DELETE permissions are required on [dbo].[RobotLicenseLogs] table', 16, 1);
         END
 
         -- Check @SaveMessagesToTable parameter
@@ -3721,7 +3642,7 @@ BEGIN
         
         IF @SavedToRunId IS NULL OR NOT EXISTS(SELECT 1 FROM [Maintenance].[Runs] WHERE Id = @SavedToRunId AND EndDate IS NULL)
         BEGIN
-            INSERT INTO [Maintenance].[Runs]([Type], [Info], [StartTime]) SELECT N'Add Archive AuditLogs Trigger', N'PROCEDURE ' + @procName, @startTime;
+            INSERT INTO [Maintenance].[Runs]([Type], [Info], [StartTime]) SELECT N'Add Archive RobotLicenseLogs Trigger', N'PROCEDURE ' + @procName, @startTime;
             SELECT @runId = @@IDENTITY, @SavedToRunId = @@IDENTITY;
             INSERT INTO @messages ([Message], Severity, [State]) VALUES 
                 (N'Messages saved to new Run Id: ' + CONVERT(nvarchar(MAX), @runId), 10, 1);
@@ -3735,7 +3656,7 @@ BEGIN
         BEGIN
             -- Check Synonyms and source/Archive tables
             BEGIN TRY            
-                EXEC [Maintenance].[ValidateArchiveObjectsAuditLogs] @IgnoreMissingColumns = 1, @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT;
+                EXEC [Maintenance].[ValidateArchiveObjectsRobotLicenseLogs] @IgnoreMissingColumns = 1, @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT;
 
                 INSERT INTO @messages ([Procedure], [Message], Severity, [State])
                 SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@synonymMessages, N'$') WITH ([Procedure] nvarchar(MAX), [Message] nvarchar(MAX), [Severity] tinyint, [State] tinyint);
@@ -3836,7 +3757,7 @@ BEGIN
         -- Archive
         ----------------------------------------------------------------------------------------------------
         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @lineSeparator, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
-        EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = 'Start ASync AuditLogs Cleanup', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
+        EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = 'Start ASync RobotLicenseLogs Cleanup', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @lineSeparator, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
 
         INSERT INTO @messages([Date], [Procedure], [Message], [Severity], [State], [Number], [Line])
@@ -3848,8 +3769,8 @@ BEGIN
         BEGIN TRY
             INSERT INTO @tempListSync([Id], [DeleteOnDate])
             SELECT sts.SyncId, sts.DeletedOnDate
-            FROM [Maintenance].[Synonym_ASyncStatus_AuditLogs] sts
-            INNER JOIN [Maintenance].[Sync_AuditLogs] syn ON syn.Id = sts.SyncId
+            FROM [Maintenance].[Synonym_ASyncStatus_RobotLicenseLogs] sts
+            INNER JOIN [Maintenance].[Sync_RobotLicenseLogs] syn ON syn.Id = sts.SyncId
             WHERE sts.IsDeleted = 1 AND syn.IsSynced <> 1;
 
             IF @@ROWCOUNT = 0
@@ -3889,7 +3810,7 @@ BEGIN
                 SET @totalIds = 0;
                 WHILE 0 >= 0
                 BEGIN
-                    DELETE TOP(@maxLoopDeleteRows) FROM [Maintenance].[Delete_AuditLogs] WHERE [SyncId] = @cursorSyncId;
+                    DELETE TOP(@maxLoopDeleteRows) FROM [Maintenance].[Delete_RobotLicenseLogs] WHERE [SyncId] = @cursorSyncId;
                     SELECT @countIds = @@ROWCOUNT;
 
                     IF @countIds = 0
@@ -3897,9 +3818,9 @@ BEGIN
                         SET @message = SPACE(@tab * 1) + 'Cleanup finished (total = ' + CAST(@totalIds AS nvarchar(100)) + N')';
                         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
 
-                        UPDATE stt SET [IsDeleted] = 1, [DeletedOnDate] = @cursorDeleteOnDate, [IsSynced] = 1, [SyncedOnDate] = SYSDATETIME() FROM [Maintenance].[Sync_AuditLogs] stt WHERE [Id] = @cursorSyncId;
+                        UPDATE stt SET [IsDeleted] = 1, [DeletedOnDate] = @cursorDeleteOnDate, [IsSynced] = 1, [SyncedOnDate] = SYSDATETIME() FROM [Maintenance].[Sync_RobotLicenseLogs] stt WHERE [Id] = @cursorSyncId;
 
-                        SELECT @IsFinished = IIF(EXISTS (SELECT 1 FROM [Maintenance].[Sync_AuditLogs] WHERE ArchiveId = (SELECT ArchiveId FROM [Maintenance].[Sync_AuditLogs] WHERE Id = @cursorSyncId) AND IsSynced <> 1), 0, 1);
+                        SELECT @IsFinished = IIF(EXISTS (SELECT 1 FROM [Maintenance].[Sync_RobotLicenseLogs] WHERE ArchiveId = (SELECT ArchiveId FROM [Maintenance].[Sync_RobotLicenseLogs] WHERE Id = @cursorSyncId) AND IsSynced <> 1), 0, 1);
 
                         UPDATE arc SET 
                             [CurrentRunId] = @runId
@@ -3916,8 +3837,8 @@ BEGIN
                                     UNION ALL SELECT [runid], [message], [timestamp] FROM OPENJSON(PreviousRunIds) WITH ([runid] nvarchar(MAX) N'$.runid', [message] nvarchar(MAX) N'$.message', [timestamp] datetime2 N'$.timestamp')
                                 ) v FOR JSON PATH
                             )
-                        FROM [Maintenance].[Archive_AuditLogs] arc
-                        INNER JOIN [Maintenance].[Sync_AuditLogs] syn ON syn.ArchiveId = arc.Id
+                        FROM [Maintenance].[Archive_RobotLicenseLogs] arc
+                        INNER JOIN [Maintenance].[Sync_RobotLicenseLogs] syn ON syn.ArchiveId = arc.Id
                         WHERE syn.Id = @cursorSyncId;
 
                         BREAK;
