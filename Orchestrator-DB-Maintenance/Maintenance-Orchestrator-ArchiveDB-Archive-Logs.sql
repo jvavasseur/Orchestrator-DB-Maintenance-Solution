@@ -390,9 +390,9 @@ GO
 
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: TABLE [Maintenance].[Sync_Logs]
--- ### [Version]: 2023-09-08T11:08:50+02:00
+-- ### [Version]: 2023-09-08T11:43:56+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Logs/Table_ArchiveDB.Maintenance.Sync_Logs.sql
--- ### [Hash]: c3792cf [SHA256-D95E025A0E4F0E6F549EC13B78BE8E86274840ABE645978B6662D4DA82F514A7]
+-- ### [Hash]: 82d9e7c [SHA256-C2103F70C8684B5F57BB9CEADF09D6B7E501EFF190C0322FA21B617BF59B6E69]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -424,11 +424,11 @@ BEGIN
 		WHERE CountASyncIds > 0 AND IsArchived = 1 AND [IsDeleted] <> 1 WITH ( DROP_EXISTING = ON );
 --	CREATE UNIQUE NONCLUSTERED INDEX [IX_Maintenance.Sync_Logs.NotSync] ON [Maintenance].[Sync_Logs] (DeleteAfterDatetime) INCLUDE ([FirstASyncId], [LastAsyncId], [Id]) WHERE IsArchived = 1 AND [IsDeleted] = 1 AND IsSynced <> 1 WITH ( DROP_EXISTING = ON );
 
-	ALTER TABLE [Maintenance].[Sync_Logs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Sync_Logs-Archive_Logs] FOREIGN KEY([ArchiveId])
+	ALTER TABLE [Maintenance].[Sync_Logs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Sync_Logs.Archive_Logs] FOREIGN KEY([ArchiveId])
 	REFERENCES [Maintenance].[Archive_Logs] ([Id])
 	ON DELETE CASCADE
 
-	ALTER TABLE [Maintenance].[Sync_Logs] CHECK CONSTRAINT [FK_Maintenance.Sync_Logs-Archive_Logs]
+	ALTER TABLE [Maintenance].[Sync_Logs] CHECK CONSTRAINT [FK_Maintenance.Sync_Logs.Archive_Logs]
 END
 ELSE PRINT '  = Table already exists: [Maintenance].[Sync_Logs]';
 GO
@@ -442,9 +442,9 @@ GO
 
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: TABLE [Maintenance].[Filter_Logs]
--- ### [Version]: 2023-09-08T11:08:50+02:00
+-- ### [Version]: 2023-09-08T11:43:56+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Logs/Table_ArchiveDB.Maintenance.Filter_Logs.sql
--- ### [Hash]: c3792cf [SHA256-69F51B9C18CE8C69A2BEAC20938AA435FCB321A906FBC65015E7587B0F89F304]
+-- ### [Hash]: 82d9e7c [SHA256-B80AC23FF059A5D120F0A56E064D87BEADB304E85AD335479E6F4C71BBA591CC]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -467,10 +467,10 @@ BEGIN
 		, INDEX [IX_Maintenance.Filter_Logs.LastId] NONCLUSTERED (TenantId, LevelId, TargetId) WHERE IsArchived = 1 AND [TargetId] IS NOT NULL AND [CurrentId] IS NOT NULL --AND [CurrentId] = [TargetId]
 	) ON [PRIMARY]
 
-	ALTER TABLE [Maintenance].[Filter_Logs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Filter_Logs-Sync_Logs] FOREIGN KEY([SyncId])
+	ALTER TABLE [Maintenance].[Filter_Logs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Filter_Logs.Sync_Logs] FOREIGN KEY([SyncId])
 	REFERENCES [Maintenance].[Sync_Logs] ([Id])
 
-	ALTER TABLE [Maintenance].[Filter_Logs] CHECK CONSTRAINT [FK_Maintenance.Filter_Logs-Sync_Logs]
+	ALTER TABLE [Maintenance].[Filter_Logs] CHECK CONSTRAINT [FK_Maintenance.Filter_Logs.Sync_Logs]
 END
 ELSE PRINT '  = Table already exists: [Maintenance].[Filter_Logs]';
 GO
@@ -484,9 +484,9 @@ GO
 
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: TABLE [Maintenance].[Delete_Logs]
--- ### [Version]: 2023-09-08T11:08:50+02:00
+-- ### [Version]: 2023-09-08T11:43:56+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Logs/Table_ArchiveDB.Maintenance.Delete_Logs.sql
--- ### [Hash]: c3792cf [SHA256-0F09CEF6F64C3250F31CD9FEA07C728ACDE9CEF3E89BCFAFE144AE2BC1A53163]
+-- ### [Hash]: 82d9e7c [SHA256-836D57C12853D30CF885104FFC0718EF13B00A93F65242D57F4AE5ABB6E4D456]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -502,10 +502,10 @@ BEGIN
 		, INDEX [UX_Maintenance.Delete_Logs.Id] UNIQUE NONCLUSTERED (Id)		
 	) ON [PRIMARY]
 
-	ALTER TABLE [Maintenance].[Delete_Logs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Delete_Logs-Sync_Logs] FOREIGN KEY([SyncId])
+	ALTER TABLE [Maintenance].[Delete_Logs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Delete_Logs.Sync_Logs] FOREIGN KEY([SyncId])
 	REFERENCES [Maintenance].[Sync_Logs] ([Id])
 	
-	ALTER TABLE [Maintenance].[Delete_Logs] CHECK CONSTRAINT [FK_Maintenance.Delete_Logs-Sync_Logs]
+	ALTER TABLE [Maintenance].[Delete_Logs] CHECK CONSTRAINT [FK_Maintenance.Delete_Logs.Sync_Logs]
 END
 ELSE PRINT '  = Table already exists: [Maintenance].[Delete_Logs]';
 GO

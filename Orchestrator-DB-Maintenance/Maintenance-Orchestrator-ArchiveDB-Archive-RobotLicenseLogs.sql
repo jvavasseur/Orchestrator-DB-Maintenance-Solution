@@ -390,9 +390,9 @@ GO
 
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: TABLE [Maintenance].[Sync_RobotLicenseLogs]
--- ### [Version]: 2023-09-08T11:08:50+02:00
+-- ### [Version]: 2023-09-08T11:43:56+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/RobotLicenseLogs/Table_ArchiveDB.Maintenance.Sync_RobotLicenseLogs.sql
--- ### [Hash]: c3792cf [SHA256-91D66633B60A0650CAE1F6CD003CD6671C47C900AF2BB8BDBBE1F5ED3EF82A18]
+-- ### [Hash]: 82d9e7c [SHA256-0644E4F71D9A3517D02F8A30A7AD784A1EACBEFF9E9C1D45952E2A385AB30342]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -424,11 +424,11 @@ BEGIN
 		WHERE CountASyncIds > 0 AND IsArchived = 1 AND [IsDeleted] <> 1 WITH ( DROP_EXISTING = ON );
 --	CREATE UNIQUE NONCLUSTERED INDEX [IX_Maintenance.Sync_RobotLicenseLogs.NotSync] ON [Maintenance].[Sync_RobotLicenseLogs] (DeleteAfterDatetime) INCLUDE ([FirstASyncId], [LastAsyncId], [Id]) WHERE IsArchived = 1 AND [IsDeleted] = 1 AND IsSynced <> 1 WITH ( DROP_EXISTING = ON );
 
-	ALTER TABLE [Maintenance].[Sync_RobotLicenseLogs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Sync_RobotLicenseLogs-Archive_RobotLicenseLogs] FOREIGN KEY([ArchiveId])
+	ALTER TABLE [Maintenance].[Sync_RobotLicenseLogs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Sync_RobotLicenseLogs.Archive_RobotLicenseLogs] FOREIGN KEY([ArchiveId])
 	REFERENCES [Maintenance].[Archive_RobotLicenseLogs] ([Id])
 	ON DELETE CASCADE
 
-	ALTER TABLE [Maintenance].[Sync_RobotLicenseLogs] CHECK CONSTRAINT [FK_Maintenance.Sync_RobotLicenseLogs-Archive_RobotLicenseLogs]
+	ALTER TABLE [Maintenance].[Sync_RobotLicenseLogs] CHECK CONSTRAINT [FK_Maintenance.Sync_RobotLicenseLogs.Archive_RobotLicenseLogs]
 END
 ELSE PRINT '  = Table already exists: [Maintenance].[Sync_RobotLicenseLogs]';
 GO
@@ -442,9 +442,9 @@ GO
 
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: TABLE [Maintenance].[Filter_RobotLicenseLogs]
--- ### [Version]: 2023-09-08T11:08:50+02:00
+-- ### [Version]: 2023-09-08T11:43:56+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/RobotLicenseLogs/Table_ArchiveDB.Maintenance.Filter_RobotLicenseLogs.sql
--- ### [Hash]: c3792cf [SHA256-59C9765E285F1373B5FA3AD8262893A18B58A3AFCA0A7CD3827187CD86873CA1]
+-- ### [Hash]: 82d9e7c [SHA256-069BEB918CAF7544113348C5E318227D277430267272605C03D3E4A7341AB57F]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -466,10 +466,10 @@ BEGIN
 		, INDEX [IX_Maintenance.Filter_RobotLicenseLogs.LastId] NONCLUSTERED (TenantId, LevelId, TargetId) WHERE IsArchived = 1 AND [TargetId] IS NOT NULL AND [CurrentId] IS NOT NULL --AND [CurrentId] = [TargetId]
 	) ON [PRIMARY]
 
-	ALTER TABLE [Maintenance].[Filter_RobotLicenseLogs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Filter_RobotLicenseLogs-Sync_RobotLicenseLogs] FOREIGN KEY([SyncId])
+	ALTER TABLE [Maintenance].[Filter_RobotLicenseLogs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Filter_RobotLicenseLogs.Sync_RobotLicenseLogs] FOREIGN KEY([SyncId])
 	REFERENCES [Maintenance].[Sync_RobotLicenseLogs] ([Id])
 
-	ALTER TABLE [Maintenance].[Filter_RobotLicenseLogs] CHECK CONSTRAINT [FK_Maintenance.Filter_RobotLicenseLogs-Sync_RobotLicenseLogs]
+	ALTER TABLE [Maintenance].[Filter_RobotLicenseLogs] CHECK CONSTRAINT [FK_Maintenance.Filter_RobotLicenseLogs.Sync_RobotLicenseLogs]
 END
 ELSE PRINT '  = Table already exists: [Maintenance].[Filter_RobotLicenseLogs]';
 GO
@@ -483,9 +483,9 @@ GO
 
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: TABLE [Maintenance].[Delete_RobotLicenseLogs]
--- ### [Version]: 2023-09-08T11:08:50+02:00
+-- ### [Version]: 2023-09-08T11:43:56+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/RobotLicenseLogs/Table_ArchiveDB.Maintenance.Delete_RobotLicenseLogs.sql
--- ### [Hash]: c3792cf [SHA256-EA604E6060599786CBDAF809F157E2FC4AACC4112A8CCF50E08129DD6EAC6826]
+-- ### [Hash]: 82d9e7c [SHA256-826C9393839CD55F293E737D706564DDAA0E1923F4B363C0CA5112D0EDD19176]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -501,10 +501,10 @@ BEGIN
 		, INDEX [UX_Maintenance.Delete_RobotLicenseLogs.Id] UNIQUE NONCLUSTERED (Id)		
 	) ON [PRIMARY]
 
-	ALTER TABLE [Maintenance].[Delete_RobotLicenseLogs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Delete_RobotLicenseLogs-Sync_RobotLicenseLogs] FOREIGN KEY([SyncId])
+	ALTER TABLE [Maintenance].[Delete_RobotLicenseLogs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Delete_RobotLicenseLogs.Sync_RobotLicenseLogs] FOREIGN KEY([SyncId])
 	REFERENCES [Maintenance].[Sync_RobotLicenseLogs] ([Id])
 	
-	ALTER TABLE [Maintenance].[Delete_RobotLicenseLogs] CHECK CONSTRAINT [FK_Maintenance.Delete_RobotLicenseLogs-Sync_RobotLicenseLogs]
+	ALTER TABLE [Maintenance].[Delete_RobotLicenseLogs] CHECK CONSTRAINT [FK_Maintenance.Delete_RobotLicenseLogs.Sync_RobotLicenseLogs]
 END
 ELSE PRINT '  = Table already exists: [Maintenance].[Delete_RobotLicenseLogs]';
 GO

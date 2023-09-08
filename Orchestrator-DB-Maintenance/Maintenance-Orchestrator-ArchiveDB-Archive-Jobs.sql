@@ -390,9 +390,9 @@ GO
 
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: TABLE [Maintenance].[Sync_Jobs]
--- ### [Version]: 2023-09-08T11:12:50+02:00
+-- ### [Version]: 2023-09-08T11:43:56+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Jobs/Table_ArchiveDB.Maintenance.Sync_Jobs.sql
--- ### [Hash]: 0859ec6 [SHA256-256FF5E81B163AC22308D7F16D90E64D71C5204839016A5FF45EA9EF6F9D034C]
+-- ### [Hash]: 82d9e7c [SHA256-6AD7A16C973AB0E489BD99F013ED0FF296375B24B5102D2B1BBFB7734D900C7E]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -424,11 +424,11 @@ BEGIN
 		WHERE CountASyncIds > 0 AND IsArchived = 1 AND [IsDeleted] <> 1 WITH ( DROP_EXISTING = ON );
 --	CREATE UNIQUE NONCLUSTERED INDEX [IX_Maintenance.Sync_Jobs.NotSync] ON [Maintenance].[Sync_Jobs] (DeleteAfterDatetime) INCLUDE ([FirstASyncId], [LastAsyncId], [Id]) WHERE IsArchived = 1 AND [IsDeleted] = 1 AND IsSynced <> 1 WITH ( DROP_EXISTING = ON );
 
-	ALTER TABLE [Maintenance].[Sync_Jobs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Sync_Jobs-Archive_Jobs] FOREIGN KEY([ArchiveId])
+	ALTER TABLE [Maintenance].[Sync_Jobs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Sync_Jobs.Archive_Jobs] FOREIGN KEY([ArchiveId])
 	REFERENCES [Maintenance].[Archive_Jobs] ([Id])
 	ON DELETE CASCADE
 
-	ALTER TABLE [Maintenance].[Sync_Jobs] CHECK CONSTRAINT [FK_Maintenance.Sync_Jobs-Archive_Jobs]
+	ALTER TABLE [Maintenance].[Sync_Jobs] CHECK CONSTRAINT [FK_Maintenance.Sync_Jobs.Archive_Jobs]
 END
 ELSE PRINT '  = Table already exists: [Maintenance].[Sync_Jobs]';
 GO
@@ -484,9 +484,9 @@ GO
 
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: TABLE [Maintenance].[Delete_Jobs]
--- ### [Version]: 2023-09-08T11:12:50+02:00
+-- ### [Version]: 2023-09-08T11:43:56+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Jobs/Table_ArchiveDB.Maintenance.Delete_Jobs.sql
--- ### [Hash]: 0859ec6 [SHA256-259AA4BB6824C030BA87464D63F9F43873401594580DD8643EF4BB49C909B3D8]
+-- ### [Hash]: 82d9e7c [SHA256-1168032132D8E621CDD3315514E138F141E80FB4659764478B8F048EF5C0F6C0]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -502,10 +502,10 @@ BEGIN
 		, INDEX [UX_Maintenance.Delete_Jobs.Id] UNIQUE NONCLUSTERED (Id)		
 	) ON [PRIMARY]
 
-	ALTER TABLE [Maintenance].[Delete_Jobs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Delete_Jobs-Sync_Jobs] FOREIGN KEY([SyncId])
+	ALTER TABLE [Maintenance].[Delete_Jobs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Delete_Jobs.Sync_Jobs] FOREIGN KEY([SyncId])
 	REFERENCES [Maintenance].[Sync_Jobs] ([Id])
 	
-	ALTER TABLE [Maintenance].[Delete_Jobs] CHECK CONSTRAINT [FK_Maintenance.Delete_Jobs-Sync_Jobs]
+	ALTER TABLE [Maintenance].[Delete_Jobs] CHECK CONSTRAINT [FK_Maintenance.Delete_Jobs.Sync_Jobs]
 END
 ELSE PRINT '  = Table already exists: [Maintenance].[Delete_Jobs]';
 GO

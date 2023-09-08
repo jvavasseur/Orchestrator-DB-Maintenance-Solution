@@ -390,9 +390,9 @@ GO
 
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: TABLE [Maintenance].[Sync_AuditLogs]
--- ### [Version]: 2023-09-08T11:08:50+02:00
+-- ### [Version]: 2023-09-08T11:43:56+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Table_ArchiveDB.Maintenance.Sync_AuditLogs.sql
--- ### [Hash]: c3792cf [SHA256-C3CA0D75F39D34CB92160BD4605BC8D6BC6EFD9E20008D5115DB35D1848BB2B2]
+-- ### [Hash]: 82d9e7c [SHA256-B791BF19AFA6F5EA66A5E3A3F6C367007519B6FDE023B69DA356C5C0F9E9B734]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -422,11 +422,11 @@ BEGIN
 	CREATE UNIQUE NONCLUSTERED INDEX [IX_Maintenance.Sync_AuditLogs.NotDeleted] ON [Maintenance].[Sync_AuditLogs] (DeleteAfterDatetime) INCLUDE ([Id], [FirstASyncId], [LastAsyncId],  [CountASyncIds], [IsDeleted], [IsSynced]) 
 		WHERE CountASyncIds > 0 AND IsArchived = 1 AND [IsDeleted] <> 1 WITH ( DROP_EXISTING = ON );
 
-	ALTER TABLE [Maintenance].[Sync_AuditLogs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Sync_AuditLogs-Archive_AuditLogs] FOREIGN KEY([ArchiveId])
+	ALTER TABLE [Maintenance].[Sync_AuditLogs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Sync_AuditLogs.Archive_AuditLogs] FOREIGN KEY([ArchiveId])
 	REFERENCES [Maintenance].[Archive_AuditLogs] ([Id])
 	ON DELETE CASCADE
 
-	ALTER TABLE [Maintenance].[Sync_AuditLogs] CHECK CONSTRAINT [FK_Maintenance.Sync_AuditLogs-Archive_AuditLogs]
+	ALTER TABLE [Maintenance].[Sync_AuditLogs] CHECK CONSTRAINT [FK_Maintenance.Sync_AuditLogs.Archive_AuditLogs]
 END
 ELSE PRINT '  = Table already exists: [Maintenance].[Sync_AuditLogs]';
 GO
@@ -440,9 +440,9 @@ GO
 
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: TABLE [Maintenance].[Filter_AuditLogs]
--- ### [Version]: 2023-09-08T11:08:50+02:00
+-- ### [Version]: 2023-09-08T11:43:56+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Table_ArchiveDB.Maintenance.Filter_AuditLogs.sql
--- ### [Hash]: c3792cf [SHA256-9A192AE225800A7BBB5EAD935475B446043396AD3BD4C5AE51FE4D0B34CC0CA2]
+-- ### [Hash]: 82d9e7c [SHA256-7709617472DA142828DDC9A081CDC1D7F3C0F2771FD8FFB2602DB37E86743E46]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -464,10 +464,10 @@ BEGIN
 		, INDEX [IX_Maintenance.Filter_AuditLogs.LastId] NONCLUSTERED (TenantId, LevelId, TargetId) WHERE IsArchived = 1 AND [TargetId] IS NOT NULL AND [CurrentId] IS NOT NULL --AND [CurrentId] = [TargetId]
 	) ON [PRIMARY]
 
-	ALTER TABLE [Maintenance].[Filter_AuditLogs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Filter_AuditLogs-Sync_AuditLogs] FOREIGN KEY([SyncId])
+	ALTER TABLE [Maintenance].[Filter_AuditLogs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Filter_AuditLogs.Sync_AuditLogs] FOREIGN KEY([SyncId])
 	REFERENCES [Maintenance].[Sync_AuditLogs] ([Id])
 
-	ALTER TABLE [Maintenance].[Filter_AuditLogs] CHECK CONSTRAINT [FK_Maintenance.Filter_AuditLogs-Sync_AuditLogs]
+	ALTER TABLE [Maintenance].[Filter_AuditLogs] CHECK CONSTRAINT [FK_Maintenance.Filter_AuditLogs.Sync_AuditLogs]
 END
 ELSE PRINT '  = Table already exists: [Maintenance].[Filter_AuditLogs]';
 GO
@@ -481,9 +481,9 @@ GO
 
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: TABLE [Maintenance].[Delete_AuditLogs]
--- ### [Version]: 2023-09-08T11:08:50+02:00
+-- ### [Version]: 2023-09-08T11:43:56+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Table_ArchiveDB.Maintenance.Delete_AuditLogs.sql
--- ### [Hash]: c3792cf [SHA256-77A7A03598BAE822BAA828DC0206BAFA8FABEBA6A816048FA0010C26FC5E36E0]
+-- ### [Hash]: 82d9e7c [SHA256-C14CE58B19314A2B325CDCEE84AF95A8E0A617A5396DD6DCECABBCD462C664D9]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -499,10 +499,10 @@ BEGIN
 		, INDEX [UX_Maintenance.Delete_AuditLogs.Id] UNIQUE NONCLUSTERED (Id)		
 	) ON [PRIMARY]
 
-	ALTER TABLE [Maintenance].[Delete_AuditLogs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Delete_AuditLogs-Sync_AuditLogs] FOREIGN KEY([SyncId])
+	ALTER TABLE [Maintenance].[Delete_AuditLogs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Delete_AuditLogs.Sync_AuditLogs] FOREIGN KEY([SyncId])
 	REFERENCES [Maintenance].[Sync_AuditLogs] ([Id])
 	
-	ALTER TABLE [Maintenance].[Delete_AuditLogs] CHECK CONSTRAINT [FK_Maintenance.Delete_AuditLogs-Sync_AuditLogs]
+	ALTER TABLE [Maintenance].[Delete_AuditLogs] CHECK CONSTRAINT [FK_Maintenance.Delete_AuditLogs.Sync_AuditLogs]
 END
 ELSE PRINT '  = Table already exists: [Maintenance].[Delete_AuditLogs]';
 GO
