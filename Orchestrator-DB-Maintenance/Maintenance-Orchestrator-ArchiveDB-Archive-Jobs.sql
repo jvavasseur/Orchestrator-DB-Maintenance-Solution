@@ -329,18 +329,18 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: TABLE [Maintenance].[Archive_Logs]
--- ### [Version]: 2023-09-08T11:08:50+02:00
--- ### [Source]: _src/Archive/ArchiveDB/Logs/Table_ArchiveDB.Maintenance.Archive_Logs.sql
--- ### [Hash]: c3792cf [SHA256-61EB8DFDBD8E6752437E53EFC60F110CC504765AA74558611020B841696AB08E]
+-- ### [Object]: TABLE [Maintenance].[Archive_Jobs]
+-- ### [Version]: 2023-09-08T11:12:50+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/Jobs/Table_ArchiveDB.Maintenance.Archive_Jobs.sql
+-- ### [Hash]: 0859ec6 [SHA256-B26DAD5008666F765D95ED2024B487EB8C91E8E8B361B257C4D0390B797330D5]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
 ----------------------------------------------------------------------------------------------------
-IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'Archive_Logs' AND SCHEMA_NAME(schema_id) = N'Maintenance')
+IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'Archive_Jobs' AND SCHEMA_NAME(schema_id) = N'Maintenance')
 BEGIN
-    PRINT '  + CREATE TABLE: [Maintenance].[Archive_Logs]';
-	CREATE TABLE [Maintenance].[Archive_Logs](
+    PRINT '  + CREATE TABLE: [Maintenance].[Archive_Jobs]';
+	CREATE TABLE [Maintenance].[Archive_Jobs](
 		[Id] [bigint] IDENTITY(0,1) NOT NULL
 		, [ParentArchiveId] [bigint]
 		, [CurrentRunId] [bigint] NULL
@@ -354,31 +354,31 @@ BEGIN
 		, [TargetId] [bigint] NULL
 		, [TargetTimestamp] [datetime] NULL
 		, [CurrentId] [bigint] NULL
-		, [RepeatArchive] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Logs.RepeatArchive] DEFAULT 0
-		, [RepeatOffsetHours] [smallint] NULL CONSTRAINT [DF_Maintenance.Archive_Logs.RepeatOffsetHours] CHECK (RepeatOffsetHours IS NULL OR RepeatOffsetHours > 0)
-		, [RepeatUntil] [datetime] NULL --CONSTRAINT [DF_Maintenance.Archive_Logs.AddNextArchives] DEFAULT 0
+		, [RepeatArchive] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Jobs.RepeatArchive] DEFAULT 0
+		, [RepeatOffsetHours] [smallint] NULL CONSTRAINT [DF_Maintenance.Archive_Jobs.RepeatOffsetHours] CHECK (RepeatOffsetHours IS NULL OR RepeatOffsetHours > 0)
+		, [RepeatUntil] [datetime] NULL --CONSTRAINT [DF_Maintenance.Archive_Jobs.AddNextArchives] DEFAULT 0
 		-- Status
-		, [CreationDate] [datetime] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Logs.CreationDate] DEFAULT SYSDATETIME()
-		, [IsDryRun] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Logs.IsDryRun] DEFAULT 0
-		, [IsSuccess] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Logs.IsSuccess] DEFAULT 0
-		, [IsError] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Logs.IsError] DEFAULT 0
-		, [IsCanceled] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Logs.IsCanceled] DEFAULT 0
+		, [CreationDate] [datetime] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Jobs.CreationDate] DEFAULT SYSDATETIME()
+		, [IsDryRun] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Jobs.IsDryRun] DEFAULT 0
+		, [IsSuccess] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Jobs.IsSuccess] DEFAULT 0
+		, [IsError] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Jobs.IsError] DEFAULT 0
+		, [IsCanceled] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Jobs.IsCanceled] DEFAULT 0
 		, [Message] nvarchar(MAX) NULL
 		, [CountValidFilters] int NULL
 		, [CountDuplicateFilters] int NULL
 		-- Execution
-		, [IsArchived] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Logs.IsArchived] DEFAULT 0
+		, [IsArchived] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Jobs.IsArchived] DEFAULT 0
 		, [ArchivedOnDate] [datetime] NULL
-		, [IsDeleted] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Logs.IsDeleted] DEFAULT 0
+		, [IsDeleted] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Jobs.IsDeleted] DEFAULT 0
 		, [DeletedOnDate] [datetime] NULL
-		, [IsFinished] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Logs.IsFinished] DEFAULT 0
+		, [IsFinished] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_Jobs.IsFinished] DEFAULT 0
 		, [FinishedOnDate] [datetime] NULL
 		, [ToDo] AS IIF(IsArchived <> 1 AND IsFinished <> 1 AND IsDryRun <> 1 AND IsError <> 1, 1, 0)
-		, CONSTRAINT [PK_Maintenance.Archive_Logs] PRIMARY KEY CLUSTERED ([Id] ASC)
+		, CONSTRAINT [PK_Maintenance.Archive_Jobs] PRIMARY KEY CLUSTERED ([Id] ASC)
 			WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 	) ON [PRIMARY]
 END
-ELSE PRINT '  = Table already exists: [Maintenance].[Archive_Logs]';
+ELSE PRINT '  = Table already exists: [Maintenance].[Archive_Jobs]';
 GO
 
 SET ANSI_NULLS ON;
@@ -389,48 +389,48 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: TABLE [Maintenance].[Sync_Logs]
--- ### [Version]: 2023-09-08T11:08:50+02:00
--- ### [Source]: _src/Archive/ArchiveDB/Logs/Table_ArchiveDB.Maintenance.Sync_Logs.sql
--- ### [Hash]: c3792cf [SHA256-D95E025A0E4F0E6F549EC13B78BE8E86274840ABE645978B6662D4DA82F514A7]
+-- ### [Object]: TABLE [Maintenance].[Sync_Jobs]
+-- ### [Version]: 2023-09-08T11:12:50+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/Jobs/Table_ArchiveDB.Maintenance.Sync_Jobs.sql
+-- ### [Hash]: 0859ec6 [SHA256-256FF5E81B163AC22308D7F16D90E64D71C5204839016A5FF45EA9EF6F9D034C]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
 ----------------------------------------------------------------------------------------------------
-IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'Sync_Logs' AND SCHEMA_NAME(schema_id) = N'Maintenance')
+IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'Sync_Jobs' AND SCHEMA_NAME(schema_id) = N'Maintenance')
 BEGIN
-    PRINT '  + CREATE TABLE: [Maintenance].[Sync_Logs]';
+    PRINT '  + CREATE TABLE: [Maintenance].[Sync_Jobs]';
 
-	CREATE TABLE [Maintenance].[Sync_Logs](
+	CREATE TABLE [Maintenance].[Sync_Jobs](
 		[Id] [bigint] IDENTITY(0,1) NOT NULL
 		, [ArchiveId] [bigint] NOT NULL
 		, [DeleteAfterDatetime] [datetime] NOT NULL
-		, [IsArchived] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Sync_Logs.IsArchived] DEFAULT 0
-		, [IsDeleted] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Sync_Logs.IsDeleted] DEFAULT 0
+		, [IsArchived] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Sync_Jobs.IsArchived] DEFAULT 0
+		, [IsDeleted] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Sync_Jobs.IsDeleted] DEFAULT 0
 		, [DeletedOnDate] [datetime] NULL
-		, [IsSynced] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Sync_Logs.IsSynced] DEFAULT 0
+		, [IsSynced] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Sync_Jobs.IsSynced] DEFAULT 0
 		, [SyncedOnDate] [datetime] NULL
-		, [RowcountDeleted] [bigint] NOT NULL CONSTRAINT [DF_Maintenance.Sync_Logs.RowcountDeleted] DEFAULT 0
+		, [RowcountDeleted] [bigint] NOT NULL CONSTRAINT [DF_Maintenance.Sync_Jobs.RowcountDeleted] DEFAULT 0
 		, [FirstASyncId] [bigint] NULL
 		, [LastAsyncId] [bigint] NULL
 		, [CountASyncIds] [bigint] NULL
-		, CONSTRAINT [PK_Maintenance.Sync_Logs] PRIMARY KEY CLUSTERED ([Id] ASC)
+		, CONSTRAINT [PK_Maintenance.Sync_Jobs] PRIMARY KEY CLUSTERED ([Id] ASC)
 			WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
---		, INDEX [IX_Maintenance.Sync_Logs.NotSync] (DeleteAfterDatetime) WHERE [Id] < 0
-		, INDEX [IX_Maintenance.Sync_Logs.NotDeleted] (DeleteAfterDatetime) WHERE [Id] < 0
+--		, INDEX [IX_Maintenance.Sync_Jobs.NotSync] (DeleteAfterDatetime) WHERE [Id] < 0
+		, INDEX [IX_Maintenance.Sync_Jobs.NotDeleted] (DeleteAfterDatetime) WHERE [Id] < 0
 	) ON [PRIMARY]
 
-	CREATE UNIQUE NONCLUSTERED INDEX [IX_Maintenance.Sync_Logs.NotDeleted] ON [Maintenance].[Sync_Logs] (DeleteAfterDatetime) INCLUDE ([Id], [FirstASyncId], [LastAsyncId],  [CountASyncIds], [IsDeleted], [IsSynced]) 
+	CREATE UNIQUE NONCLUSTERED INDEX [IX_Maintenance.Sync_Jobs.NotDeleted] ON [Maintenance].[Sync_Jobs] (DeleteAfterDatetime) INCLUDE ([Id], [FirstASyncId], [LastAsyncId],  [CountASyncIds], [IsDeleted], [IsSynced]) 
 		WHERE CountASyncIds > 0 AND IsArchived = 1 AND [IsDeleted] <> 1 WITH ( DROP_EXISTING = ON );
---	CREATE UNIQUE NONCLUSTERED INDEX [IX_Maintenance.Sync_Logs.NotSync] ON [Maintenance].[Sync_Logs] (DeleteAfterDatetime) INCLUDE ([FirstASyncId], [LastAsyncId], [Id]) WHERE IsArchived = 1 AND [IsDeleted] = 1 AND IsSynced <> 1 WITH ( DROP_EXISTING = ON );
+--	CREATE UNIQUE NONCLUSTERED INDEX [IX_Maintenance.Sync_Jobs.NotSync] ON [Maintenance].[Sync_Jobs] (DeleteAfterDatetime) INCLUDE ([FirstASyncId], [LastAsyncId], [Id]) WHERE IsArchived = 1 AND [IsDeleted] = 1 AND IsSynced <> 1 WITH ( DROP_EXISTING = ON );
 
-	ALTER TABLE [Maintenance].[Sync_Logs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Sync_Logs-Archive_Logs] FOREIGN KEY([ArchiveId])
-	REFERENCES [Maintenance].[Archive_Logs] ([Id])
+	ALTER TABLE [Maintenance].[Sync_Jobs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Sync_Jobs-Archive_Jobs] FOREIGN KEY([ArchiveId])
+	REFERENCES [Maintenance].[Archive_Jobs] ([Id])
 	ON DELETE CASCADE
 
-	ALTER TABLE [Maintenance].[Sync_Logs] CHECK CONSTRAINT [FK_Maintenance.Sync_Logs-Archive_Logs]
+	ALTER TABLE [Maintenance].[Sync_Jobs] CHECK CONSTRAINT [FK_Maintenance.Sync_Jobs-Archive_Jobs]
 END
-ELSE PRINT '  = Table already exists: [Maintenance].[Sync_Logs]';
+ELSE PRINT '  = Table already exists: [Maintenance].[Sync_Jobs]';
 GO
 
 SET ANSI_NULLS ON;
@@ -441,38 +441,38 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: TABLE [Maintenance].[Filter_Logs]
--- ### [Version]: 2023-09-08T11:08:50+02:00
--- ### [Source]: _src/Archive/ArchiveDB/Logs/Table_ArchiveDB.Maintenance.Filter_Logs.sql
--- ### [Hash]: c3792cf [SHA256-69F51B9C18CE8C69A2BEAC20938AA435FCB321A906FBC65015E7587B0F89F304]
+-- ### [Object]: TABLE [Maintenance].[Filter_Jobs]
+-- ### [Version]: 2023-09-08T11:12:50+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/Jobs/Table_ArchiveDB.Maintenance.Filter_Jobs.sql
+-- ### [Hash]: 0859ec6 [SHA256-7669E3409BBD7EA213FC62F142EA646A1D347561A4AF1DF95CEF037B35BA74E5]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
 ----------------------------------------------------------------------------------------------------
-IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'Filter_Logs' AND SCHEMA_NAME(schema_id) = N'Maintenance')
+IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'Filter_Jobs' AND SCHEMA_NAME(schema_id) = N'Maintenance')
 BEGIN
-    PRINT '  + CREATE TABLE: [Maintenance].[Filter_Logs]';
-	CREATE TABLE [Maintenance].[Filter_Logs](
+    PRINT '  + CREATE TABLE: [Maintenance].[Filter_Jobs]';
+	CREATE TABLE [Maintenance].[Filter_Jobs](
 		[SyncId] [bigint] NOT NULL,
 		[TenantId] [int] NOT NULL,
-		[LevelId] [int] NOT NULL,
+		[StateId] [int] NOT NULL,
 		[DeleteOnly] [bit] NOT NULL,
 		[TargetTimestamp] [datetime] NOT NULL,
 		[PreviousTimestamp] [datetime] NOT NULL,
-		[IsArchived] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Filter_Logs.IsArchived] DEFAULT 0,
+		[IsArchived] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Filter_Jobs.IsArchived] DEFAULT 0,
 		[CurrentId] [bigint] NULL,
 		[TargetId] [bigint] NULL,
-		CONSTRAINT [PK_Maintenance.Filter_Logs] PRIMARY KEY CLUSTERED ([SyncId] ASC, [TenantId] ASC, [LevelId] ASC)
+		CONSTRAINT [PK_Maintenance.Filter_Jobs] PRIMARY KEY CLUSTERED ([SyncId] ASC, [TenantId] ASC, [StateId] ASC)
 			WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-		, INDEX [IX_Maintenance.Filter_Logs.LastId] NONCLUSTERED (TenantId, LevelId, TargetId) WHERE IsArchived = 1 AND [TargetId] IS NOT NULL AND [CurrentId] IS NOT NULL --AND [CurrentId] = [TargetId]
+		, INDEX [IX_Maintenance.Filter_Jobs.LastId] NONCLUSTERED (TenantId, StateId, TargetId) WHERE IsArchived = 1 AND [TargetId] IS NOT NULL AND [CurrentId] IS NOT NULL --AND [CurrentId] = [TargetId]
 	) ON [PRIMARY]
 
-	ALTER TABLE [Maintenance].[Filter_Logs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Filter_Logs-Sync_Logs] FOREIGN KEY([SyncId])
-	REFERENCES [Maintenance].[Sync_Logs] ([Id])
+	ALTER TABLE [Maintenance].[Filter_Jobs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Filter_Jobs-Sync_Jobs] FOREIGN KEY([SyncId])
+	REFERENCES [Maintenance].[Sync_Jobs] ([Id])
 
-	ALTER TABLE [Maintenance].[Filter_Logs] CHECK CONSTRAINT [FK_Maintenance.Filter_Logs-Sync_Logs]
+	ALTER TABLE [Maintenance].[Filter_Jobs] CHECK CONSTRAINT [FK_Maintenance.Filter_Jobs-Sync_Jobs]
 END
-ELSE PRINT '  = Table already exists: [Maintenance].[Filter_Logs]';
+ELSE PRINT '  = Table already exists: [Maintenance].[Filter_Jobs]';
 GO
 
 SET ANSI_NULLS ON;
@@ -483,31 +483,31 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: TABLE [Maintenance].[Delete_Logs]
--- ### [Version]: 2023-09-08T11:08:50+02:00
--- ### [Source]: _src/Archive/ArchiveDB/Logs/Table_ArchiveDB.Maintenance.Delete_Logs.sql
--- ### [Hash]: c3792cf [SHA256-0F09CEF6F64C3250F31CD9FEA07C728ACDE9CEF3E89BCFAFE144AE2BC1A53163]
+-- ### [Object]: TABLE [Maintenance].[Delete_Jobs]
+-- ### [Version]: 2023-09-08T11:12:50+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/Jobs/Table_ArchiveDB.Maintenance.Delete_Jobs.sql
+-- ### [Hash]: 0859ec6 [SHA256-259AA4BB6824C030BA87464D63F9F43873401594580DD8643EF4BB49C909B3D8]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
 ----------------------------------------------------------------------------------------------------
-IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'Delete_Logs' AND SCHEMA_NAME(schema_id) = N'Maintenance')
+IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE name = N'Delete_Jobs' AND SCHEMA_NAME(schema_id) = N'Maintenance')
 BEGIN
-    PRINT '  + CREATE TABLE: [Maintenance].[Delete_Logs]';
-	CREATE TABLE [Maintenance].[Delete_Logs](
+    PRINT '  + CREATE TABLE: [Maintenance].[Delete_Jobs]';
+	CREATE TABLE [Maintenance].[Delete_Jobs](
 		[SyncId] [bigint] NOT NULL
 		, [Id] [bigint] NOT NULL
-		, CONSTRAINT [PK_Delete_Logs] PRIMARY KEY CLUSTERED ([SyncId] ASC, [Id] ASC)
+		, CONSTRAINT [PK_Delete_Jobs] PRIMARY KEY CLUSTERED ([SyncId] ASC, [Id] ASC)
 			WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-		, INDEX [UX_Maintenance.Delete_Logs.Id] UNIQUE NONCLUSTERED (Id)		
+		, INDEX [UX_Maintenance.Delete_Jobs.Id] UNIQUE NONCLUSTERED (Id)		
 	) ON [PRIMARY]
 
-	ALTER TABLE [Maintenance].[Delete_Logs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Delete_Logs-Sync_Logs] FOREIGN KEY([SyncId])
-	REFERENCES [Maintenance].[Sync_Logs] ([Id])
+	ALTER TABLE [Maintenance].[Delete_Jobs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Delete_Jobs-Sync_Jobs] FOREIGN KEY([SyncId])
+	REFERENCES [Maintenance].[Sync_Jobs] ([Id])
 	
-	ALTER TABLE [Maintenance].[Delete_Logs] CHECK CONSTRAINT [FK_Maintenance.Delete_Logs-Sync_Logs]
+	ALTER TABLE [Maintenance].[Delete_Jobs] CHECK CONSTRAINT [FK_Maintenance.Delete_Jobs-Sync_Jobs]
 END
-ELSE PRINT '  = Table already exists: [Maintenance].[Delete_Logs]';
+ELSE PRINT '  = Table already exists: [Maintenance].[Delete_Jobs]';
 GO
 
 SET ANSI_NULLS ON;
@@ -959,25 +959,25 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- DROP PROCEDURE [Maintenance].[ValidateArchiveObjectsLogs]
+-- DROP PROCEDURE [Maintenance].[ValidateArchiveObjectsJobs]
 ----------------------------------------------------------------------------------------------------
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[ValidateArchiveObjectsLogs]') AND type in (N'P'))
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[ValidateArchiveObjectsJobs]') AND type in (N'P'))
 BEGIN
-    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[ValidateArchiveObjectsLogs] AS'
-    PRINT '  + CREATE PROCEDURE: [Maintenance].[ValidateArchiveObjectsLogs]';
+    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[ValidateArchiveObjectsJobs] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[ValidateArchiveObjectsJobs]';
 END
-ELSE PRINT '  = PROCEDURE [Maintenance].[ValidateArchiveObjectsLogs] already exists' 
+ELSE PRINT '  = PROCEDURE [Maintenance].[ValidateArchiveObjectsJobs] already exists' 
 GO
 
-PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[ValidateArchiveObjectsLogs]'
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[ValidateArchiveObjectsJobs]'
 GO
 
-ALTER PROCEDURE [Maintenance].[ValidateArchiveObjectsLogs]
+ALTER PROCEDURE [Maintenance].[ValidateArchiveObjectsJobs]
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: PROCEDURE [Maintenance].[ValidateArchiveObjectsLogs]
--- ### [Version]: 2023-09-07T15:05:21+02:00
--- ### [Source]: _src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjectsLogs.sql
--- ### [Hash]: 30c2b77 [SHA256-3A489989B10F4FA875DB0C188820D6103FAF22CE9C8B0A3F8801FC994AF28373]
+-- ### [Object]: PROCEDURE [Maintenance].[ValidateArchiveObjectsJobs]
+-- ### [Version]: 2023-09-08T11:12:50+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/Jobs/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjectsJobs.sql
+-- ### [Hash]: 0859ec6 [SHA256-23D39A88A3A267F79EA3E3BE75F0F4FCA27A594A2AC99CFA59B3363E95651FC0]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -1006,11 +1006,11 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         -- Settings
         ----------------------------------------------------------------------------------------------------
-        DECLARE @synonymSourceName nvarchar(256) = N'Synonym_Source_Logs';
+        DECLARE @synonymSourceName nvarchar(256) = N'Synonym_Source_Jobs';
         DECLARE @synonymSourceSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymArchiveName nvarchar(256) = N'Synonym_Archive_Logs';
+        DECLARE @synonymArchiveName nvarchar(256) = N'Synonym_Archive_Jobs';
         DECLARE @synonymArchiveSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_Logs';
+        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_Jobs';
         DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
         DECLARE @clusteredName nvarchar(128) = N'Id';
         ----------------------------------------------------------------------------------------------------      
@@ -1070,25 +1070,25 @@ GO
 
 
 ----------------------------------------------------------------------------------------------------
--- DROP PROCEDURE [Maintenance].[ParseJsonArchiveLogs]
+-- DROP PROCEDURE [Maintenance].[ParseJsonArchiveJobs]
 ----------------------------------------------------------------------------------------------------
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[ParseJsonArchiveLogs]') AND type in (N'P'))
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[ParseJsonArchiveJobs]') AND type in (N'P'))
 BEGIN
-        EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[ParseJsonArchiveLogs] AS'
-    PRINT '  + CREATE PROCEDURE: [Maintenance].[ParseJsonArchiveLogs]';
+        EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[ParseJsonArchiveJobs] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[ParseJsonArchiveJobs]';
 END
-ELSE PRINT '  = PROCEDURE [Maintenance].[ParseJsonArchiveLogs] already exists' 
+ELSE PRINT '  = PROCEDURE [Maintenance].[ParseJsonArchiveJobs] already exists' 
 GO
 
-PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[ParseJsonArchiveLogs]'
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[ParseJsonArchiveJobs]'
 GO
 
-ALTER PROCEDURE [Maintenance].[ParseJsonArchiveLogs]
+ALTER PROCEDURE [Maintenance].[ParseJsonArchiveJobs]
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: PROCEDURE [Maintenance].[ParseJsonArchiveLogs]
--- ### [Version]: 2023-09-07T15:05:21+02:00
--- ### [Source]: _src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.ParseJsonArchiveLogs.sql
--- ### [Hash]: 30c2b77 [SHA256-D8F7B4FD7835E6EEC0879531E5047BAD335160E2DE14831A588C8F819A329209]
+-- ### [Object]: PROCEDURE [Maintenance].[ParseJsonArchiveJobs]
+-- ### [Version]: 2023-09-08T11:12:50+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/Jobs/Procedure_ArchiveDB.Maintenance.ParseJsonArchiveJobs.sql
+-- ### [Hash]: 0859ec6 [SHA256-F4C119A4F4F4753CBBE3307ABCA8BEBC86CA03345E37ADE0F940E4489C63BEB1]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -1115,25 +1115,24 @@ BEGIN
         -- JSON elements local tables
         DECLARE @jsons TABLE ([key] int, [value] nvarchar(MAX), [type] int, [type_name] nvarchar(10));
         DECLARE @jsonArray_elements TABLE([key] int, [name] nvarchar(MAX), [value] nvarchar(MAX), [type] int, [type_name] nvarchar(10));
-        DECLARE @jsonArray_Levels TABLE([key] int, [level_key] int, [name] nvarchar(100), [Level_Name] nvarchar(128), [Level_Id] int);
+        DECLARE @jsonArray_States TABLE([key] int, [state_key] int, [name] nvarchar(100), [State_Name] nvarchar(128), [State_Id] int);
         --, [keep] bit, [exclude] nvarchar(128), [IsDeleted] bit);
         DECLARE @jsonArray_tenants TABLE([key] int, [value_name] nvarchar(100), [value_id] int, [Tenant_Name] nvarchar(128), [Tenant_Id] int, [keep] bit, [exclude] nvarchar(128), [IsDeleted] bit);
-        DECLARE @jsonValues_levels TABLE([key] int, [level_key] int, [name] nvarchar(MAX), [value] nvarchar(MAX), [type] int, [type_name] nvarchar(10));
+        DECLARE @jsonValues_states TABLE([key] int, [state_key] int, [name] nvarchar(MAX), [value] nvarchar(MAX), [type] int, [type_name] nvarchar(10));
         DECLARE @jsonValues_tenants TABLE([key] int, [value_name] nvarchar(128), [value_id] int)--, [Tenant_Name] nvarchar(128), [TenantId] int);
         DECLARE @jsonValues_exclude TABLE([key] int, [value_name] nvarchar(128), [value_id] int)--, [Tenant_Name] nvarchar(128), [TenantId] int);
         DECLARE @json_errors TABLE([id] tinyint NOT NULL, [key] int NOT NULL, [message] nvarchar(MAX) NOT NULL);
 
         DECLARE @elements_settings TABLE([key] int, [after_hours] int, [delete_delay_hours] int,  [disabled] bit);
-        DECLARE @levels_settings TABLE([key] int, [level_key] int, [after_hours] int, [delete_delay_hours] int,  [disabled] bit);
+        DECLARE @states_settings TABLE([key] int, [state_key] int, [after_hours] int, [delete_delay_hours] int,  [disabled] bit);
 
         ----------------------------------------------------------------------------------------------------
         -- Constant / Default value
         ----------------------------------------------------------------------------------------------------
         DECLARE @json_types TABLE(id tinyint, [name] nvarchar(10));
         INSERT INTO @json_types(id, [name]) VALUES (0, 'null'), (1, 'string'), (2, 'number'), (3, 'true/false'), (4, 'array'), (5, 'object');
-        DECLARE @log_levels TABLE(id int, [level] nvarchar(20));
-        INSERT INTO @log_levels(Id, [level]) VALUES(0, 'trace'), (1, 'debug'), (2, 'info'), (3, 'warn'), (4, 'error'), (5, 'fatal');
-
+        DECLARE @log_states TABLE(id int, [state] nvarchar(20));
+        INSERT INTO @log_states(Id, [state]) VALUES (4, 'faulted'), (5, 'successful'), (6, 'stopped'), (7, 'suspended'), (8, 'resumed');
         ----------------------------------------------------------------------------------------------------      
         -- Message / Error Handling
         ----------------------------------------------------------------------------------------------------
@@ -1211,53 +1210,53 @@ BEGIN
         END CATCH;
 
         ----------------------------------------------------------------------------------------------------
-        -- Parse and extract Levels
+        -- Parse and extract States
         ----------------------------------------------------------------------------------------------------
-        -- get each elements from each objects in levels arrays
+        -- get each elements from each objects in states arrays
         BEGIN TRY;
-            INSERT INTO @jsonValues_levels([key], [level_key], [name], [value], [type], [type_name])
-            SELECT elm.[key], [level_key] = lvl.[key] + 1, [name] = CASE WHEN LTRIM(RTRIM(val.[key])) IN (N'disable', N'disabled') THEN N'disabled' ELSE LTRIM(RTRIM(val.[key])) END
+            INSERT INTO @jsonValues_states([key], [state_key], [name], [value], [type], [type_name])
+            SELECT elm.[key], [state_key] = stt.[key] + 1, [name] = CASE WHEN LTRIM(RTRIM(val.[key])) IN (N'disable', N'disabled') THEN N'disabled' ELSE LTRIM(RTRIM(val.[key])) END
                 , [value] = val.[value], [value_type] = val.[type], [value_type_name] = tps.[name]
             FROM @jsonArray_elements elm --ON elm.[key] = jsn.[key] 
             INNER JOIN @elements_settings stg ON stg.[key] = elm.[key]
-            OUTER APPLY OPENJSON(elm.[value]) lvl
-            OUTER APPLY OPENJSON(lvl.[value]) val
+            OUTER APPLY OPENJSON(elm.[value]) stt
+            OUTER APPLY OPENJSON(stt.[value]) val
             INNER JOIN @json_types tps ON tps.id = val.[type]
-            WHERE elm.[name] = N'levels' AND elm.[type] = 4 AND lvl.[type] = 5 AND stg.[disabled] = 0;
+            WHERE elm.[name] = N'states' AND elm.[type] = 4 AND stt.[type] = 5 AND stg.[disabled] = 0;
         END TRY 
         BEGIN CATCH;
-            SET @message = N'ERROR[R3]: error(s) occured while retrieving "levels" from JSON string';
+            SET @message = N'ERROR[R3]: error(s) occured while retrieving "states" from JSON string';
             THROW;
         END CATCH;
 
-        -- merge default settings for each objects in levels arrays
+        -- merge default settings for each objects in states arrays
         BEGIN TRY;
-            INSERT INTO @levels_settings([key], [level_key], [after_hours], [delete_delay_hours], [disabled])
-            SELECT lvl.[key], lvl.[level_key]
-                , [after_hours] = (SELECT MAX([value]) FROM @jsonValues_levels WHERE [key] = lvl.[key] AND [level_key] = lvl.[level_key] AND [name] = N'after_hours' AND [type] = 2 )
-                , [delete_delay_hours] = (SELECT MAX([value]) FROM @jsonValues_levels WHERE [key] = lvl.[key] AND [level_key] = lvl.[level_key] AND [name] = N'delete_delay_hours' AND [type] = 2 )
-                , [disabled] = ISNULL( ( SELECT MIN(ISNULL(IIF( ([type] = 3 AND [value] = N'true') OR ([type] = 2 AND [value] >= 1) , 1, 0), 0)) FROM @jsonValues_levels WHERE [key] = lvl.[key] AND [level_key] = lvl.[level_key] AND [name] = N'disabled' AND [type] IN (2, 3, 4) ), 0)
-            FROM (SELECT DISTINCT [key], [level_key] FROM @jsonValues_levels) lvl
+            INSERT INTO @states_settings([key], [state_key], [after_hours], [delete_delay_hours], [disabled])
+            SELECT stt.[key], stt.[state_key]
+                , [after_hours] = (SELECT MAX([value]) FROM @jsonValues_states WHERE [key] = stt.[key] AND [state_key] = stt.[state_key] AND [name] = N'after_hours' AND [type] = 2 )
+                , [delete_delay_hours] = (SELECT MAX([value]) FROM @jsonValues_states WHERE [key] = stt.[key] AND [state_key] = stt.[state_key] AND [name] = N'delete_delay_hours' AND [type] = 2 )
+                , [disabled] = ISNULL( ( SELECT MIN(ISNULL(IIF( ([type] = 3 AND [value] = N'true') OR ([type] = 2 AND [value] >= 1) , 1, 0), 0)) FROM @jsonValues_states WHERE [key] = stt.[key] AND [state_key] = stt.[state_key] AND [name] = N'disabled' AND [type] IN (2, 3, 4) ), 0)
+            FROM (SELECT DISTINCT [key], [state_key] FROM @jsonValues_states) stt
         END TRY 
         BEGIN CATCH;
-            SET @message = N'ERROR[R4]: error(s) occured while retrieving "levels" settings from JSON string';
+            SET @message = N'ERROR[R4]: error(s) occured while retrieving "states" settings from JSON string';
             THROW;
         END CATCH;
 
-        -- merge Levels values and string arrays
+        -- merge States values and string arrays
         BEGIN TRY;
-            INSERT INTO @jsonArray_Levels([key], [level_key], [name], [Level_Name], [Level_Id])
-            SELECT lvl.[key], lvl.[level_key], lvl.[name]
-            , [level_name] = LTRIM(RTRIM( IIF(lvl.[type] = 1, lvl.[value], IIF(val.[type] = 1, val.[value], NULL)) ))
-            , [level_id] = LTRIM(RTRIM( IIF(lvl.[type] = 2, lvl.[value], IIF(val.[type] = 2, val.[value], NULL)) ))
-            FROM @levels_settings sts 
-            INNER JOIN @jsonValues_levels lvl ON lvl.[key] = sts.[key] AND sts.[level_key] = lvl.[level_key] AND sts.[disabled] = 0
-            OUTER APPLY OPENJSON( IIF(lvl.[type] = 4, lvl.[value], NULL) ) val
-            WHERE lvl.[type] IN (1, 2, 4) AND lvl.[name] IN (N'archive', N'delete') AND (val.[type] IS NULL OR val.[type] IN (1, 2) )
-                AND lvl.[value] IS NOT NULL
+            INSERT INTO @jsonArray_States([key], [state_key], [name], [State_Name], [State_Id])
+            SELECT stt.[key], stt.[state_key], stt.[name]
+            , [state_name] = LTRIM(RTRIM( IIF(stt.[type] = 1, stt.[value], IIF(val.[type] = 1, val.[value], NULL)) ))
+            , [state_id] = LTRIM(RTRIM( IIF(stt.[type] = 2, stt.[value], IIF(val.[type] = 2, val.[value], NULL)) ))
+            FROM @states_settings sts 
+            INNER JOIN @jsonValues_states stt ON stt.[key] = sts.[key] AND sts.[state_key] = stt.[state_key] AND sts.[disabled] = 0
+            OUTER APPLY OPENJSON( IIF(stt.[type] = 4, stt.[value], NULL) ) val
+            WHERE stt.[type] IN (1, 2, 4) AND stt.[name] IN (N'archive', N'delete') AND (val.[type] IS NULL OR val.[type] IN (1, 2) )
+                AND stt.[value] IS NOT NULL
         END TRY 
         BEGIN CATCH;
-            SET @message = N'ERROR[R5]: error(s) occured while merging "levels" value(s) and string array(s) from JSON string';
+            SET @message = N'ERROR[R5]: error(s) occured while merging "states" value(s) and string array(s) from JSON string';
             THROW;
         END CATCH;
 
@@ -1367,12 +1366,12 @@ BEGIN
         END CATCH;
 
         BEGIN TRY;
-            -- 1 - J1: array contains invalid key (not 'tenants', N'levels', N'after_hours', N'delete_delay_hours') 
+            -- 1 - J1: array contains invalid key (not 'tenants', N'states', N'after_hours', N'delete_delay_hours') 
             INSERT INTO @json_errors([id], [key], [message])
             SELECT DISTINCT [id] = 1, [key] = elm.[key], [message] = N'ERROR[J1]: array #' + CAST(elm.[key] AS nvarchar(10)) + N' => invalid key "' + elm.[name] COLLATE DATABASE_DEFAULT + N'"'
             FROM @jsonArray_elements elm 
             INNER JOIN @elements_settings sts ON sts.[key] = elm.[key]
-            WHERE sts.[disabled] = 0 AND elm.[name] NOT IN (N'tenants', N'exclude', N'levels', N'after_hours', N'delete_delay_hours', N'disabled', N'comment', N'comments');
+            WHERE sts.[disabled] = 0 AND elm.[name] NOT IN (N'tenants', N'exclude', N'states', N'after_hours', N'delete_delay_hours', N'disabled', N'comment', N'comments');
         END TRY
         BEGIN CATCH;
             SET @message = N'ERROR[J1]: error(s) occured while checking invalid key(s) in JSON string';
@@ -1380,12 +1379,12 @@ BEGIN
         END CATCH;
 
         BEGIN TRY;
-            -- 2 - J2: missing key(s) in object ('tenants', 'levels')
+            -- 2 - J2: missing key(s) in object ('tenants', 'states')
             INSERT INTO @json_errors([id], [key], [message])
             SELECT DISTINCT [id] = 2, [key] = jsn.[key], N'ERROR[J2]: array #' + CAST(jsn.[key] AS nvarchar(10)) + N' => missing key "' + v.[name]
             FROM @jsons jsn 
             INNER JOIN @elements_settings sts ON sts.[key] = jsn.[key]
-            CROSS JOIN (VALUES(N'tenants'), (N'levels')) v([name]) 
+            CROSS JOIN (VALUES(N'tenants'), (N'states')) v([name]) 
             WHERE sts.[disabled] = 0 AND NOT EXISTS(SELECT 1 FROM @jsonArray_elements WHERE [key] = jsn.[key] AND [name] = v.[name]);
         END TRY
         BEGIN CATCH;
@@ -1394,17 +1393,17 @@ BEGIN
         END CATCH;
 
         BEGIN TRY;
-            -- 3 - J3: invalid type for key (tenants => number, string or array ; levels => object ; others => number)
+            -- 3 - J3: invalid type for key (tenants => number, string or array ; states => object ; others => number)
             INSERT INTO @json_errors([id], [key], [message])
             SELECT DISTINCT [id] = 3, [key] = elm.[key], [message] = N'ERROR[J3]: array #' + CAST(elm.[key] AS nvarchar(10)) + N' => invalid "' + elm.[type_name] + '" type for key "' + elm.[name] + N'" (only ' +
                 CASE WHEN elm.[name] IN (N'tenants', N'exclude') THEN N'number, string or array' 
-                WHEN elm.[name] = N'levels' THEN N'array' 
+                WHEN elm.[name] = N'states' THEN N'array' 
                 WHEN elm.[name] = N'disabled' THEN N'true/false or 0/1' 
                 ELSE N'number' END + N' expected)'
             FROM @elements_settings sts 
             INNER JOIN @jsonArray_elements elm ON elm.[key] = sts.[key] AND sts.[disabled] = 0
             WHERE (elm.[name] = N'tenants' AND elm.[type] NOT IN (1, 2, 4)) 
-                OR (elm.[name] = N'levels' AND elm.[type] <> 4) 
+                OR (elm.[name] = N'states' AND elm.[type] <> 4) 
                 OR (elm.[name] IN (N'after_hours', N'delete_delay_hours') AND elm.[type] <> 2)
                 OR (elm.[name] = N'disabled' AND elm.[type] NOT IN (2, 3));
         END TRY
@@ -1427,17 +1426,17 @@ BEGIN
             THROW;
         END CATCH;
 
-        -- 5 - J5: empty tenants / levels array
+        -- 5 - J5: empty tenants / states array
         BEGIN TRY
             INSERT INTO @json_errors([id], [key], [message])
             SELECT DISTINCT [id] = 5, [key] =elm.[key], [message] = N'ERROR[J5]: array #' + CAST(elm.[key] AS nvarchar(10)) + N' => "' + elm.[name] + '" array is empty (' +  CASE WHEN elm.[name] IN (N'tenants', N'exclude') THEN N'number(s) or string(s)' ELSE N'archive or delete object(s)' END + N' expected)'
             FROM @elements_settings sts 
             INNER JOIN @jsonArray_elements elm ON elm.[key] = sts.[key] AND sts.[disabled] = 0
             OUTER APPLY OPENJSON(elm.[value]) val
-            WHERE elm.[name] IN (N'tenants', N'exclude', N'levels') AND elm.[type] = 4 AND val.[key] IS NULL;
+            WHERE elm.[name] IN (N'tenants', N'exclude', N'states') AND elm.[type] = 4 AND val.[key] IS NULL;
         END TRY
         BEGIN CATCH;
-            SET @message = N'ERROR[J5]: error(s) occured while checking empty array(s) ("tenants" or "levels") in JSON string';
+            SET @message = N'ERROR[J5]: error(s) occured while checking empty array(s) ("tenants" or "states") in JSON string';
             THROW;
         END CATCH;
 
@@ -1452,7 +1451,7 @@ BEGIN
             INNER JOIN @jsonArray_elements elm ON elm.[key] = sts.[key] AND sts.[disabled] = 0
             CROSS APPLY OPENJSON(elm.[value]) val
             INNER JOIN @json_types tps ON tps.id = val.[type]
-            WHERE elm.[type] = 4 AND ( ( elm.[name] IN (N'tenants', N'exclude') AND val.[type] NOT IN (1, 2) ) OR ( elm.[name] = N'levels' AND val.[type] NOT IN (5) ));
+            WHERE elm.[type] = 4 AND ( ( elm.[name] IN (N'tenants', N'exclude') AND val.[type] NOT IN (1, 2) ) OR ( elm.[name] = N'states' AND val.[type] NOT IN (5) ));
         END TRY
         BEGIN CATCH;
             SET @message = N'ERROR[T0]: error(s) occured while checking invalid type(s) in "tenants" array(s) in JSON string';
@@ -1498,26 +1497,26 @@ BEGIN
         END CATCH;
 
         ----------------------------------------------------------------------------------------------------
-        -- JSON string - Levels checks
+        -- JSON string - States checks
         ----------------------------------------------------------------------------------------------------
         -- 10 - L0: array contains invalid key (not 'archive', 'delete', 'after_hours', 'delete_delay_hours', 'disabled') 
         BEGIN TRY
             INSERT INTO @json_errors([id], [key], [message])
-            SELECT DISTINCT [id] = 10, [key] = lvl.[key], [message] = N'ERROR[L0]: array #' + CAST([key] AS nvarchar(10)) + N' / level #' +  CAST([level_key] AS nvarchar(10)) + N' => invalid key "' + lvl.[name] COLLATE DATABASE_DEFAULT + N'"'
-            FROM @jsonValues_levels lvl 
-            WHERE lvl.[name] NOT IN (N'archive', N'delete', N'after_hours', N'delete_delay_hours', N'disabled', N'comment', N'comments');
+            SELECT DISTINCT [id] = 10, [key] = stt.[key], [message] = N'ERROR[L0]: array #' + CAST([key] AS nvarchar(10)) + N' / state #' +  CAST([state_key] AS nvarchar(10)) + N' => invalid key "' + stt.[name] COLLATE DATABASE_DEFAULT + N'"'
+            FROM @jsonValues_states stt 
+            WHERE stt.[name] NOT IN (N'archive', N'delete', N'after_hours', N'delete_delay_hours', N'disabled', N'comment', N'comments');
         END TRY
         BEGIN CATCH;
-            SET @message = N'ERROR[L0]: error(s) occured while checking invalid type(s) in "levels" array(s) in JSON string';
+            SET @message = N'ERROR[L0]: error(s) occured while checking invalid type(s) in "states" array(s) in JSON string';
             THROW;
         END CATCH;
 
         -- 11 - L1: missing key(s) in object ('archive', 'delete')
         BEGIN TRY;
             INSERT INTO @json_errors([id], [key], [message])
-            SELECT DISTINCT [id] = 11, [key] = lvl.[key]/*, lvl.[level_key]*/, [message] = N'ERROR[L1]: array #' + CAST([key] AS nvarchar(10)) + N' / level #' +  CAST([level_key] AS nvarchar(10)) + N' => missing key (archive or delete or both)"'
-            FROM @levels_settings lvl 
-            WHERE NOT EXISTS(SELECT 1 FROM @jsonValues_levels WHERE [key] = lvl.[key] AND [level_key] = lvl.[level_key] AND [name] IN (N'archive', N'delete') );
+            SELECT DISTINCT [id] = 11, [key] = stt.[key]/*, stt.[state_key]*/, [message] = N'ERROR[L1]: array #' + CAST([key] AS nvarchar(10)) + N' / state #' +  CAST([state_key] AS nvarchar(10)) + N' => missing key (archive or delete or both)"'
+            FROM @states_settings stt 
+            WHERE NOT EXISTS(SELECT 1 FROM @jsonValues_states WHERE [key] = stt.[key] AND [state_key] = stt.[state_key] AND [name] IN (N'archive', N'delete') );
         END TRY
         BEGIN CATCH;
             SET @message = N'ERROR[L1]: error(s) occured while checking missing key(s) "archive" or "delete" object(s) in JSON string';
@@ -1527,102 +1526,102 @@ BEGIN
         -- 12 - L3: invalid type for key (archive/delete => number, string or array ; disabled => true/false or number ; others => number)
         BEGIN TRY;
             INSERT INTO @json_errors([id], [key], [message])
-            SELECT DISTINCT [id] = 12, [key] = sts.[key], [message] = N'ERROR[L3]: array #' + CAST(sts.[key] AS nvarchar(10)) + N' / level #' +  CAST(sts.[level_key] AS nvarchar(10)) + N' => invalid "' + lvl.[type_name] + '" type for key "' + lvl.[name] + N'" (only ' +
-                CASE WHEN lvl.[name] IN (N'archive', N'delete') THEN N'number, string or array' 
-                WHEN lvl.[name] = N'disabled' THEN N'true/false or 0/1' 
+            SELECT DISTINCT [id] = 12, [key] = sts.[key], [message] = N'ERROR[L3]: array #' + CAST(sts.[key] AS nvarchar(10)) + N' / state #' +  CAST(sts.[state_key] AS nvarchar(10)) + N' => invalid "' + vst.[type_name] + '" type for key "' + vst.[name] + N'" (only ' +
+                CASE WHEN vst.[name] IN (N'archive', N'delete') THEN N'number, string or array' 
+                WHEN vst.[name] = N'disabled' THEN N'true/false or 0/1' 
                 ELSE N'number' END + N' expected)'
-            FROM @levels_settings sts 
-            INNER JOIN @jsonValues_levels lvl ON lvl.[key] = sts.[key] AND sts.[level_key] = lvl.[level_key] AND sts.[disabled] = 0
-            WHERE (lvl.[name] IN (N'archive', N'delete') AND lvl.[type] NOT IN (1, 2, 4)) 
-                OR (lvl.[name] IN (N'after_hours', N'delete_delay_hours') AND lvl.[type] <> 2) 
-                OR (lvl.[name] = N'disabled' AND lvl.[type] NOT IN (2, 3));
+            FROM @states_settings sts 
+            INNER JOIN @jsonValues_states vst ON vst.[key] = sts.[key] AND sts.[state_key] = vst.[state_key] AND sts.[disabled] = 0
+            WHERE (vst.[name] IN (N'archive', N'delete') AND vst.[type] NOT IN (1, 2, 4)) 
+                OR (vst.[name] IN (N'after_hours', N'delete_delay_hours') AND vst.[type] <> 2) 
+                OR (vst.[name] = N'disabled' AND vst.[type] NOT IN (2, 3));
         END TRY
         BEGIN CATCH;
-            SET @message = N'ERROR[L3]: error(s) occured while checking invalid type(s) in "levels" in JSON string';
+            SET @message = N'ERROR[L3]: error(s) occured while checking invalid type(s) in "states" in JSON string';
             THROW;
         END CATCH;
 
         -- 13 - L4: duplicate elements
         BEGIN TRY;
             INSERT INTO @json_errors([id], [key], [message])
-            SELECT [id] = 13, [key] = sts.[key], [message] = N'ERROR[L4]: array #' + CAST(sts.[key] AS nvarchar(10)) + N' / level #' +  CAST(sts.[level_key] AS nvarchar(10)) + N' => duplicate "' + lvl.[name] + '" found ' + CAST(COUNT(*) AS nvarchar(10)) + N' times (only 1 expected)'
-            FROM @levels_settings sts 
-            INNER JOIN @jsonValues_levels lvl ON lvl.[key] = sts.[key] AND sts.[level_key] = lvl.[level_key] AND sts.[disabled] = 0
-            GROUP BY sts.[key], sts.[level_key], lvl.[name]
+            SELECT [id] = 13, [key] = sts.[key], [message] = N'ERROR[L4]: array #' + CAST(sts.[key] AS nvarchar(10)) + N' / state #' +  CAST(sts.[state_key] AS nvarchar(10)) + N' => duplicate "' + vst.[name] + '" found ' + CAST(COUNT(*) AS nvarchar(10)) + N' times (only 1 expected)'
+            FROM @states_settings sts 
+            INNER JOIN @jsonValues_states vst ON vst.[key] = sts.[key] AND sts.[state_key] = vst.[state_key] AND sts.[disabled] = 0
+            GROUP BY sts.[key], sts.[state_key], vst.[name]
             HAVING COUNT(*) > 1;
         END TRY
         BEGIN CATCH;
-            SET @message = N'ERROR[L4]: error(s) occured while checking duplicate element(s) in "levels" in JSON string';
+            SET @message = N'ERROR[L4]: error(s) occured while checking duplicate element(s) in "states" in JSON string';
             THROW;
         END CATCH;
 
         -- 14 - L5: empty archive / delete array
         BEGIN TRY;
             INSERT INTO @json_errors([id], [key], [message])
-            SELECT DISTINCT [id] = 14, [key] = sts.[key], [message] = N'ERROR[L5]: array #' + CAST(sts.[key] AS nvarchar(10)) + N' / level #' +  CAST(sts.[level_key] AS nvarchar(10)) + N' => "' + lvl.[name] + '" array is empty (number(s) or string(s) expected)'
-            FROM @levels_settings sts 
-            INNER JOIN @jsonValues_levels lvl ON lvl.[key] = sts.[key] AND sts.[level_key] = lvl.[level_key] AND sts.[disabled] = 0
-            OUTER APPLY OPENJSON(lvl.[value]) val
-            WHERE lvl.[name] IN (N'archive', N'delete') AND lvl.[type] = 4 AND val.[key] IS NULL;
+            SELECT DISTINCT [id] = 14, [key] = sts.[key], [message] = N'ERROR[L5]: array #' + CAST(sts.[key] AS nvarchar(10)) + N' / state #' +  CAST(sts.[state_key] AS nvarchar(10)) + N' => "' + vst.[name] + '" array is empty (number(s) or string(s) expected)'
+            FROM @states_settings sts 
+            INNER JOIN @jsonValues_states vst ON vst.[key] = sts.[key] AND sts.[state_key] = vst.[state_key] AND sts.[disabled] = 0
+            OUTER APPLY OPENJSON(vst.[value]) val
+            WHERE vst.[name] IN (N'archive', N'delete') AND vst.[type] = 4 AND val.[key] IS NULL;
         END TRY
         BEGIN CATCH;
-            SET @message = N'ERROR[L5]: error(s) occured while checking empty "archive" or "delete" array(s) in "levels" array(s) in JSON string';
+            SET @message = N'ERROR[L5]: error(s) occured while checking empty "archive" or "delete" array(s) in "states" array(s) in JSON string';
             THROW;
         END CATCH;
 
         -- 15 - L6: invalid type(s) in tenants array (only number or string)
         BEGIN TRY
             INSERT INTO @json_errors([id], [key], [message])
-            SELECT DISTINCT [id] = 15, [key] = sts.[key], [message] = N'ERROR[L6]: array #' + CAST(sts.[key] AS nvarchar(10)) + N' / level #' +  CAST(sts.[level_key] AS nvarchar(10)) + N' => invalid "' + tps.[name] COLLATE DATABASE_DEFAULT + '" type in "' + lvl.[name] + '" array (only number(s) or string(s) expected)'
-            FROM @levels_settings sts 
-            INNER JOIN @jsonValues_levels lvl ON lvl.[key] = sts.[key] AND sts.[level_key] = lvl.[level_key] AND sts.[disabled] = 0
-            CROSS APPLY OPENJSON(lvl.[value]) val
+            SELECT DISTINCT [id] = 15, [key] = sts.[key], [message] = N'ERROR[L6]: array #' + CAST(sts.[key] AS nvarchar(10)) + N' / state #' +  CAST(sts.[state_key] AS nvarchar(10)) + N' => invalid "' + tps.[name] COLLATE DATABASE_DEFAULT + '" type in "' + vst.[name] + '" array (only number(s) or string(s) expected)'
+            FROM @states_settings sts 
+            INNER JOIN @jsonValues_states vst ON vst.[key] = sts.[key] AND sts.[state_key] = vst.[state_key] AND sts.[disabled] = 0
+            CROSS APPLY OPENJSON(vst.[value]) val
             INNER JOIN @json_types tps ON tps.id = val.[type]
-            WHERE lvl.[type] = 4 AND lvl.[name] IN (N'archive', N'delete') AND val.[type] NOT IN (1, 2);
+            WHERE vst.[type] = 4 AND vst.[name] IN (N'archive', N'delete') AND val.[type] NOT IN (1, 2);
         END TRY 
         BEGIN CATCH
-            SET @message = N'ERROR[L6]: errors occured while checking invalid types in "archive" or "delete" elements(s) in "levels" array(s) in JSON string';
+            SET @message = N'ERROR[L6]: errors occured while checking invalid types in "archive" or "delete" elements(s) in "states" array(s) in JSON string';
             THROW;
         END CATCH
 
-        -- 16 - L7: invalid level type/id
+        -- 16 - L7: invalid state type/id
         BEGIN TRY;
             INSERT INTO @json_errors([id], [key], [message])
-            SELECT [id] = 16, [key] = lvl.[key], [message] = N'ERROR[L7]: array #' + CAST(lvl.[key] AS nvarchar(10)) + N' / level #' +  CAST(lvl.[level_key] AS nvarchar(10)) + N' => invalid level ' + IIF(lvl.[level_name] IS NOT NULL, N'"' + lvl.[level_name] + N'"', CAST(lvl.[level_id] AS nvarchar(10))) + N' in "' + lvl.[name] + N'" (0/trace, 1/debug, 2/info, 3/warn, 4/error or 5/fatal expected)'
-            FROM @jsonArray_Levels lvl
-            LEFT JOIN @log_levels lgl ON lgl.[id] = lvl.[level_id] OR lgl.[level] = lvl.[level_name]
-            WHERE --lvl.[level_name] <> N'ALL' AND lgl.[id] IS NULL AND (lvl.[level_name] IS NOT NULL OR lvl.[level_id] IS NOT NULL)
-          lgl.[id] IS NULL AND ( (lvl.[level_name] <> N'ALL' AND lvl.[level_name] IS NOT NULL) OR lvl.[level_id] IS NOT NULL)
+            SELECT [id] = 16, [key] = stt.[key], [message] = N'ERROR[L7]: array #' + CAST(stt.[key] AS nvarchar(10)) + N' / state #' +  CAST(stt.[state_key] AS nvarchar(10)) + N' => invalid state ' + IIF(stt.[state_name] IS NOT NULL, N'"' + stt.[state_name] + N'"', CAST(stt.[state_id] AS nvarchar(10))) + N' in "' + stt.[name] + N'" (4/Faulted, 5/Successful,6/Stopped, 7/Suspended, 8/Resumed expected)'
+            FROM @jsonArray_States stt
+            LEFT JOIN @log_states lgl ON lgl.[id] = stt.[state_id] OR lgl.[state] = stt.[state_name]
+            WHERE --stt.[state_name] <> N'ALL' AND lgl.[id] IS NULL AND (stt.[state_name] IS NOT NULL OR stt.[state_id] IS NOT NULL)
+          lgl.[id] IS NULL AND ( (stt.[state_name] <> N'ALL' AND stt.[state_name] IS NOT NULL) OR stt.[state_id] IS NOT NULL)
         END TRY 
         BEGIN CATCH
-            SET @message = N'ERROR[L7]: errors occured while checking invalid level type(s) or id(s) in JSON string';
+            SET @message = N'ERROR[L7]: errors occured while checking invalid state type(s) or id(s) in JSON string';
             THROW;
         END CATCH
 
-        -- 17 - L8: duplicate level type/id
+        -- 17 - L8: duplicate state type/id
         BEGIN TRY;
             INSERT INTO @json_errors([id], [key], [message])
-            SELECT [id] = 17, [key] = lvl.[key], [message] = N'ERROR[L8]: array #' + CAST(lvl.[key] AS nvarchar(10)) + N' => duplicate level "' + lgl.[level] + '" found ' + CAST(COUNT(DISTINCT lvl.[level_key]) AS nvarchar(10)) + N' times (only 1 expected)'
-            FROM @jsonArray_Levels lvl
-            INNER JOIN @log_levels lgl ON lgl.[id] = lvl.[level_id] OR lgl.[level] = lvl.[level_name]
-            GROUP BY lvl.[key], lgl.[id], lgl.[level]
-            HAVING COUNT(DISTINCT lvl.[level_key]) > 1
+            SELECT [id] = 17, [key] = stt.[key], [message] = N'ERROR[L8]: array #' + CAST(stt.[key] AS nvarchar(10)) + N' => duplicate state "' + lgl.[state] + '" found ' + CAST(COUNT(DISTINCT stt.[state_key]) AS nvarchar(10)) + N' times (only 1 expected)'
+            FROM @jsonArray_States stt
+            INNER JOIN @log_states lgl ON lgl.[id] = stt.[state_id] OR lgl.[state] = stt.[state_name]
+            GROUP BY stt.[key], lgl.[id], lgl.[state]
+            HAVING COUNT(DISTINCT stt.[state_key]) > 1
         END TRY 
         BEGIN CATCH
-            SET @message = N'ERROR[L8]: errors occured while checking duplicate level type(s) or id(s) in JSON string';
+            SET @message = N'ERROR[L8]: errors occured while checking duplicate state type(s) or id(s) in JSON string';
             THROW;
         END CATCH
 
-        -- 18 - L9: invalid level with all
+        -- 18 - L9: invalid state with all
         BEGIN TRY;
             INSERT INTO @json_errors([id], [key], [message])
-            SELECT [id] = 18, [key] = lvl.[key], [message] = N'ERROR[L9]: array #' + CAST(lvl.[key] AS nvarchar(10)) + N' => level "' + lgl.[level] + '" (' + CAST(lgl.[id] AS nvarchar(10)) + N' ) is invalid when alias "all" is present'
-            FROM @jsonArray_Levels lvl
-            INNER JOIN @log_levels lgl ON lgl.[id] = lvl.[level_id] OR lgl.[level] = lvl.[level_name]
-            WHERE EXISTS(SELECT 1 FROM @jsonArray_Levels WHERE [key] = lvl.[key] AND [level_name] = N'all');
+            SELECT [id] = 18, [key] = stt.[key], [message] = N'ERROR[L9]: array #' + CAST(stt.[key] AS nvarchar(10)) + N' => state "' + lgl.[state] + '" (' + CAST(lgl.[id] AS nvarchar(10)) + N' ) is invalid when alias "all" is present'
+            FROM @jsonArray_States stt
+            INNER JOIN @log_states lgl ON lgl.[id] = stt.[state_id] OR lgl.[state] = stt.[state_name]
+            WHERE EXISTS(SELECT 1 FROM @jsonArray_States WHERE [key] = stt.[key] AND [state_name] = N'all');
         END TRY 
         BEGIN CATCH
-            SET @message = N'ERROR[L9]: errors occured while checking ALL level type(s) in JSON string';
+            SET @message = N'ERROR[L9]: errors occured while checking ALL state type(s) in JSON string';
             THROW;
         END CATCH
 
@@ -1631,8 +1630,8 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         BEGIN TRY;
             INSERT INTO @json_errors([id], [key], [message])
-            SELECT [id] = 18, [key] = lvs.[key], [message] = N'ERROR[H0]: array #' + CAST(els.[key] AS nvarchar(10)) + N' / level #' +  CAST(lvs.[level_key] AS nvarchar(10)) + N' => @AfterHours default value is not provided and "after_hours" value missing in both element and level objects'
-            FROM @levels_settings lvs 
+            SELECT [id] = 18, [key] = lvs.[key], [message] = N'ERROR[H0]: array #' + CAST(els.[key] AS nvarchar(10)) + N' / state #' +  CAST(lvs.[state_key] AS nvarchar(10)) + N' => @AfterHours default value is not provided and "after_hours" value missing in both element and state objects'
+            FROM @states_settings lvs 
             INNER JOIN @elements_settings els ON els.[key] = lvs.[key]
             WHERE lvs.[disabled] = 0 AND @AfterHours IS NULL AND els.[after_hours] IS NULL AND lvs.[after_hours] IS NULL;
         END TRY 
@@ -1646,66 +1645,32 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         BEGIN TRY;
             INSERT INTO @json_errors([id], [key], [message])
-            SELECT [id] = 19, [key] = lvs.[key], [message] = N'ERROR[H1]: array #' + CAST(els.[key] AS nvarchar(10)) + N' / level #' +  CAST(lvs.[level_key] AS nvarchar(10)) + N' => @DeleteDelayHours default value is not provided and "delete_delay_hours" value missing in both element and level objects'
-            FROM @levels_settings lvs 
+            SELECT [id] = 19, [key] = lvs.[key], [message] = N'ERROR[H1]: array #' + CAST(els.[key] AS nvarchar(10)) + N' / state #' +  CAST(lvs.[state_key] AS nvarchar(10)) + N' => @DeleteDelayHours default value is not provided and "delete_delay_hours" value missing in both element and state objects'
+            FROM @states_settings lvs 
             INNER JOIN @elements_settings els ON els.[key] = lvs.[key]
             WHERE lvs.[disabled] = 0 AND @DeleteDelayHhours IS NULL AND els.[delete_delay_hours] IS NULL AND lvs.[delete_delay_hours] IS NULL;
         END TRY 
         BEGIN CATCH
-            SET @message = N'ERROR[H1]: errors occured while checking [after_hours] parameter(s)';
+            SET @message = N'ERROR[H1]: errors occured while checking [delete_delay_hours] parameter(s)';
             THROW;
         END CATCH
 
         IF NOT EXISTS(SELECT 1 FROM @json_errors) 
         BEGIN 
             SET @IsValid = 1;
-/*            WITH levels AS(
-                SELECT  lvs.[key], lvs.[level_key], [level] = lgl.[id], lvs.[after_hours], lvs.[delete_delay_hours]
-                    , [deleteOnly] = IIF(lvl.[name] = N'delete', 1, 0)
-                FROM  @levels_settings lvs 
-                INNER JOIN @jsonArray_Levels lvl ON lvs.[key] = lvl.[key] AND lvs.[level_key] = lvl.[level_key]
-                INNER JOIN @log_levels lgl ON lgl.[id] = lvl.[level_id] OR lgl.[level] = lvl.[level_name] OR lvl.[level_name] = N'ALL'
-                WHERE lvs.[disabled] = 0
-            )
-            SELECT DISTINCT 'x', @DeleteDelayHhours, --tnt.[key]-1, lvl.[level_key]-1, 
-                tnt.[Tenant_Id]
-                , lvl.[level]            
-                , lvl.[deleteOnly]
-                , [a] = COALESCE(lvl.[after_hours], elm.[after_hours], @AfterHours)
-                , [d] = COALESCE(lvl.[delete_delay_hours], elm.[delete_delay_hours], @DeleteDelayHhours, 0)
-                -- = IIF(lvl.[name] = N'delete', 1, 0)
-                --, tnt.value_name, tnt.Tenant_Name
-            FROM @elements_settings elm
-            INNER JOIN / *(SELECT  [key], [Tenant_Id] FROM* / @jsonArray_tenants / *WHERE [keep] = 1)* / tnt ON tnt.[key] = elm.[key]
-            INNER JOIN levels lvl ON elm.[key] = lvl.[key]
-            WHERE elm.[disabled] = 0 --AND lvs.[disabled] = 0 
-            AND tnt.[keep] = 1
-            ORDER BY  tnt.[Tenant_Id]
-                , lvl.[level]            --[key], [level_key]*/
-/*                SELECT DISTINCT tnt.[Tenant_Id], [level] = lgl.[Id]
-                    , [delete only] = IIF(lvl.[name] = N'delete', 1, 0)
-                    , [after hours] = COALESCE(lvs.[after_hours], elm.[after_hours], @AfterHours)
-                    , [delay] = COALESCE(lvs.[delete_delay_hours], elm.[delete_delay_hours], @DeleteDelayHhours, 0)
-                FROM @elements_settings elm
-                INNER JOIN @jsonArray_tenants tnt ON tnt.[key] = elm.[key]
-                INNER JOIN @levels_settings lvs ON elm.[key] = lvs.[key]
-                INNER JOIN @jsonArray_Levels lvl ON lvs.[key] = lvl.[key] AND lvs.[level_key] = lvl.[level_key]
-                INNER JOIN @log_levels lgl ON lgl.[id] = lvl.[level_id] OR lgl.[level] = lvl.[level_name] OR lvl.[level_name] = N'ALL'
-                WHERE elm.[disabled] = 0 AND lvs.[disabled] = 0 AND tnt.[keep] = 1
-                ORDER BY  [Tenant_Id], [level];
-*/
+
             SELECT @Settings = (
-                SELECT DISTINCT [t] = tnt.[Tenant_Id], [l] = lgl.[Id]
-                    , [o] = IIF(lvl.[name] = N'delete', 1, 0)
-                    , [h] = COALESCE(lvs.[after_hours], elm.[after_hours], @AfterHours)
-                    , [d] = COALESCE(lvs.[delete_delay_hours], elm.[delete_delay_hours], @DeleteDelayHhours, 0)
+                SELECT DISTINCT [t] = tnt.[Tenant_Id], [s] = lgs.[Id]
+                    , [o] = IIF(stt.[name] = N'delete', 1, 0)
+                    , [h] = COALESCE(sts.[after_hours], elm.[after_hours], @AfterHours)
+                    , [d] = COALESCE(sts.[delete_delay_hours], elm.[delete_delay_hours], @DeleteDelayHhours, 0)
                 FROM @elements_settings elm
                 INNER JOIN @jsonArray_tenants tnt ON tnt.[key] = elm.[key]
-                INNER JOIN @levels_settings lvs ON elm.[key] = lvs.[key]
-                INNER JOIN @jsonArray_Levels lvl ON lvs.[key] = lvl.[key] AND lvs.[level_key] = lvl.[level_key]
-                INNER JOIN @log_levels lgl ON lgl.[id] = lvl.[level_id] OR lgl.[level] = lvl.[level_name] OR lvl.[level_name] = N'ALL'
-                WHERE elm.[disabled] = 0 AND lvs.[disabled] = 0 AND tnt.[keep] = 1
-                ORDER BY  [t], [l]
+                INNER JOIN @states_settings sts ON elm.[key] = sts.[key]
+                INNER JOIN @jsonArray_States stt ON sts.[key] = stt.[key] AND sts.[state_key] = stt.[state_key]
+                INNER JOIN @log_states lgs ON lgs.[id] = stt.[state_id] OR lgs.[state] = stt.[state_name] OR stt.[state_name] = N'ALL'
+                WHERE elm.[disabled] = 0 AND sts.[disabled] = 0 AND tnt.[keep] = 1
+                ORDER BY  [t], [s]
                 FOR JSON PATH, INCLUDE_NULL_VALUES
             )
         END
@@ -1738,25 +1703,25 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- DROP PROCEDURE [Maintenance].[AddArchiveTriggerLogs]
+-- DROP PROCEDURE [Maintenance].[AddArchiveTriggerJobs]
 ----------------------------------------------------------------------------------------------------
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[AddArchiveTriggerLogs]') AND type in (N'P'))
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[AddArchiveTriggerJobs]') AND type in (N'P'))
 BEGIN
-    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[AddArchiveTriggerLogs] AS'
-    PRINT '  + CREATE PROCEDURE: [Maintenance].[AddArchiveTriggerLogs]';
+    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[AddArchiveTriggerJobs] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[AddArchiveTriggerJobs]';
 END
-ELSE PRINT '  = PROCEDURE [Maintenance].[AddArchiveTriggerLogs] already exists' 
+ELSE PRINT '  = PROCEDURE [Maintenance].[AddArchiveTriggerJobs] already exists' 
 GO
 
-PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[AddArchiveTriggerLogs]'
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[AddArchiveTriggerJobs]'
 GO
 
-ALTER PROCEDURE [Maintenance].[AddArchiveTriggerLogs]
+ALTER PROCEDURE [Maintenance].[AddArchiveTriggerJobs]
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: PROCEDURE [Maintenance].[AddArchiveTriggerLogs]
--- ### [Version]: 2023-09-07T15:05:21+02:00
--- ### [Source]: _src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.AddArchiveTriggerLogs.sql
--- ### [Hash]: 30c2b77 [SHA256-E550912D5F096E7D253B0574A751F0555E4AD9255C7713FAFCABCE10B150F210]
+-- ### [Object]: PROCEDURE [Maintenance].[AddArchiveTriggerJobs]
+-- ### [Version]: 2023-09-08T11:12:50+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/Jobs/Procedure_ArchiveDB.Maintenance.AddArchiveTriggerJobs.sql
+-- ### [Hash]: 0859ec6 [SHA256-691FD8BE1776DA09C2617D3D4A1F425628EC83958B9F0F4C65BC9A7997617196]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -1819,7 +1784,7 @@ SELECT @startTimeFloat = CAST(@startTime AS float(53));
         -- Archive / Filters
         ----------------------------------------------------------------------------------------------------
         DECLARE @Ids TABLE(Id bigint);
-        DECLARE @listFilters TABLE([syncId] bigint, [tenants] int, [level] int, [deleteOnly] bit, [archiveDate] datetime, [deleteDate] datetime, [next] datetime)
+        DECLARE @listFilters TABLE([syncId] bigint, [tenants] int, [state] int, [deleteOnly] bit, [archiveDate] datetime, [deleteDate] datetime, [next] datetime)
         DECLARE @countValidFilters int, @countDuplicateFilters int;
         DECLARE @targetTimestamp datetime;
         DECLARE @archiveId bigint;
@@ -1907,9 +1872,9 @@ SELECT @startTimeFloat = CAST(@startTime AS float(53));
         -- Get Proc Version
 /*
         EXEC sp_executesql @stmt = @stmtGetProcInfo, @params = @paramsGetProcInfo, @procid = @@PROCID, @info = N'Version', @output = @versionDatetime OUTPUT;
-        INSERT INTO [Maintenance].[Runs]([Type], [Info], [StartTime]) SELECT N'Add Archive Logs', N'PROCEDURE ' + @procName, @startTime;
+        INSERT INTO [Maintenance].[Runs]([Type], [Info], [StartTime]) SELECT N'Add Archive Jobs', N'PROCEDURE ' + @procName, @startTime;
         INSERT INTO @messages ([Message], Severity, [State]) 
-        SELECT 'Add Archive Logs...' , 10, 1;
+        SELECT 'Add Archive Jobs...' , 10, 1;
 */
         ----------------------------------------------------------------------------------------------------
         -- Create new Run Id
@@ -1921,7 +1886,7 @@ SELECT @startTimeFloat = CAST(@startTime AS float(53));
         
         IF @SavedToRunId IS NULL OR NOT EXISTS(SELECT 1 FROM [Maintenance].[Runs] WHERE Id = @SavedToRunId AND EndDate IS NULL)
         BEGIN
-            INSERT INTO [Maintenance].[Runs]([Type], [Info], [StartTime]) SELECT N'Add Archive Logs Trigger', N'PROCEDURE ' + @procName, @startTime;
+            INSERT INTO [Maintenance].[Runs]([Type], [Info], [StartTime]) SELECT N'Add Archive Jobs Trigger', N'PROCEDURE ' + @procName, @startTime;
             SELECT @runId = @@IDENTITY, @SavedToRunId = @@IDENTITY;
             INSERT INTO @messages ([Message], Severity, [State]) VALUES 
                 (SPACE(@tab+ @space * 1) + N'Messages saved to new Run Id: ' + CONVERT(nvarchar(MAX), @runId), 10, 1);
@@ -2034,7 +1999,7 @@ SELECT @startTimeFloat = CAST(@startTime AS float(53));
                 SELECT @json_filters = UPPER(@json_filters);
                 INSERT INTO @messages ([Message], Severity, [State]) SELECT SPACE(@tab+ @space * 1) + N'@Filters keyword used: ' + @json_filters, 10, 1
                 INSERT INTO @messages ([Message], Severity, [State]) VALUES (SPACE(@tab+ @space * 1) + N'Create JSON string and parameters...', 10, 1)
-                SELECT @json_filters = ( SELECT [tenants] = N'#' + [tenants] + N'#', [levels] = JSON_QUERY( N'[{ "archive": "all"}]' ) FROM (VALUES(N'ACTIVE_TENANTS'), (N'DELETED_TENANTS')) t([tenants]) WHERE @json_filters = N'ALL' OR @json_filters = N'#ALL#' OR @json_filters = [tenants] OR @json_filters = N'#'+ [tenants] + N'#' FOR JSON PATH )
+                SELECT @json_filters = ( SELECT [tenants] = N'#' + [tenants] + N'#', [states] = JSON_QUERY( N'[{ "archive": "all"}]' ) FROM (VALUES(N'ACTIVE_TENANTS'), (N'DELETED_TENANTS')) t([tenants]) WHERE @json_filters = N'ALL' OR @json_filters = N'#ALL#' OR @json_filters = [tenants] OR @json_filters = N'#'+ [tenants] + N'#' FOR JSON PATH )
 
                 INSERT INTO @messages ([Message], Severity, [State]) SELECT SPACE(@tab+ @space * 1) + N'Resulting JSON string: ' + @json_filters, 10, 1
             END
@@ -2045,10 +2010,10 @@ SELECT @startTimeFloat = CAST(@startTime AS float(53));
 
             BEGIN TRY            
                 INSERT INTO @messages ([Message], Severity, [State]) VALUES (SPACE(@tab+ @space * 1) + N'Checking @Filters...', 10, 1)
-                EXEC [Maintenance].[ParseJsonArchiveLogs] @Filters = @json_filters, @Settings = @json_settings OUTPUT, @Messages = @json_errors OUTPUT, @IsValid = @json_IsValid OUTPUT, @AfterHours = @globalAfterHours, @DeleteDelayHhours = @globalDeleteDelay;
+                EXEC [Maintenance].[ParseJsonArchiveJobs] @Filters = @json_filters, @Settings = @json_settings OUTPUT, @Messages = @json_errors OUTPUT, @IsValid = @json_IsValid OUTPUT, @AfterHours = @globalAfterHours, @DeleteDelayHhours = @globalDeleteDelay;
             END TRY
             BEGIN CATCH
-                SET @message = N'ERROR: error(s) occurcered while validating settings with [Maintenance].[ParseJsonArchiveLogs]'
+                SET @message = N'ERROR: error(s) occurcered while validating settings with [Maintenance].[ParseJsonArchiveJobs]'
                 INSERT INTO @messages ([Message], Severity, [State]) VALUES
                         (ERROR_MESSAGE(), 10, 1)
                         , (@message, 16, 1)
@@ -2073,10 +2038,10 @@ SELECT @startTimeFloat = CAST(@startTime AS float(53));
 
         SELECT @errorCount = COUNT(*) FROM @messages WHERE severity >= 16;
         ----------------------------------------------------------------------------------------------------
-        -- Add new Archive Logs
+        -- Add new Archive Jobs
         ----------------------------------------------------------------------------------------------------
         BEGIN TRY
-            INSERT INTO [Maintenance].[Archive_Logs]([ParentArchiveId], [CurrentRunId], [PreviousRunIds], [Name], [Definition], [ArchiveTriggerTime], [ArchiveAfterHours], [DeleteDelayHours], [TargetId], [TargetTimestamp], [RepeatArchive], [RepeatOffsetHours], [RepeatUntil]
+            INSERT INTO [Maintenance].[Archive_Jobs]([ParentArchiveId], [CurrentRunId], [PreviousRunIds], [Name], [Definition], [ArchiveTriggerTime], [ArchiveAfterHours], [DeleteDelayHours], [TargetId], [TargetTimestamp], [RepeatArchive], [RepeatOffsetHours], [RepeatUntil]
                 -- , [AddNextArchive], [NextOffsetHours]
                 , [IsDryRun], [IsSuccess], [IsError], [IsCanceled], [Message], [IsFinished], [FinishedOnDate]
                 , [CountValidFilters], [CountDuplicateFilters] )
@@ -2086,10 +2051,10 @@ SELECT @startTimeFloat = CAST(@startTime AS float(53));
                 , 0, 0
             SET @archiveId = @@IDENTITY;
             
-            INSERT INTO @messages ([Message], Severity, [State]) VALUES (SPACE(@tab+ @space * 1) + N'Archive Logs Trigger created (Id = ' + CAST(@archiveId AS nvarchar(100)) + N')' + IIF(@errorCount > 0, N' with error(s)', N'') + N'.', 10, 1);
+            INSERT INTO @messages ([Message], Severity, [State]) VALUES (SPACE(@tab+ @space * 1) + N'Archive Jobs Trigger created (Id = ' + CAST(@archiveId AS nvarchar(100)) + N')' + IIF(@errorCount > 0, N' with error(s)', N'') + N'.', 10, 1);
         END TRY
         BEGIN CATCH
-            SET @message = N'ERROR: error(s) occurcered while adding Archive Logs trigger to [Maintenance].[Archive_Logs]'
+            SET @message = N'ERROR: error(s) occurcered while adding Archive Jobs trigger to [Maintenance].[Archive_Jobs]'
             INSERT INTO @messages ([Message], Severity, [State]) VALUES
                     (ERROR_MESSAGE(), 10, 1)
                     , (@message, 16, 1)
@@ -2103,13 +2068,13 @@ SELECT @startTimeFloat = CAST(@startTime AS float(53));
 
             BEGIN TRY
                 -- retrieve parsed filters and update target dates
-                INSERT @listFilters ([tenants], [level], [deleteOnly], [archiveDate], [deleteDate])
-                SELECT [tenants] = [t], [levels] = [l], [deleteOnly] = [o]
+                INSERT @listFilters ([tenants], [state], [deleteOnly], [archiveDate], [deleteDate])
+                SELECT [tenants] = [t], [states] = [s], [deleteOnly] = [o]
                     , [TargetTimestamp] = CAST(@triggerTime -ABS(@floatingHour * [h]) AS datetime) 
                     , [DeleteAfterDatetime] = CAST(@triggerTime - ABS(@floatingHour * [h]) + ABS(@floatingHour * [d]) AS datetime) 
-                FROM OPENJSON(@json_settings) WITH ([t] int, [l] int, [o] int, [h] int, [d] int) jsn
+                FROM OPENJSON(@json_settings) WITH ([t] int, [s] int, [o] int, [h] int, [d] int) jsn
 
-                SELECT @countValidFilters = COUNT(*) FROM @listFilters lst WHERE NOT EXISTS (SELECT 1 FROM [Maintenance].[Filter_Logs] flt WHERE flt.TenantId = lst.tenants AND flt.LevelId = lst.[level] AND flt.TargetTimestamp >= lst.archiveDate);
+                SELECT @countValidFilters = COUNT(*) FROM @listFilters lst WHERE NOT EXISTS (SELECT 1 FROM [Maintenance].[Filter_Jobs] flt WHERE flt.TenantId = lst.tenants AND flt.StateId = lst.[state] AND flt.TargetTimestamp >= lst.archiveDate);
                 SELECT @countDuplicateFilters = COUNT(*) - @countValidFilters, @targetTimestamp = MAX(archiveDate) FROM @listFilters;
 
                 IF @countValidFilters > 0
@@ -2117,22 +2082,22 @@ SELECT @startTimeFloat = CAST(@startTime AS float(53));
                     BEGIN TRAN
 
                     -- insert archive sync by target Delete date
-                    INSERT INTO [Maintenance].[Sync_Logs](ArchiveId, DeleteAfterDatetime)
+                    INSERT INTO [Maintenance].[Sync_Jobs](ArchiveId, DeleteAfterDatetime)
                     OUTPUT inserted.Id INTO @Ids(Id)
                     SELECT DISTINCT @archiveId, deleteDate FROM @listFilters ORDER BY deleteDate DESC
 
                     -- match filters with inserted Sync Id
                     UPDATE lst SET syncId = ids.Id
                     FROM @Ids ids 
-                    INNER JOIN [Maintenance].[Sync_Logs] snc ON snc.Id = ids.Id
+                    INNER JOIN [Maintenance].[Sync_Jobs] snc ON snc.Id = ids.Id
                     INNER JOIN @listFilters lst ON lst.deleteDate = snc.DeleteAfterDatetime
 
                     -- insert valid filter(s)
-                    INSERT INTO [Maintenance].[Filter_Logs]([SyncId],[TenantId], [LevelId], [DeleteOnly], [TargetTimestamp], [PreviousTimestamp])
-                    SELECT lst.syncId, lst.tenants, lst.[level], lst.deleteOnly, lst.archiveDate, ISNULL(last.TargetTimestamp, 0) -- 0 => 19010101
+                    INSERT INTO [Maintenance].[Filter_Jobs]([SyncId],[TenantId], [StateId], [DeleteOnly], [TargetTimestamp], [PreviousTimestamp])
+                    SELECT lst.syncId, lst.tenants, lst.[state], lst.deleteOnly, lst.archiveDate, ISNULL(last.TargetTimestamp, 0) -- 0 => 19010101
                     FROM @listFilters lst
-                    OUTER APPLY (SELECT MAX(TargetTimestamp) FROM [Maintenance].[Filter_Logs] flt WHERE flt.TenantId = lst.tenants AND flt.LevelId = lst.[level] AND flt.TargetTimestamp < lst.archiveDate) last(TargetTimestamp) -- retrieve previous target date
-                    WHERE NOT EXISTS (SELECT 1 FROM [Maintenance].[Filter_Logs] flt WHERE flt.TenantId = lst.tenants AND flt.LevelId = lst.[level] AND flt.TargetTimestamp >= lst.archiveDate) -- remove existing filter(s) with a newer date
+                    OUTER APPLY (SELECT MAX(TargetTimestamp) FROM [Maintenance].[Filter_Jobs] flt WHERE flt.TenantId = lst.tenants AND flt.StateId = lst.[state] AND flt.TargetTimestamp < lst.archiveDate) last(TargetTimestamp) -- retrieve previous target date
+                    WHERE NOT EXISTS (SELECT 1 FROM [Maintenance].[Filter_Jobs] flt WHERE flt.TenantId = lst.tenants AND flt.StateId = lst.[state] AND flt.TargetTimestamp >= lst.archiveDate) -- remove existing filter(s) with a newer date
 
                     SET @message = SPACE(@tab+ @space * 1) + N'Valid Filter(s) added: ' + CAST(@countValidFilters AS nvarchar(100)) + N' , duplicate(s) found (' + CAST(@countDuplicateFilters AS nvarchar(100)) + N')';
                     INSERT INTO @messages ([Message], Severity, [State]) VALUES (@message, 10, 1);
@@ -2145,7 +2110,7 @@ SELECT @startTimeFloat = CAST(@startTime AS float(53));
                     INSERT INTO @messages ([Message], Severity, [State]) VALUES (@message, 10, 1)
                 END
                 -- update valid and duplicate filter(s) count
-                UPDATE arc SET [CountValidFilters] = @countValidFilters, [CountDuplicateFilters] = @countDuplicateFilters, [TargetTimestamp] = @targetTimestamp FROM [Maintenance].[Archive_Logs] arc WHERE arc.Id = @archiveId;
+                UPDATE arc SET [CountValidFilters] = @countValidFilters, [CountDuplicateFilters] = @countDuplicateFilters, [TargetTimestamp] = @targetTimestamp FROM [Maintenance].[Archive_Jobs] arc WHERE arc.Id = @archiveId;
 
                 INSERT INTO @messages ([Message], Severity, [State])
                 SELECT SPACE(@tab+ @space * 1) + N'Repeat enabled every [' + CAST(@RepeatOffsetHours AS nvarchar(100)) + N'] hour(s)' + IIF(@RepeatUntil IS NOT NULL, N' until [' + CONVERT(nvarchar(100), @RepeatUntil, 120) + N']', N''), 10, 1 WHERE @RepeatArchive = 1
@@ -2236,7 +2201,7 @@ SELECT @startTimeFloat = CAST(@startTime AS float(53));
         END
 
         --DELETE FROM @messages;
-        SELECT @Message = SPACE(@tab+ @space * 0) + 'Valid Archive Logs Trigger added (SUCCESS)';
+        SELECT @Message = SPACE(@tab+ @space * 0) + 'Valid Archive Jobs Trigger added (SUCCESS)';
 		EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @Message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
 
         INSERT INTO @messages([Date], [Procedure], [Message], [Severity], [State], [Number], [Line])
@@ -2261,24 +2226,24 @@ SELECT @startTimeFloat = CAST(@startTime AS float(53));
             IF @dryRun <> 0 
             BEGIN 
                 -- Output Message result set
-                EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = 'Test Archive Logs Trigger added (DRY RUN)', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
+                EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = 'Test Archive Jobs Trigger added (DRY RUN)', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
             END
             ELSE 
             BEGIN
                 SET @message = N'Execution finished with error(s)'
                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
-                EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = 'Invalid Archive Logs Trigger added (FAIL)', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
+                EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = 'Invalid Archive Jobs Trigger added (FAIL)', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
                 SET @errorCount = @errorCount + 1;
                 SET @returnValue = 4;
             END
         END
         ELSE
         BEGIN
-            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = 'Invalid Archive Logs Trigger added (INCORRECT PARAMETERS)', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
+            EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = 'Invalid Archive Jobs Trigger added (INCORRECT PARAMETERS)', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
         END
 
             UPDATE arc SET [CountValidFilters] = 0, [CountDuplicateFilters] = 0, [IsDryRun] = @dryRun, [IsError] = @errorCount, [IsFinished] = 1, [FinishedOnDate] = SYSDATETIME()
-            FROM [Maintenance].[Archive_Logs] arc WHERE arc.Id = @archiveId;
+            FROM [Maintenance].[Archive_Jobs] arc WHERE arc.Id = @archiveId;
         RAISERROR(@ERROR_MESSAGE, @ERROR_SEVERITY, @ERROR_STATE);
 
         SET @returnValue = ISNULL(@returnValue, 255);
@@ -2310,26 +2275,26 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- DROP PROCEDURE [Maintenance].[ArchiveLogs]
+-- DROP PROCEDURE [Maintenance].[ArchiveJobs]
 ----------------------------------------------------------------------------------------------------
 
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[ArchiveLogs]') AND type in (N'P'))
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[ArchiveJobs]') AND type in (N'P'))
 BEGIN
-    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[ArchiveLogs] AS'
-    PRINT '  + CREATE PROCEDURE: [Maintenance].[ArchiveLogs]';
+    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[ArchiveJobs] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[ArchiveJobs]';
 END
-ELSE PRINT '  = PROCEDURE [Maintenance].[ArchiveLogs] already exists' 
+ELSE PRINT '  = PROCEDURE [Maintenance].[ArchiveJobs] already exists' 
 GO
 
-PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[ArchiveLogs]'
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[ArchiveJobs]'
 GO  
 
-ALTER PROCEDURE [Maintenance].[ArchiveLogs]
+ALTER PROCEDURE [Maintenance].[ArchiveJobs]
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: PROCEDURE [Maintenance].[ArchiveLogs]
--- ### [Version]: 2023-09-07T15:05:21+02:00
--- ### [Source]: _src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.ArchiveLogs.sql
--- ### [Hash]: 30c2b77 [SHA256-107C2185F93F41E6376DAA0BB229C4F1106D075E073352A9B413F6CF4D4570A1]
+-- ### [Object]: PROCEDURE [Maintenance].[ArchiveJobs]
+-- ### [Version]: 2023-09-08T11:12:50+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/Jobs/Procedure_ArchiveDB.Maintenance.ArchiveJobs.sql
+-- ### [Hash]: 0859ec6 [SHA256-7136965B1CEAB4035A9149338FA61FA89F5E40BA02B18E46174A8A1CFD86BE74]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -2390,7 +2355,7 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         -- Filters
         ----------------------------------------------------------------------------------------------------
---        DECLARE @listFilters TABLE (OrderId smallint, ArchiveId bigint, SyncId bigint, CurrentId bigint, TargetId bigint, LastId bigint, TargetTimestamp datetime, PreviousTimestamp datetime , TenantId int, LevelId int, DeleteOnly bit, NoDelay bit, PRIMARY KEY(TenantId, LevelId));
+--        DECLARE @listFilters TABLE (OrderId smallint, ArchiveId bigint, SyncId bigint, CurrentId bigint, TargetId bigint, LastId bigint, TargetTimestamp datetime, PreviousTimestamp datetime , TenantId int, StateId int, DeleteOnly bit, NoDelay bit, PRIMARY KEY(TenantId, StateId));
         DECLARE @countFilterIds int;
         DECLARE @countArchiveIds int;
         DECLARE @targetTimestamp datetime;
@@ -2683,11 +2648,11 @@ BEGIN
 		----------------------------------------------------------------------------------------------------
         -- Check Permissions
         ----------------------------------------------------------------------------------------------------
-/*        -- Check SELECT & DELETE permission on [dbo].[Logs]
+/*        -- Check SELECT & DELETE permission on [dbo].[Jobs]
         INSERT INTO @messages ([Message], Severity, [State])
         SELECT 'Permission not effectively granted: ' + UPPER(p.permission_name), 10, 1
         FROM (VALUES(N'', N'SELECT'), (N'', N'DELETE')) AS p (subentity_name, permission_name)
-        LEFT JOIN sys.fn_my_permissions(N'[dbo].[Logs]', N'OBJECT') eff ON eff.subentity_name = p.subentity_name AND eff.permission_name = p.permission_name
+        LEFT JOIN sys.fn_my_permissions(N'[dbo].[Jobs]', N'OBJECT') eff ON eff.subentity_name = p.subentity_name AND eff.permission_name = p.permission_name
         WHERE eff.permission_name IS NULL
         ORDER BY p.permission_name;
 */
@@ -2695,7 +2660,7 @@ BEGIN
         BEGIN
             INSERT INTO @messages ([Message], Severity, [State]) VALUES
                 (N'Error: missing permission', 10, 1)
-                , (N'SELECT and DELETE permissions are required on [dbo].[Logs] table', 16, 1);
+                , (N'SELECT and DELETE permissions are required on [dbo].[Jobs] table', 16, 1);
         END
 
         -- Check @SaveMessagesToTable parameter
@@ -2820,7 +2785,7 @@ BEGIN
         
         IF @SavedToRunId IS NULL OR NOT EXISTS(SELECT 1 FROM [Maintenance].[Runs] WHERE Id = @SavedToRunId AND EndDate IS NULL)
         BEGIN
-            INSERT INTO [Maintenance].[Runs]([Type], [Info], [StartTime]) SELECT N'Add Archive Logs Trigger', N'PROCEDURE ' + @procName, @startTime;
+            INSERT INTO [Maintenance].[Runs]([Type], [Info], [StartTime]) SELECT N'Add Archive Jobs Trigger', N'PROCEDURE ' + @procName, @startTime;
             SELECT @runId = @@IDENTITY, @SavedToRunId = @@IDENTITY;
             INSERT INTO @messages ([Message], Severity, [State]) VALUES 
                 (N'Messages saved to new Run Id: ' + CONVERT(nvarchar(MAX), @runId), 10, 1);
@@ -2834,7 +2799,7 @@ BEGIN
         BEGIN
             -- Check Synonyms and source/Archive tables
             BEGIN TRY            
-                EXEC [Maintenance].[ValidateArchiveObjectsLogs] @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT, @CreateTable = @synonymCreateTable, @UpdateTable = @synonymUpdateTable, @SourceColumns = @sourceColumns OUTPUT, @ExcludeColumns = @synonymExcludeColumns;
+                EXEC [Maintenance].[ValidateArchiveObjectsJobs] @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT, @CreateTable = @synonymCreateTable, @UpdateTable = @synonymUpdateTable, @SourceColumns = @sourceColumns OUTPUT, @ExcludeColumns = @synonymExcludeColumns;
 
                 INSERT INTO @messages ([Procedure], [Message], Severity, [State])
                 SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@synonymMessages, N'$') WITH ([Procedure] nvarchar(MAX), [Message] nvarchar(MAX), [Severity] tinyint, [State] tinyint);
@@ -2861,11 +2826,11 @@ BEGIN
                 SELECT @archivedColumns = NULL;
                 SELECT @archivedColumns = COALESCE(@archivedColumns + N', ' + QUOTENAME([value]), QUOTENAME([value])) FROM OPENJSON(@sourceColumns)
                 SELECT @sqlArchive = N'
-                    INSERT INTO [Maintenance].[Synonym_Archive_Logs](' + @archivedColumns + N')
+                    INSERT INTO [Maintenance].[Synonym_Archive_Jobs](' + @archivedColumns + N')
                     SELECT ' + @archivedColumns + N' 
                     FROM #tempListIds ids
-                    INNER JOIN [Maintenance].[Synonym_Source_Logs] src ON ids.tempId = src.Id
-                    WHERE tempDeleteOnly = 0 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Synonym_Archive_Logs] WHERE Id = ids.tempId)';
+                    INNER JOIN [Maintenance].[Synonym_Source_Jobs] src ON ids.tempId = src.Id
+                    WHERE tempDeleteOnly = 0 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Synonym_Archive_Jobs] WHERE Id = ids.tempId)';
                 INSERT INTO @messages ([Message], Severity, [State]) VALUES 
                 (N'Archive query: ' + ISNULL(@sqlArchive, N'-'), 10, 1);
             END TRY
@@ -2973,7 +2938,7 @@ BEGIN
 
         -- Create temp table (Filter List / Repeat Triggers)
         DROP TABLE IF EXISTS #tempListFilters;
-        CREATE TABLE #tempListFilters(OrderId smallint, ArchiveId bigint, SyncId bigint, CurrentId bigint, TargetId bigint, LastId bigint, TargetTimestamp datetime, PreviousTimestamp datetime , TenantId int, LevelId int, DeleteOnly bit, NoDelay bit, PRIMARY KEY(TenantId, LevelId, SyncId));
+        CREATE TABLE #tempListFilters(OrderId smallint, ArchiveId bigint, SyncId bigint, CurrentId bigint, TargetId bigint, LastId bigint, TargetTimestamp datetime, PreviousTimestamp datetime , TenantId int, StateId int, DeleteOnly bit, NoDelay bit, PRIMARY KEY(TenantId, StateId, SyncId));
         DROP TABLE IF EXISTS #tempRepeatTriggersTable;
         CREATE TABLE #tempRepeatTriggersTable(Id bigint, [Name] nvarchar(100), /*[PreviousRunIds] bigint,*/ [Definition] nvarchar(MAX)/*, TargetTimestamp*/, ArchiveTriggerTime datetime, ArchiveAfterHours smallint, DeleteDelayHours smallint, RepeatArchive bit, RepeatOffsetHours smallint, RepeatUntil datetime, CountValidFilters int)
 
@@ -2989,20 +2954,20 @@ BEGIN
                 SELECT @totalRowIds = 0, @totalDeleteOnlyIds = 0, @totalDeleted = 0
 
                 --  Get Filters
-                INSERT INTO #tempListFilters(ArchiveId, SyncId, CurrentId, TargetId, TargetTimestamp, PreviousTimestamp, TenantId, LevelId, DeleteOnly, NoDelay, OrderId)
-                SELECT TOP(@topLoopFilters) snc.ArchiveId, flt.SyncId, CurrentId = ISNULL(flt.CurrentId, 0), flt.TargetId, flt.TargetTimeStamp, flt.PreviousTimestamp , flt.TenantId, flt.LevelId, flt.DeleteOnly
+                INSERT INTO #tempListFilters(ArchiveId, SyncId, CurrentId, TargetId, TargetTimestamp, PreviousTimestamp, TenantId, StateId, DeleteOnly, NoDelay, OrderId)
+                SELECT TOP(@topLoopFilters) snc.ArchiveId, flt.SyncId, CurrentId = ISNULL(flt.CurrentId, 0), flt.TargetId, flt.TargetTimeStamp, flt.PreviousTimestamp , flt.TenantId, flt.StateId, flt.DeleteOnly
                     , IIF( @deleteIfNoDelay = 1 AND (snc.DeleteAfterDatetime = flt.TargetTimestamp OR @ignoreDelay = 1), 1, 0)
-                    , OrderId = ROW_NUMBER() OVER(PARTITION BY flt.TenantId, flt.LevelId ORDER BY flt.TargetTimeStamp ASC)
-                FROM [Maintenance].[Filter_Logs] flt 
-                INNER JOIN [Maintenance].[Sync_Logs] snc ON snc.Id = flt.SyncId
-                INNER JOIN [Maintenance].[Archive_Logs] arc ON arc.Id = snc.ArchiveId
+                    , OrderId = ROW_NUMBER() OVER(PARTITION BY flt.TenantId, flt.StateId ORDER BY flt.TargetTimeStamp ASC)
+                FROM [Maintenance].[Filter_Jobs] flt 
+                INNER JOIN [Maintenance].[Sync_Jobs] snc ON snc.Id = flt.SyncId
+                INNER JOIN [Maintenance].[Archive_Jobs] arc ON arc.Id = snc.ArchiveId
                 WHERE flt.IsArchived = 0 AND snc.IsArchived = 0 AND (flt.TargetId IS NULL OR flt.CurrentId IS NULL OR flt.CurrentId < flt.TargetId) AND arc.ToDo = 1 AND arc.ArchiveTriggerTime < @StartTime
                 ORDER BY flt.PreviousTimestamp ASC, TargetTimestamp ASC;
 
                 SELECT @countFilterIds = ISNULL(COUNT(*), 0), @countArchiveIds = ISNULL(COUNT(DISTINCT ArchiveId), 0) FROM #tempListFilters;
                 SELECT @targetTimestamp = MAX(TargetTimeStamp) FROM #tempListFilters WHERE TargetTimeStamp IS NOT NULL;
 
-                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_Logs] WITH(INDEX([IX_Machine])) WHERE TimeStamp <= @targetTimestamp;
+                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_Jobs] WITH(INDEX([IX_TenantId_OU_ProcessType_CreationTime])) WHERE CreationTime <= @targetTimestamp;
                 DECLARE @maxTargetId bigint;
 
                 SELECT @maxTargetId = MAX(ISNULL(TargetId, 0)) FROM #tempListFilters;
@@ -3027,9 +2992,9 @@ BEGIN
 
                 INSERT INTO #tempRepeatTriggersTable(Id, [Name], [Definition], ArchiveTriggerTime, ArchiveAfterHours, DeleteDelayHours, RepeatArchive, RepeatOffsetHours, RepeatUntil, CountValidFilters)
                 SELECT Id, [Name]/*, [PreviousRunIds]*/, [Definition]/*, TargetTimestamp*/, CAST( CAST(ArchiveTriggerTime AS float(53)) + ABS(@floatingHour * RepeatOffsetHours) AS datetime), ArchiveAfterHours, DeleteDelayHours, RepeatArchive, RepeatOffsetHours, RepeatUntil, CountValidFilters
-                FROM [Maintenance].[Archive_Logs] arc 
+                FROM [Maintenance].[Archive_Jobs] arc 
                 WHERE arc.[ToDo] = 1 AND arc.RepeatArchive = 1 AND (RepeatUntil IS NULL OR RepeatUntil >= CAST( CAST(ArchiveTriggerTime AS float(53)) + ABS(@floatingHour * RepeatOffsetHours) AS datetime))
-                    AND NOT EXISTS (SELECT  1 FROM [Maintenance].[Archive_Logs] WHERE Id > arc.Id AND ParentArchiveId = arc.Id) 
+                    AND NOT EXISTS (SELECT  1 FROM [Maintenance].[Archive_Jobs] WHERE Id > arc.Id AND ParentArchiveId = arc.Id) 
                     AND ( (arc.CountValidFilters = 0 AND arc.[TargetTimestamp] <= ISNULL(@targetTimestamp, SYSDATETIME())) OR EXISTS(SELECT 1 FROM #tempListFilters WHERE ArchiveId = arc.Id) ) 
                 ORDER BY Id ASC;
 
@@ -3045,7 +3010,7 @@ BEGIN
                             UNION ALL SELECT [runid], [message], [timestamp] FROM OPENJSON(PreviousRunIds) WITH ([runid] nvarchar(MAX) N'$.runid', [message] nvarchar(MAX) N'$.message', [timestamp] datetime2 N'$.timestamp')
                         ) v FOR JSON PATH
                     )
-                    FROM [Maintenance].[Archive_Logs] arc 
+                    FROM [Maintenance].[Archive_Jobs] arc 
                     INNER JOIN #tempRepeatTriggersTable tbl ON tbl.Id = arc.Id;
 
                     IF CURSOR_STATUS('local', 'CursorRepeatClose') >= 0 CLOSE CursorRepeatClose;
@@ -3067,7 +3032,7 @@ BEGIN
                                 SET @message = SPACE(@tab * 2) + N'Repeat Archive Id [' + CAST(@cursorId AS nvarchar(100)) + N'] on ' + CONVERT(nvarchar(100), @cursorArchiveTriggerTime, 120);
                                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
 
-                                EXEC [Maintenance].[AddArchiveTriggerLogs] @SavedTorunId = @runId, @DryRunOnly = 0, @Name = @cursorName, @ArchiveTriggerTime = @cursorArchiveTriggerTime, @ArchiveAfterHours = @cursorArchiveAfterHours, @DeleteDelayHours = @cursorDeleteDelayHours, @Filters = @cursorDefinition, @RepeatArchive = @cursorRepeatArchive, @RepeatOffsetHours = @cursorRepeatOffsetHours, @RepeatUntil = @cursorRepeatUntil, @ParentArchiveId = @cursorId
+                                EXEC [Maintenance].[AddArchiveTriggerJobs] @SavedTorunId = @runId, @DryRunOnly = 0, @Name = @cursorName, @ArchiveTriggerTime = @cursorArchiveTriggerTime, @ArchiveAfterHours = @cursorArchiveAfterHours, @DeleteDelayHours = @cursorDeleteDelayHours, @Filters = @cursorDefinition, @RepeatArchive = @cursorRepeatArchive, @RepeatOffsetHours = @cursorRepeatOffsetHours, @RepeatUntil = @cursorRepeatUntil, @ParentArchiveId = @cursorId
                             END
                             FETCH CursorRepeatClose INTO @cursorId, @cursorName, @cursorDefinition, @cursorArchiveTriggerTime, @cursorArchiveAfterHours, @cursorDeleteDelayHours, @cursorRepeatArchive, @cursorRepeatOffsetHours, @cursorRepeatUntil, @cursorCountValidFilters
                         END
@@ -3097,16 +3062,16 @@ BEGIN
 
             IF @countFilterIds < 1
             BEGIN
-                SET @message = SPACE(@tab * 1) + N'No remaining filters found in [Maintenance].[Filter_Logs]'
+                SET @message = SPACE(@tab * 1) + N'No remaining filters found in [Maintenance].[Filter_Jobs]'
                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
             END
             ELSE
             BEGIN
                 -- Update status for Archive with no valid filter
-                IF EXISTS (SELECT 1 FROM [Maintenance].[Archive_Logs] arc WHERE arc.[ToDo] = 1 AND arc.CountValidFilters = 0 AND arc.[TargetTimestamp] < @targetTimestamp)
+                IF EXISTS (SELECT 1 FROM [Maintenance].[Archive_Jobs] arc WHERE arc.[ToDo] = 1 AND arc.CountValidFilters = 0 AND arc.[TargetTimestamp] < @targetTimestamp)
                 BEGIN
                     SELECT @message = NULL;
-                    SELECT  @message = COALESCE(@message + ', ' + CAST(Id AS nvarchar(100)), CAST(Id AS nvarchar(100)) ) FROM [Maintenance].[Archive_Logs] arc WHERE arc.[ToDo] = 1 AND arc.CountValidFilters = 0 AND arc.[TargetTimestamp] <= @targetTimestamp ORDER BY Id;
+                    SELECT  @message = COALESCE(@message + ', ' + CAST(Id AS nvarchar(100)), CAST(Id AS nvarchar(100)) ) FROM [Maintenance].[Archive_Jobs] arc WHERE arc.[ToDo] = 1 AND arc.CountValidFilters = 0 AND arc.[TargetTimestamp] <= @targetTimestamp ORDER BY Id;
                     SET @message = SPACE(@tab * 1) + N'Close Archive Trigger(s) with no filter(s): ' + @message;
                     EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
 
@@ -3117,7 +3082,7 @@ BEGIN
                             UNION ALL SELECT [runid], [message], [timestamp] FROM OPENJSON(PreviousRunIds) WITH ([runid] nvarchar(MAX) N'$.runid', [message] nvarchar(MAX) N'$.message', [timestamp] datetime2 N'$.timestamp')
                         ) v FOR JSON PATH
                     )
-                    FROM [Maintenance].[Archive_Logs] arc WHERE arc.[ToDo] = 1 AND arc.CountValidFilters = 0 AND arc.[TargetTimestamp] <= @targetTimestamp;
+                    FROM [Maintenance].[Archive_Jobs] arc WHERE arc.[ToDo] = 1 AND arc.CountValidFilters = 0 AND arc.[TargetTimestamp] <= @targetTimestamp;
                 END    
 
                 SET @message =  SPACE(@tab * 1) + N'Archive Filter(s) found: ' + ISNULL(CAST(@countFilterIds AS nvarchar(100)), N'-');
@@ -3141,15 +3106,15 @@ BEGIN
                     BEGIN TRAN;                                                                                      --|
                                                                                                                      --|
                     UPDATE flt SET TargetId = lst.TargetId                                                           --|
-                    FROM [Maintenance].[Filter_Logs] flt                                                             --|
-                    INNER JOIN #tempListFilters lst ON lst.SyncId = flt.SyncId AND lst.TenantId = flt.TenantId AND lst.LevelId = flt.LevelId;
+                    FROM [Maintenance].[Filter_Jobs] flt                                                             --|
+                    INNER JOIN #tempListFilters lst ON lst.SyncId = flt.SyncId AND lst.TenantId = flt.TenantId AND lst.StateId = flt.StateId;
                                                                                                                      --|
-                    -- Add Last Current Id to each 1st filter per Tenant/Level from most recent Archiving trigger(s) per Tenant/Level
+                    -- Add Last Current Id to each 1st filter per Tenant/State from most recent Archiving trigger(s) per Tenant/State
                     UPDATE lst SET LastId = oap.LastId FROM #tempListFilters lst                                         --|
                     CROSS APPLY (                                                                                    --|
                         SELECT LastId = MAX(TargetId)                                                                --|
-                        FROM [Maintenance].[Filter_Logs] flt                                                         --|
-                        WHERE flt.TenantId = lst.TenantId AND flt.LevelId = lst.LevelId AND flt.IsArchived = 1 AND flt.CurrentId = flt.TargetId
+                        FROM [Maintenance].[Filter_Jobs] flt                                                         --|
+                        WHERE flt.TenantId = lst.TenantId AND flt.StateId = lst.StateId AND flt.IsArchived = 1 AND flt.CurrentId = flt.TargetId
                     ) oap                                                                                            --|
                     WHERE lst.OrderId = 1;                                                                           --|
                                                                                                                      --|
@@ -3159,7 +3124,7 @@ BEGIN
                             UNION ALL SELECT [runid], [message], [timestamp] FROM OPENJSON(PreviousRunIds) WITH ([runid] nvarchar(MAX) N'$.runid', [message] nvarchar(MAX) N'$.message', [timestamp] datetime2 N'$.timestamp')
                         ) v FOR JSON PATH                                                                            --|
                     ), CurrentRunId = @runid                                                                         --|
-                    FROM [Maintenance].[Archive_Logs] arc                                                            --|
+                    FROM [Maintenance].[Archive_Jobs] arc                                                            --|
                     WHERE EXISTS (SELECT 1 FROM #tempListFilters WHERE ArchiveId = arc.Id);                              --|
                                                                                                                      --|
                     IF @@TRANCOUNT > 0 COMMIT;                                                                       --|
@@ -3199,8 +3164,8 @@ BEGIN
                         INSERT INTO #tempListIds(tempId, tempSyncId, tempDeleteOnly, tempNoDelay)
                         SELECT TOP(@maxLoopDeleteRows) src.Id, flt.SyncId, flt.DeleteOnly, flt.NoDelay
                         FROM #tempListFilters flt
-                        INNER JOIN [Maintenance].[Synonym_Source_Logs] src ON src.TenantId = flt.TenantId AND src.Level = flt.LevelId
-                        WHERE ( (src.TimeStamp > flt.PreviousTimestamp AND src.TimeStamp <= flt.TargetTimestamp) OR (flt.LastId IS NOT NULL AND src.TimeStamp <= flt.PreviousTimestamp AND src.Id > flt.LastId ) ) AND src.Id >= flt.CurrentId AND src.Id <= @maxId AND src.Id >= @currentId
+                        INNER JOIN [Maintenance].[Synonym_Source_Jobs] src ON src.TenantId = flt.TenantId AND src.State = flt.StateId
+                        WHERE ( (src.Synonym_Source_Jobs > flt.PreviousTimestamp AND src.Synonym_Source_Jobs <= flt.TargetTimestamp) OR (flt.LastId IS NOT NULL AND src.Synonym_Source_Jobs <= flt.PreviousTimestamp AND src.Id > flt.LastId ) ) AND src.Id >= flt.CurrentId AND src.Id <= @maxId AND src.Id >= @currentId
                         ORDER BY src.Id ASC;
  
                         SELECT @countRowIds = @@ROWCOUNT;
@@ -3214,8 +3179,8 @@ BEGIN
                             -- If nothing left, save status...
                             -- Update IsArchived when current Id(s) reach Target Id
                             UPDATE flt SET CurrentId = @maxId, IsArchived = 1
-                            FROM [Maintenance].[Filter_Logs] flt
-                            INNER JOIN #tempListFilters lst ON lst.TenantId = flt.TenantId AND lst.LevelId = flt.LevelId AND lst.SyncId = flt.SyncId --AND flt.CurrentId >= flt.TargetId
+                            FROM [Maintenance].[Filter_Jobs] flt
+                            INNER JOIN #tempListFilters lst ON lst.TenantId = flt.TenantId AND lst.StateId = flt.StateId AND lst.SyncId = flt.SyncId --AND flt.CurrentId >= flt.TargetId
 
                             SELECT @filtersArchived = @@ROWCOUNT, @globalFiltersArchived = ISNULL(@globalFiltersArchived, 0) + @@ROWCOUNT;
                             BREAK;
@@ -3227,16 +3192,16 @@ BEGIN
                         EXEC sp_executesql @stmt = @sqlArchive;                                                                              --|
                                                                                                                                              --|
                         -- Add Delete info                                                                                                   --|
-                        INSERT INTO [Maintenance].[Delete_Logs](SyncId, Id)                                                                  --|
+                        INSERT INTO [Maintenance].[Delete_Jobs](SyncId, Id)                                                                  --|
                         SELECT tempSyncId, tempId FROM #tempListIds ids                                                                      --|
-                        WHERE NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_Logs] WHERE Id = ids.tempId) AND tempNoDelay = 0;               --|
+                        WHERE NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_Jobs] WHERE Id = ids.tempId) AND tempNoDelay = 0;               --|
                                                                                                                                              --|
-                        DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_Logs] src ON src.Id = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
+                        DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_Jobs] src ON src.Id = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
                                                                                                                                              --|
                         -- Update current Id(s)                                                                                              --|
                         UPDATE flt SET CurrentId = @currentLoopId                                                                            --|
-                        FROM [Maintenance].[Filter_Logs] flt                                                                                 --|
-                        INNER JOIN #tempListFilters lst ON lst.TenantId = flt.TenantId AND lst.LevelId = flt.LevelId AND lst.SyncId = flt.SyncId --|
+                        FROM [Maintenance].[Filter_Jobs] flt                                                                                 --|
+                        INNER JOIN #tempListFilters lst ON lst.TenantId = flt.TenantId AND lst.StateId = flt.StateId AND lst.SyncId = flt.SyncId --|
                         WHERE @currentLoopId IS NOT NULL;                                                                                    --|
                                                                                                                                              --|
                         IF @@TRANCOUNT > 0 COMMIT;                                                                                           --|
@@ -3284,45 +3249,45 @@ BEGIN
 
                 -- Update Sync status when all filters are Archived
                 UPDATE snc SET IsArchived = 1
-                    , IsDeleted = IIF( @deleteIfNoDelay = 1 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_Logs] WHERE syncId = snc.Id), 1, 0)
-                    , DeletedOnDate = IIF( @deleteIfNoDelay = 1 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_Logs] WHERE syncId = snc.Id), SYSDATETIME(), NULL)
-                    , IsSynced = IIF( @deleteIfNoDelay = 1 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_Logs] WHERE syncId = snc.Id), 1, 0)
-                    , SyncedOnDate = IIF( @deleteIfNoDelay = 1 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_Logs] WHERE syncId = snc.Id), SYSDATETIME(), NULL)
-                    , FirstASyncId = (SELECT MIN(Id) FROM [Maintenance].[Delete_Logs] WHERE syncId = snc.Id)
-                    , LastASyncId = (SELECT MAX(Id) FROM [Maintenance].[Delete_Logs] WHERE syncId = snc.Id)
-                    , CountASyncIds = (SELECT COUNT(*) FROM [Maintenance].[Delete_Logs] WHERE syncId = snc.Id)
-                FROM [Maintenance].[Sync_Logs] snc
-                INNER JOIN [Maintenance].[Archive_Logs] arc ON arc.Id = snc.ArchiveId
+                    , IsDeleted = IIF( @deleteIfNoDelay = 1 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_Jobs] WHERE syncId = snc.Id), 1, 0)
+                    , DeletedOnDate = IIF( @deleteIfNoDelay = 1 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_Jobs] WHERE syncId = snc.Id), SYSDATETIME(), NULL)
+                    , IsSynced = IIF( @deleteIfNoDelay = 1 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_Jobs] WHERE syncId = snc.Id), 1, 0)
+                    , SyncedOnDate = IIF( @deleteIfNoDelay = 1 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_Jobs] WHERE syncId = snc.Id), SYSDATETIME(), NULL)
+                    , FirstASyncId = (SELECT MIN(Id) FROM [Maintenance].[Delete_Jobs] WHERE syncId = snc.Id)
+                    , LastASyncId = (SELECT MAX(Id) FROM [Maintenance].[Delete_Jobs] WHERE syncId = snc.Id)
+                    , CountASyncIds = (SELECT COUNT(*) FROM [Maintenance].[Delete_Jobs] WHERE syncId = snc.Id)
+                FROM [Maintenance].[Sync_Jobs] snc
+                INNER JOIN [Maintenance].[Archive_Jobs] arc ON arc.Id = snc.ArchiveId
                 WHERE EXISTS(SELECT 1 FROM #tempListFilters WHERE SyncId = snc.Id) AND
-                    NOT EXISTS (SELECT 1 FROM [Maintenance].[Filter_Logs] WHERE SyncId = snc.Id AND IsArchived = 0);
+                    NOT EXISTS (SELECT 1 FROM [Maintenance].[Filter_Jobs] WHERE SyncId = snc.Id AND IsArchived = 0);
                 SELECT @syncArchived = @@ROWCOUNT;
 
                 -- Update Archive status when all sync and filters are archived
                 UPDATE arc SET IsArchived = 1, ArchivedOnDate = SYSDATETIME()
-                    , IsDeleted = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_Logs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), 1, 0)
-                    , DeletedOnDate = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_Logs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), SYSDATETIME(), NULL)
-                    , IsFinished = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_Logs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), 1, 0)
-                    , FinishedOnDate = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_Logs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), SYSDATETIME(), NULL)
-                    , IsSuccess = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_Logs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), 1, 0)
-                    , [Message] = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_Logs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), N'Cleanup finished', 'Archiving finished')
+                    , IsDeleted = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_Jobs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), 1, 0)
+                    , DeletedOnDate = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_Jobs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), SYSDATETIME(), NULL)
+                    , IsFinished = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_Jobs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), 1, 0)
+                    , FinishedOnDate = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_Jobs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), SYSDATETIME(), NULL)
+                    , IsSuccess = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_Jobs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), 1, 0)
+                    , [Message] = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_Jobs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), N'Cleanup finished', 'Archiving finished')
                     , PreviousRunIds = (
                         SELECT [runid], [message], [timestamp] FROM (
-                            SELECT [runid] = @runId, [message] = N'Cleanup finished', [timestamp] = SYSDATETIME() WHERE NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_Logs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0)
+                            SELECT [runid] = @runId, [message] = N'Cleanup finished', [timestamp] = SYSDATETIME() WHERE NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_Jobs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0)
                             UNION ALL SELECT [runid] = @runId, [message] = N'All Archive Filter(s) finished]', [timestamp] = SYSDATETIME()
                             UNION ALL SELECT [runid], [message], [timestamp] FROM OPENJSON(PreviousRunIds) WITH ([runid] nvarchar(MAX) N'$.runid', [message] nvarchar(MAX) N'$.message', [timestamp] datetime2 N'$.timestamp')
                         ) v FOR JSON PATH
                     )
-                FROM [Maintenance].[Archive_Logs] arc
+                FROM [Maintenance].[Archive_Jobs] arc
                 INNER JOIN #tempListFilters lst ON lst.ArchiveId = arc.Id
-                WHERE NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_Logs] WHERE ArchiveId = lst.ArchiveId AND IsArchived = 0);
+                WHERE NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_Jobs] WHERE ArchiveId = lst.ArchiveId AND IsArchived = 0);
 
                 SELECT @triggerArchived = @@ROWCOUNT, @globalTriggerArchived = ISNULL(@globalTriggerArchived, 0) + @@ROWCOUNT;
 
-                SELECT @message = SPACE(@tab * 2) + N'Archive Filter(s) finished: ' + CAST(ISNULL(@filtersArchived, 0) AS nvarchar(100)) + N' / ' + CAST(ISNULL(@countFilterIds, 0) AS nvarchar(100)) + N' (remaining filters = '+ CAST(ISNULL(COUNT(*), 0) AS nvarchar(100)) + N')' FROM [Maintenance].[Filter_Logs] WHERE IsArchived <> 1;
+                SELECT @message = SPACE(@tab * 2) + N'Archive Filter(s) finished: ' + CAST(ISNULL(@filtersArchived, 0) AS nvarchar(100)) + N' / ' + CAST(ISNULL(@countFilterIds, 0) AS nvarchar(100)) + N' (remaining filters = '+ CAST(ISNULL(COUNT(*), 0) AS nvarchar(100)) + N')' FROM [Maintenance].[Filter_Jobs] WHERE IsArchived <> 1;
                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
                 SELECT @message = SPACE(@tab * 2) + N'Archive Sync(s) finished: ' + ISNULL(CAST(@syncArchived AS nvarchar(100)), N'-');
                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
-                SELECT @message = SPACE(@tab * 1) + N'Archive(s) finished: ' + ISNULL(CAST(@triggerArchived AS nvarchar(100)), N'-') + N' (in progress = ' + CAST(@countArchiveIds - ISNULL(@triggerArchived, 0) AS nvarchar(100)) + N', to do = '+ CAST(ISNULL(COUNT(*), 0) AS nvarchar(100)) + N')' FROM [Maintenance].[Archive_Logs] WHERE [Todo] = 1 AND ArchiveTriggerTime < @StartTime;
+                SELECT @message = SPACE(@tab * 1) + N'Archive(s) finished: ' + ISNULL(CAST(@triggerArchived AS nvarchar(100)), N'-') + N' (in progress = ' + CAST(@countArchiveIds - ISNULL(@triggerArchived, 0) AS nvarchar(100)) + N', to do = '+ CAST(ISNULL(COUNT(*), 0) AS nvarchar(100)) + N')' FROM [Maintenance].[Archive_Jobs] WHERE [Todo] = 1 AND ArchiveTriggerTime < @StartTime;
                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
             END
 
@@ -3352,14 +3317,14 @@ BEGIN
         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
 
         SELECT @message = SPACE(@tab * 1) + 'Remaining Archive Trigger(s): ' + CAST(COUNT(*) AS nvarchar(100)) + IIF(COUNT(*) > 0, N' (outstanding = '+ CAST(SUM(IIF(arc.ArchiveTriggerTime < @startTime, 1, 0)) AS nvarchar(100)) + N', upcoming = ' + CAST(SUM(IIF(arc.ArchiveTriggerTime >= @startTime, 1, 0)) AS nvarchar(100)) + N')', '')
-        FROM [Maintenance].[Archive_Logs] arc
+        FROM [Maintenance].[Archive_Jobs] arc
         WHERE arc.ToDo = 1
         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
 
         SELECT @message = SPACE(@tab * 1) + 'Remaining Filter(s): ' + CAST(COUNT(*) AS nvarchar(100)) + IIF(COUNT(*) > 0, N' (outstanding = '+ CAST(SUM(IIF(arc.ArchiveTriggerTime < @startTime, 1, 0)) AS nvarchar(100)) + N', upcoming = ' + CAST(SUM(IIF(arc.ArchiveTriggerTime >= @startTime, 1, 0)) AS nvarchar(100)) + N')', '')
-        FROM [Maintenance].[Filter_Logs] flt 
-        INNER JOIN [Maintenance].[Sync_Logs] snc ON snc.Id = flt.SyncId
-        INNER JOIN [Maintenance].[Archive_Logs] arc ON arc.Id = snc.ArchiveId 
+        FROM [Maintenance].[Filter_Jobs] flt 
+        INNER JOIN [Maintenance].[Sync_Jobs] snc ON snc.Id = flt.SyncId
+        INNER JOIN [Maintenance].[Archive_Jobs] arc ON arc.Id = snc.ArchiveId 
         WHERE flt.IsArchived = 0 AND snc.IsArchived = 0 AND (flt.TargetId IS NULL OR flt.CurrentId IS NULL OR flt.CurrentId < flt.TargetId) AND arc.ToDo = 1 --AND arc.ArchiveTriggerTime < @StartTime
         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
 
@@ -3464,26 +3429,26 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- DROP PROCEDURE [Maintenance].[CleanupSyncedLogs]
+-- DROP PROCEDURE [Maintenance].[CleanupSyncedJobs]
 ----------------------------------------------------------------------------------------------------
 
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[CleanupSyncedLogs]') AND type in (N'P'))
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[CleanupSyncedJobs]') AND type in (N'P'))
 BEGIN
-    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[CleanupSyncedLogs] AS'
-    PRINT '  + CREATE PROCEDURE: [Maintenance].[CleanupSyncedLogs]';
+    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[CleanupSyncedJobs] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[CleanupSyncedJobs]';
 END
-ELSE PRINT '  = PROCEDURE [Maintenance].[CleanupSyncedLogs] already exists' 
+ELSE PRINT '  = PROCEDURE [Maintenance].[CleanupSyncedJobs] already exists' 
 GO
 
-PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[CleanupSyncedLogs]'
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[CleanupSyncedJobs]'
 GO  
 
-ALTER PROCEDURE [Maintenance].[CleanupSyncedLogs]
+ALTER PROCEDURE [Maintenance].[CleanupSyncedJobs]
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: PROCEDURE [Maintenance].[CleanupSyncedLogs]
--- ### [Version]: 2023-09-07T15:05:21+02:00
--- ### [Source]: _src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.CleanupSyncedLogs.sql
--- ### [Hash]: 30c2b77 [SHA256-04B3DA5260E4CC17A5C7D7726F34996D3223EF3EF4BDB8448C32381FDC18BFD1]
+-- ### [Object]: PROCEDURE [Maintenance].[CleanupSyncedJobs]
+-- ### [Version]: 2023-09-08T11:12:50+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/Jobs/Procedure_ArchiveDB.Maintenance.CleanupSyncedJobs.sql
+-- ### [Hash]: 0859ec6 [SHA256-2E11D7D19822B6C4073C8899E6CBA1F374FE314F66496BBDB1E456812A6BF5F1]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -3734,11 +3699,11 @@ BEGIN
 		----------------------------------------------------------------------------------------------------
         -- Check Permissions
         ----------------------------------------------------------------------------------------------------
-        -- Check SELECT & DELETE permission on [dbo].[Logs]
+        -- Check SELECT & DELETE permission on [dbo].[Jobs]
         INSERT INTO @messages ([Message], Severity, [State])
         SELECT 'Permission not effectively granted: ' + UPPER(p.permission_name), 10, 1
         FROM (VALUES(N'', N'SELECT'), (N'', N'DELETE')) AS p (subentity_name, permission_name)
-        LEFT JOIN sys.fn_my_permissions(N'[dbo].[Logs]', N'OBJECT') eff ON eff.subentity_name = p.subentity_name AND eff.permission_name = p.permission_name
+        LEFT JOIN sys.fn_my_permissions(N'[dbo].[Jobs]', N'OBJECT') eff ON eff.subentity_name = p.subentity_name AND eff.permission_name = p.permission_name
         WHERE eff.permission_name IS NULL
         ORDER BY p.permission_name;
 
@@ -3746,7 +3711,7 @@ BEGIN
         BEGIN
             INSERT INTO @messages ([Message], Severity, [State]) VALUES
                 (N'Error: missing permission', 10, 1)
-                , (N'SELECT and DELETE permissions are required on [dbo].[Logs] table', 16, 1);
+                , (N'SELECT and DELETE permissions are required on [dbo].[Jobs] table', 16, 1);
         END
 
         -- Check @SaveMessagesToTable parameter
@@ -3869,7 +3834,7 @@ BEGIN
         
         IF @SavedToRunId IS NULL OR NOT EXISTS(SELECT 1 FROM [Maintenance].[Runs] WHERE Id = @SavedToRunId AND EndDate IS NULL)
         BEGIN
-            INSERT INTO [Maintenance].[Runs]([Type], [Info], [StartTime]) SELECT N'Add Archive Logs Trigger', N'PROCEDURE ' + @procName, @startTime;
+            INSERT INTO [Maintenance].[Runs]([Type], [Info], [StartTime]) SELECT N'Add Archive Jobs Trigger', N'PROCEDURE ' + @procName, @startTime;
             SELECT @runId = @@IDENTITY, @SavedToRunId = @@IDENTITY;
             INSERT INTO @messages ([Message], Severity, [State]) VALUES 
                 (N'Messages saved to new Run Id: ' + CONVERT(nvarchar(MAX), @runId), 10, 1);
@@ -3883,7 +3848,7 @@ BEGIN
         BEGIN
             -- Check Synonyms and source/Archive tables
             BEGIN TRY            
-                EXEC [Maintenance].[ValidateArchiveObjectsLogs] @IgnoreMissingColumns = 1, @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT;
+                EXEC [Maintenance].[ValidateArchiveObjectsJobs] @IgnoreMissingColumns = 1, @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT;
 
                 INSERT INTO @messages ([Procedure], [Message], Severity, [State])
                 SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@synonymMessages, N'$') WITH ([Procedure] nvarchar(MAX), [Message] nvarchar(MAX), [Severity] tinyint, [State] tinyint);
@@ -3984,7 +3949,7 @@ BEGIN
         -- Archive
         ----------------------------------------------------------------------------------------------------
         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @lineSeparator, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
-        EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = 'Start ASync Logs Cleanup', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
+        EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = 'Start ASync Jobs Cleanup', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @lineSeparator, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
 
         INSERT INTO @messages([Date], [Procedure], [Message], [Severity], [State], [Number], [Line])
@@ -3996,8 +3961,8 @@ BEGIN
         BEGIN TRY
             INSERT INTO @tempListSync([Id], [DeleteOnDate])
             SELECT sts.SyncId, sts.DeletedOnDate
-            FROM [Maintenance].[Synonym_ASyncStatus_Logs] sts
-            INNER JOIN [Maintenance].[Sync_Logs] syn ON syn.Id = sts.SyncId
+            FROM [Maintenance].[Synonym_ASyncStatus_Jobs] sts
+            INNER JOIN [Maintenance].[Sync_Jobs] syn ON syn.Id = sts.SyncId
             WHERE sts.IsDeleted = 1 AND syn.IsSynced <> 1;
 
             IF @@ROWCOUNT = 0
@@ -4037,7 +4002,7 @@ BEGIN
                 SET @totalIds = 0;
                 WHILE 0 >= 0
                 BEGIN
-                    DELETE TOP(@maxLoopDeleteRows) FROM [Maintenance].[Delete_Logs] WHERE [SyncId] = @cursorSyncId;
+                    DELETE TOP(@maxLoopDeleteRows) FROM [Maintenance].[Delete_Jobs] WHERE [SyncId] = @cursorSyncId;
                     SELECT @countIds = @@ROWCOUNT;
 
                     IF @countIds = 0
@@ -4045,9 +4010,9 @@ BEGIN
                         SET @message = SPACE(@tab * 1) + 'Cleanup finished (total = ' + CAST(@totalIds AS nvarchar(100)) + N')';
                         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
 
-                        UPDATE stt SET [IsDeleted] = 1, [DeletedOnDate] = @cursorDeleteOnDate, [IsSynced] = 1, [SyncedOnDate] = SYSDATETIME() FROM [Maintenance].[Sync_Logs] stt WHERE [Id] = @cursorSyncId;
+                        UPDATE stt SET [IsDeleted] = 1, [DeletedOnDate] = @cursorDeleteOnDate, [IsSynced] = 1, [SyncedOnDate] = SYSDATETIME() FROM [Maintenance].[Sync_Jobs] stt WHERE [Id] = @cursorSyncId;
 
-                        SELECT @IsFinished = IIF(EXISTS (SELECT 1 FROM [Maintenance].[Sync_Logs] WHERE ArchiveId = (SELECT ArchiveId FROM [Maintenance].[Sync_Logs] WHERE Id = @cursorSyncId) AND IsSynced <> 1), 0, 1);
+                        SELECT @IsFinished = IIF(EXISTS (SELECT 1 FROM [Maintenance].[Sync_Jobs] WHERE ArchiveId = (SELECT ArchiveId FROM [Maintenance].[Sync_Jobs] WHERE Id = @cursorSyncId) AND IsSynced <> 1), 0, 1);
 
                         UPDATE arc SET 
                             [CurrentRunId] = @runId
@@ -4064,8 +4029,8 @@ BEGIN
                                     UNION ALL SELECT [runid], [message], [timestamp] FROM OPENJSON(PreviousRunIds) WITH ([runid] nvarchar(MAX) N'$.runid', [message] nvarchar(MAX) N'$.message', [timestamp] datetime2 N'$.timestamp')
                                 ) v FOR JSON PATH
                             )
-                        FROM [Maintenance].[Archive_Logs] arc
-                        INNER JOIN [Maintenance].[Sync_Logs] syn ON syn.ArchiveId = arc.Id
+                        FROM [Maintenance].[Archive_Jobs] arc
+                        INNER JOIN [Maintenance].[Sync_Jobs] syn ON syn.ArchiveId = arc.Id
                         WHERE syn.Id = @cursorSyncId;
 
                         BREAK;

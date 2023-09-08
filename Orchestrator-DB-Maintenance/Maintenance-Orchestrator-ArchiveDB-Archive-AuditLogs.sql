@@ -330,9 +330,9 @@ GO
 
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: TABLE [Maintenance].[Archive_AuditLogs]
--- ### [Version]: 2023-09-07T15:05:21+02:00
+-- ### [Version]: 2023-09-08T11:08:50+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Table_ArchiveDB.Maintenance.Archive_AuditLogs.sql
--- ### [Hash]: 30c2b77 [SHA256-D0030A7D3FA082B05C5F98084D8B9858E1117B8EB8E53E20D44F70CC7EEF8FFA]
+-- ### [Hash]: c3792cf [SHA256-268124148270144E340794273D9AB31BB54FCF367E7A836BD1B849950F0149B8]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -355,23 +355,23 @@ BEGIN
 		, [TargetTimestamp] [datetime] NULL
 		, [CurrentId] [bigint] NULL
 		, [RepeatArchive] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_AuditLogs.RepeatArchive] DEFAULT 0
-		, [RepeatOffsetHours] [smallint] NULL CONSTRAINT [DF_Maintenance.Archive.AuditLogs.RepeatOffsetHours] CHECK (RepeatOffsetHours IS NULL OR RepeatOffsetHours > 0)
+		, [RepeatOffsetHours] [smallint] NULL CONSTRAINT [DF_Maintenance.Archive_AuditLogs.RepeatOffsetHours] CHECK (RepeatOffsetHours IS NULL OR RepeatOffsetHours > 0)
 		, [RepeatUntil] [datetime] NULL --CONSTRAINT [DF_Maintenance.Archive_AuditLogs.AddNextArchives] DEFAULT 0
 		-- Status
-		, [CreationDate] [datetime] NOT NULL CONSTRAINT [DF_Maintenance.Archive.AuditLogs_CreationDate] DEFAULT SYSDATETIME()
-		, [IsDryRun] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive.IsDryRun] DEFAULT 0
-		, [IsSuccess] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive.IsSuccess] DEFAULT 0
-		, [IsError] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive.IsError] DEFAULT 0
-		, [IsCanceled] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive.IsCanceled] DEFAULT 0
+		, [CreationDate] [datetime] NOT NULL CONSTRAINT [DF_Maintenance.Archive_AuditLogs.CreationDate] DEFAULT SYSDATETIME()
+		, [IsDryRun] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_AuditLogs.IsDryRun] DEFAULT 0
+		, [IsSuccess] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_AuditLogs.IsSuccess] DEFAULT 0
+		, [IsError] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_AuditLogs.IsError] DEFAULT 0
+		, [IsCanceled] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_AuditLogs.IsCanceled] DEFAULT 0
 		, [Message] nvarchar(MAX) NULL
 		, [CountValidFilters] int NULL
 		, [CountDuplicateFilters] int NULL
 		-- Execution
-		, [IsArchived] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive.IsArchived] DEFAULT 0
+		, [IsArchived] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_AuditLogs.IsArchived] DEFAULT 0
 		, [ArchivedOnDate] [datetime] NULL
-		, [IsDeleted] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive.IsDeleted] DEFAULT 0
+		, [IsDeleted] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_AuditLogs.IsDeleted] DEFAULT 0
 		, [DeletedOnDate] [datetime] NULL
-		, [IsFinished] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive.IsFinished] DEFAULT 0
+		, [IsFinished] [bit] NOT NULL CONSTRAINT [DF_Maintenance.Archive_AuditLogs.IsFinished] DEFAULT 0
 		, [FinishedOnDate] [datetime] NULL
 		, [ToDo] AS IIF(IsArchived <> 1 AND IsFinished <> 1 AND IsDryRun <> 1 AND IsError <> 1, 1, 0)
 		, CONSTRAINT [PK_Maintenance.Archive_AuditLogs] PRIMARY KEY CLUSTERED ([Id] ASC)
@@ -390,9 +390,9 @@ GO
 
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: TABLE [Maintenance].[Sync_AuditLogs]
--- ### [Version]: 2023-09-07T18:38:18+02:00
+-- ### [Version]: 2023-09-08T11:08:50+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Table_ArchiveDB.Maintenance.Sync_AuditLogs.sql
--- ### [Hash]: b0839d6 [SHA256-C20D641082BF07EC8331864908748F005E9AB0CF1C98C4A6C1F1F892B994BBEA]
+-- ### [Hash]: c3792cf [SHA256-C3CA0D75F39D34CB92160BD4605BC8D6BC6EFD9E20008D5115DB35D1848BB2B2]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -429,6 +429,7 @@ BEGIN
 	ALTER TABLE [Maintenance].[Sync_AuditLogs] CHECK CONSTRAINT [FK_Maintenance.Sync_AuditLogs-Archive_AuditLogs]
 END
 ELSE PRINT '  = Table already exists: [Maintenance].[Sync_AuditLogs]';
+GO
 
 SET ANSI_NULLS ON;
 GO
@@ -439,9 +440,9 @@ GO
 
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: TABLE [Maintenance].[Filter_AuditLogs]
--- ### [Version]: 2023-09-07T15:05:21+02:00
+-- ### [Version]: 2023-09-08T11:08:50+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Table_ArchiveDB.Maintenance.Filter_AuditLogs.sql
--- ### [Hash]: 30c2b77 [SHA256-26237EB17675007A00B354D607DAB5F464D3B1B5510D6651BA742A510348C4BC]
+-- ### [Hash]: c3792cf [SHA256-9A192AE225800A7BBB5EAD935475B446043396AD3BD4C5AE51FE4D0B34CC0CA2]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -469,6 +470,7 @@ BEGIN
 	ALTER TABLE [Maintenance].[Filter_AuditLogs] CHECK CONSTRAINT [FK_Maintenance.Filter_AuditLogs-Sync_AuditLogs]
 END
 ELSE PRINT '  = Table already exists: [Maintenance].[Filter_AuditLogs]';
+GO
 
 SET ANSI_NULLS ON;
 GO
@@ -479,9 +481,9 @@ GO
 
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: TABLE [Maintenance].[Delete_AuditLogs]
--- ### [Version]: 2023-09-07T15:05:21+02:00
+-- ### [Version]: 2023-09-08T11:08:50+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Table_ArchiveDB.Maintenance.Delete_AuditLogs.sql
--- ### [Hash]: 30c2b77 [SHA256-DD9F12C3B95DFE2CE31BAB63F3B064A8FAC915446463E99858DDE026D400CCA0]
+-- ### [Hash]: c3792cf [SHA256-77A7A03598BAE822BAA828DC0206BAFA8FABEBA6A816048FA0010C26FC5E36E0]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -503,6 +505,7 @@ BEGIN
 	ALTER TABLE [Maintenance].[Delete_AuditLogs] CHECK CONSTRAINT [FK_Maintenance.Delete_AuditLogs-Sync_AuditLogs]
 END
 ELSE PRINT '  = Table already exists: [Maintenance].[Delete_AuditLogs]';
+GO
 
 SET ANSI_NULLS ON;
 GO
@@ -2143,9 +2146,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ArchiveAuditLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ArchiveAuditLogs]
--- ### [Version]: 2023-09-07T18:14:12+02:00
+-- ### [Version]: 2023-09-08T11:08:50+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.ArchiveAuditLogs.sql
--- ### [Hash]: 914e4af [SHA256-B9B5D3B9E2140F724975A2FBDCA8E09CD3D494ACA99BAB590B21FA62DC89DD5F]
+-- ### [Hash]: c3792cf [SHA256-CB2C5F3BBE524B95054288726A8945AE1379149B159AE7FAB4794FD35DA4B619]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -2852,7 +2855,7 @@ BEGIN
                 SELECT @countFilterIds = ISNULL(COUNT(*), 0), @countArchiveIds = ISNULL(COUNT(DISTINCT ArchiveId), 0) FROM #tempListFilters;
                 SELECT @targetTimestamp = MAX(TargetTimeStamp) FROM #tempListFilters WHERE TargetTimeStamp IS NOT NULL;
 
-                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_AuditLogs] WITH(INDEX([IX_Machine])) WHERE TimeStamp <= @targetTimestamp;
+                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_AuditLogs] WITH(INDEX([IX_TenantId_IsGlobal_ExecutionTime])) WHERE ExecutionTime <= @targetTimestamp;
                 DECLARE @maxTargetId bigint;
 
                 SELECT @maxTargetId = MAX(ISNULL(TargetId, 0)) FROM #tempListFilters;
@@ -3050,7 +3053,7 @@ BEGIN
                         SELECT TOP(@maxLoopDeleteRows) src.Id, flt.SyncId, flt.DeleteOnly, flt.NoDelay
                         FROM #tempListFilters flt
                         INNER JOIN [Maintenance].[Synonym_Source_AuditLogs] src ON src.TenantId = flt.TenantId
-                        WHERE ( (src.TimeStamp > flt.PreviousTimestamp AND src.TimeStamp <= flt.TargetTimestamp) OR (flt.LastId IS NOT NULL AND src.TimeStamp <= flt.PreviousTimestamp AND src.Id > flt.LastId ) ) AND src.Id >= flt.CurrentId AND src.Id <= @maxId AND src.Id >= @currentId
+                        WHERE ( (src.ExecutionTime > flt.PreviousTimestamp AND src.ExecutionTime <= flt.TargetTimestamp) OR (flt.LastId IS NOT NULL AND src.ExecutionTime <= flt.PreviousTimestamp AND src.Id > flt.LastId ) ) AND src.Id >= flt.CurrentId AND src.Id <= @maxId AND src.Id >= @currentId
                         ORDER BY src.Id ASC;
  
                         SELECT @countRowIds = @@ROWCOUNT;
