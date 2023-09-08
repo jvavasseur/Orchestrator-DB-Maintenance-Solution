@@ -41,11 +41,11 @@ BEGIN
 		WHERE CountASyncIds > 0 AND IsArchived = 1 AND [IsDeleted] <> 1 WITH ( DROP_EXISTING = ON );
 --	CREATE UNIQUE NONCLUSTERED INDEX [IX_Maintenance.Sync_Jobs.NotSync] ON [Maintenance].[Sync_Jobs] (DeleteAfterDatetime) INCLUDE ([FirstASyncId], [LastAsyncId], [Id]) WHERE IsArchived = 1 AND [IsDeleted] = 1 AND IsSynced <> 1 WITH ( DROP_EXISTING = ON );
 
-	ALTER TABLE [Maintenance].[Sync_Jobs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Sync_Jobs-Archive_Jobs] FOREIGN KEY([ArchiveId])
+	ALTER TABLE [Maintenance].[Sync_Jobs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Sync_Jobs.Archive_Jobs] FOREIGN KEY([ArchiveId])
 	REFERENCES [Maintenance].[Archive_Jobs] ([Id])
 	ON DELETE CASCADE
 
-	ALTER TABLE [Maintenance].[Sync_Jobs] CHECK CONSTRAINT [FK_Maintenance.Sync_Jobs-Archive_Jobs]
+	ALTER TABLE [Maintenance].[Sync_Jobs] CHECK CONSTRAINT [FK_Maintenance.Sync_Jobs.Archive_Jobs]
 END
 ELSE PRINT '  = Table already exists: [Maintenance].[Sync_Jobs]';
 GO

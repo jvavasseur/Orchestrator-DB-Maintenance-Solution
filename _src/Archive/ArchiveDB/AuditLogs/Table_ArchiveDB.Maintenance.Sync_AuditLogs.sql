@@ -39,11 +39,11 @@ BEGIN
 	CREATE UNIQUE NONCLUSTERED INDEX [IX_Maintenance.Sync_AuditLogs.NotDeleted] ON [Maintenance].[Sync_AuditLogs] (DeleteAfterDatetime) INCLUDE ([Id], [FirstASyncId], [LastAsyncId],  [CountASyncIds], [IsDeleted], [IsSynced]) 
 		WHERE CountASyncIds > 0 AND IsArchived = 1 AND [IsDeleted] <> 1 WITH ( DROP_EXISTING = ON );
 
-	ALTER TABLE [Maintenance].[Sync_AuditLogs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Sync_AuditLogs-Archive_AuditLogs] FOREIGN KEY([ArchiveId])
+	ALTER TABLE [Maintenance].[Sync_AuditLogs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Sync_AuditLogs.Archive_AuditLogs] FOREIGN KEY([ArchiveId])
 	REFERENCES [Maintenance].[Archive_AuditLogs] ([Id])
 	ON DELETE CASCADE
 
-	ALTER TABLE [Maintenance].[Sync_AuditLogs] CHECK CONSTRAINT [FK_Maintenance.Sync_AuditLogs-Archive_AuditLogs]
+	ALTER TABLE [Maintenance].[Sync_AuditLogs] CHECK CONSTRAINT [FK_Maintenance.Sync_AuditLogs.Archive_AuditLogs]
 END
 ELSE PRINT '  = Table already exists: [Maintenance].[Sync_AuditLogs]';
 GO

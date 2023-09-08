@@ -31,10 +31,10 @@ BEGIN
 		, INDEX [IX_Maintenance.Filter_RobotLicenseLogs.LastId] NONCLUSTERED (TenantId, LevelId, TargetId) WHERE IsArchived = 1 AND [TargetId] IS NOT NULL AND [CurrentId] IS NOT NULL --AND [CurrentId] = [TargetId]
 	) ON [PRIMARY]
 
-	ALTER TABLE [Maintenance].[Filter_RobotLicenseLogs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Filter_RobotLicenseLogs-Sync_RobotLicenseLogs] FOREIGN KEY([SyncId])
+	ALTER TABLE [Maintenance].[Filter_RobotLicenseLogs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Filter_RobotLicenseLogs.Sync_RobotLicenseLogs] FOREIGN KEY([SyncId])
 	REFERENCES [Maintenance].[Sync_RobotLicenseLogs] ([Id])
 
-	ALTER TABLE [Maintenance].[Filter_RobotLicenseLogs] CHECK CONSTRAINT [FK_Maintenance.Filter_RobotLicenseLogs-Sync_RobotLicenseLogs]
+	ALTER TABLE [Maintenance].[Filter_RobotLicenseLogs] CHECK CONSTRAINT [FK_Maintenance.Filter_RobotLicenseLogs.Sync_RobotLicenseLogs]
 END
 ELSE PRINT '  = Table already exists: [Maintenance].[Filter_RobotLicenseLogs]';
 GO

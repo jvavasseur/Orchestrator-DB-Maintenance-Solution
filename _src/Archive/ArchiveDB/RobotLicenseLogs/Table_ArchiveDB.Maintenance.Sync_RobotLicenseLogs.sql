@@ -41,11 +41,11 @@ BEGIN
 		WHERE CountASyncIds > 0 AND IsArchived = 1 AND [IsDeleted] <> 1 WITH ( DROP_EXISTING = ON );
 --	CREATE UNIQUE NONCLUSTERED INDEX [IX_Maintenance.Sync_RobotLicenseLogs.NotSync] ON [Maintenance].[Sync_RobotLicenseLogs] (DeleteAfterDatetime) INCLUDE ([FirstASyncId], [LastAsyncId], [Id]) WHERE IsArchived = 1 AND [IsDeleted] = 1 AND IsSynced <> 1 WITH ( DROP_EXISTING = ON );
 
-	ALTER TABLE [Maintenance].[Sync_RobotLicenseLogs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Sync_RobotLicenseLogs-Archive_RobotLicenseLogs] FOREIGN KEY([ArchiveId])
+	ALTER TABLE [Maintenance].[Sync_RobotLicenseLogs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Sync_RobotLicenseLogs.Archive_RobotLicenseLogs] FOREIGN KEY([ArchiveId])
 	REFERENCES [Maintenance].[Archive_RobotLicenseLogs] ([Id])
 	ON DELETE CASCADE
 
-	ALTER TABLE [Maintenance].[Sync_RobotLicenseLogs] CHECK CONSTRAINT [FK_Maintenance.Sync_RobotLicenseLogs-Archive_RobotLicenseLogs]
+	ALTER TABLE [Maintenance].[Sync_RobotLicenseLogs] CHECK CONSTRAINT [FK_Maintenance.Sync_RobotLicenseLogs.Archive_RobotLicenseLogs]
 END
 ELSE PRINT '  = Table already exists: [Maintenance].[Sync_RobotLicenseLogs]';
 GO

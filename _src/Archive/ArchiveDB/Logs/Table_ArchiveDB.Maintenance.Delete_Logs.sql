@@ -25,10 +25,10 @@ BEGIN
 		, INDEX [UX_Maintenance.Delete_Logs.Id] UNIQUE NONCLUSTERED (Id)		
 	) ON [PRIMARY]
 
-	ALTER TABLE [Maintenance].[Delete_Logs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Delete_Logs-Sync_Logs] FOREIGN KEY([SyncId])
+	ALTER TABLE [Maintenance].[Delete_Logs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Delete_Logs.Sync_Logs] FOREIGN KEY([SyncId])
 	REFERENCES [Maintenance].[Sync_Logs] ([Id])
 	
-	ALTER TABLE [Maintenance].[Delete_Logs] CHECK CONSTRAINT [FK_Maintenance.Delete_Logs-Sync_Logs]
+	ALTER TABLE [Maintenance].[Delete_Logs] CHECK CONSTRAINT [FK_Maintenance.Delete_Logs.Sync_Logs]
 END
 ELSE PRINT '  = Table already exists: [Maintenance].[Delete_Logs]';
 GO

@@ -32,10 +32,10 @@ BEGIN
 		, INDEX [IX_Maintenance.Filter_Logs.LastId] NONCLUSTERED (TenantId, LevelId, TargetId) WHERE IsArchived = 1 AND [TargetId] IS NOT NULL AND [CurrentId] IS NOT NULL --AND [CurrentId] = [TargetId]
 	) ON [PRIMARY]
 
-	ALTER TABLE [Maintenance].[Filter_Logs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Filter_Logs-Sync_Logs] FOREIGN KEY([SyncId])
+	ALTER TABLE [Maintenance].[Filter_Logs]  WITH CHECK ADD  CONSTRAINT [FK_Maintenance.Filter_Logs.Sync_Logs] FOREIGN KEY([SyncId])
 	REFERENCES [Maintenance].[Sync_Logs] ([Id])
 
-	ALTER TABLE [Maintenance].[Filter_Logs] CHECK CONSTRAINT [FK_Maintenance.Filter_Logs-Sync_Logs]
+	ALTER TABLE [Maintenance].[Filter_Logs] CHECK CONSTRAINT [FK_Maintenance.Filter_Logs.Sync_Logs]
 END
 ELSE PRINT '  = Table already exists: [Maintenance].[Filter_Logs]';
 GO
