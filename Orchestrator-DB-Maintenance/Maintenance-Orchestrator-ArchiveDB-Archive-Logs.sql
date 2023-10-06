@@ -1086,9 +1086,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ParseJsonArchiveLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ParseJsonArchiveLogs]
--- ### [Version]: 2023-09-07T15:05:21+02:00
+-- ### [Version]: 2023-10-06T11:29:36+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.ParseJsonArchiveLogs.sql
--- ### [Hash]: 30c2b77 [SHA256-D8F7B4FD7835E6EEC0879531E5047BAD335160E2DE14831A588C8F819A329209]
+-- ### [Hash]: dc39c27 [SHA256-4394AE24CA78B8691873F11A265615803478429294F266F8A6D04A7FB87812FA]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -1295,8 +1295,7 @@ BEGIN
             SET @message = N'ERROR[R6]: error(s) occured while retrieving "tenants" name(s) and alias(es) from JSON string';
             THROW;
         END CATCH;
-
-        -- extract tenant from JSON string and matches them with [dbo].[tenants]
+        -- extract tenant from JSON string and matches them with [Maintenance].[Synonym_Source_Tenants]
         BEGIN TRY;
             WITH list AS (
                 -- exact matches
@@ -1305,7 +1304,7 @@ BEGIN
                     , [exclude] = NULL
                     , IsDeleted = tnt.IsDeleted
                 FROM @jsonValues_tenants jst
-                LEFT JOIN [dbo].[Tenants] tnt ON tnt.Id = jst.[value_id] OR tnt.[Name] LIKE jst.[value_name]
+                LEFT JOIN [Maintenance].[Synonym_Source_Tenants] tnt ON tnt.Id = jst.[value_id] OR tnt.[Name] LIKE jst.[value_name]
                 WHERE ( jst.[value_id] IS NOT NULL OR ( CHARINDEX(N'%', jst.[value_name], 1) = 0 AND jst.[value_name] NOT IN (N'#ACTIVE_TENANTS#', N'#OTHER_TENANTS#', N'#DELETED_TENANTS#') ) )
                 UNION ALL
                 -- filter matches
@@ -1314,7 +1313,7 @@ BEGIN
                     , [exclude] = (SELECT TOP(1) ISNULL([value_name], [value_id]) FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] LIKE [value_name] OR tnt.[Id] = [value_id]) )
                     , IsDeleted = tnt.IsDeleted
                 FROM @jsonValues_tenants jst
-                LEFT JOIN [dbo].[Tenants] tnt ON tnt.Id = jst.[value_id] OR (tnt.[Name] LIKE jst.[value_name])
+                LEFT JOIN [Maintenance].[Synonym_Source_Tenants] tnt ON tnt.Id = jst.[value_id] OR (tnt.[Name] LIKE jst.[value_name])
                 WHERE jst.[value_id] IS NULL AND CHARINDEX(N'%', jst.[value_name], 1) > 0
                 UNION ALL 
                 -- alias
@@ -1324,7 +1323,7 @@ BEGIN
                     , IsDeleted = tnt.IsDeleted
                 FROM @jsonValues_tenants jst
                 INNER JOIN (VALUES(N'#ACTIVE_TENANTS#', 0, N'active'), (N'#DELETED_TENANTS#', 1, N'deleted') ) sts([name], [status], [type]) ON jst.[value_name] = sts.name
-                LEFT JOIN [dbo].[Tenants] tnt ON tnt.IsDeleted = sts.[status]
+                LEFT JOIN [Maintenance].[Synonym_Source_Tenants] tnt ON tnt.IsDeleted = sts.[status]
                     AND jst.[value_name] = sts.[name]
                     AND NOT EXISTS(SELECT 1 FROM @jsonValues_tenants WHERE [key] <> jst.[key] AND value_name = jst.[value_name])
             )
@@ -1338,7 +1337,7 @@ BEGIN
                 , 0
             FROM @jsonValues_tenants jst
             CROSS APPLY (
-                SELECT [name], [Id] FROM [dbo].[Tenants] WHERE [IsDeleted] = 0 AND NOT EXISTS( SELECT  1 FROM @jsonValues_tenants WHERE [key] <> jst.[key] AND value_name = N'#OTHER_TENANTS#') 
+                SELECT [name], [Id] FROM [Maintenance].[Synonym_Source_Tenants] WHERE [IsDeleted] = 0 AND NOT EXISTS( SELECT  1 FROM @jsonValues_tenants WHERE [key] <> jst.[key] AND value_name = N'#OTHER_TENANTS#') 
                 UNION ALL 
                 SELECT NULL, NULL WHERE EXISTS( SELECT  1 FROM @jsonValues_tenants WHERE [key] <> jst.[key] AND value_name = N'#OTHER_TENANTS#') 
                 EXCEPT 
@@ -1350,6 +1349,8 @@ BEGIN
             SET @message = N'ERROR[R7]: error(s) occured while matching Tenants table with "tenants" name(s) and alias(es) from JSON string';
             THROW;
         END CATCH;
+
+        UPDATE @jsonArray_tenants SET [keep] = 0 WHERE [IsDeleted] IS NULL AND [value_name] IN (N'#ACTIVE_TENANTS#', N'#DELETED_TENANTS#')
 
         ----------------------------------------------------------------------------------------------------
         -- JSON string - keys and types checks
@@ -1754,9 +1755,9 @@ GO
 ALTER PROCEDURE [Maintenance].[AddArchiveTriggerLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[AddArchiveTriggerLogs]
--- ### [Version]: 2023-09-07T15:05:21+02:00
+-- ### [Version]: 2023-10-06T11:29:36+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.AddArchiveTriggerLogs.sql
--- ### [Hash]: 30c2b77 [SHA256-E550912D5F096E7D253B0574A751F0555E4AD9255C7713FAFCABCE10B150F210]
+-- ### [Hash]: dc39c27 [SHA256-4B22B7B78C9918A2355E9FF079D16CB052943958002D85B682336491A89D24F3]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -1796,8 +1797,11 @@ BEGIN
 
         DECLARE @startTime datetime = SYSDATETIME();
 --SET @StartTime = N'20230401 00:00:00';     
-DECLARE @startTimeFloat float(53);
-SELECT @startTimeFloat = CAST(@startTime AS float(53));
+        DECLARE @startTimeFloat float(53);
+        SELECT @startTimeFloat = CAST(@startTime AS float(53));
+
+        DECLARE @tenantsSynonymIsValid bit;
+        DECLARE @tenantsSynonymMessages nvarchar(MAX);        
 
         DECLARE @triggerTime datetime;
         DECLARE @triggerFloatingTime float(53);
@@ -1964,6 +1968,20 @@ SELECT @startTimeFloat = CAST(@startTime AS float(53));
         -- Check uses_quoted_identifier
         UNION ALL SELECT 'ERROR: QUOTED_IDENTIFIER must be set to ON for this Stored Procedure', 16, 1 FROM sys.sql_modules WHERE [object_id] = @@PROCID AND uses_quoted_identifier <> 1;
 
+        BEGIN TRY
+            EXEC [Maintenance].[SetSourceTableTenants] @IsValid = @tenantsSynonymIsValid OUTPUT, @Messages = @tenantsSynonymMessages OUTPUT;
+
+            INSERT INTO @messages([message], [severity], [state])
+            SELECT [Message], [Severity], 0 FROM OPENJSON(@tenantsSynonymMessages, N'$') WITH ([Message] nvarchar(MAX), [Severity] tinyint)
+            UNION ALL SELECT 'Tenants synonym must be set using [Maintenance].[SetSourceTableTenants]', 16, 0 WHERE @tenantsSynonymIsValid = 0;
+        END TRY
+        BEGIN CATCH
+            SET @message = N'ERROR: error(s) occurcered while validating Tenants synonym with with [Maintenance].[SetSourceTableTenants]'
+            INSERT INTO @messages ([Message], Severity, [State]) VALUES
+                    (ERROR_MESSAGE(), 10, 1)
+                    , (@message, 16, 1)
+        END CATCH
+
         ----------------------------------------------------------------------------------------------------
         -- Parameters
         ----------------------------------------------------------------------------------------------------
@@ -1988,9 +2006,14 @@ SELECT @startTimeFloat = CAST(@startTime AS float(53));
                 , ('Parameter @SaveMessagesToTable is invalid: ' + LTRIM(RTRIM(@SaveMessagesToTable)), 16, 1);
         END
 
+        SET @levelVerbose = 10;
+        
         ----------------------------------------------------------------------------------------------------
         -- Parameters' Validation
         ----------------------------------------------------------------------------------------------------
+        -- Check @@ArchiveTriggerTime
+        SELECT @triggerTime = ISNULL(@ArchiveTriggerTime, SYSDATETIME());
+        SELECT @triggerFloatingTime = CAST(@triggerTime AS float(53));
 
         -- Check Parameters
         IF EXISTS(SELECT 1 FROM @messages WHERE severity >= 16) 
@@ -2000,11 +2023,7 @@ SELECT @startTimeFloat = CAST(@startTime AS float(53));
         ELSE
         BEGIN
             SELECT @json_filters = LTRIM(RTRIM(@Filters));
-
-            -- Check @@ArchiveTriggerTime
-            SELECT @triggerTime = ISNULL(@ArchiveTriggerTime, SYSDATETIME());
-            SELECT @triggerFloatingTime = CAST(@triggerTime AS float(53));
-
+ 
             -- Check @ArchiveAfterHours / @DeleteDelayHours
             SELECT @globalDeleteDelay = ISNULL(@DeleteDelayHours, @constDefaultDeleteDelay);
             SELECT @globalAfterHours = ISNULL(@ArchiveAfterHours, @constDefaultAfterHours);
@@ -2015,7 +2034,7 @@ SELECT @startTimeFloat = CAST(@startTime AS float(53));
             UNION ALL SELECT SPACE(@tab+ @space * 1) + N'@ArchiveAfterHours is NULL. "after_hours" value(s) from JSON string will be used', 10, 1 WHERE @ArchiveAfterHours IS NULL AND @json_filters NOT IN (N'ALL', N'ACTIVE_TENANTS', N'DELETED_TENANTS')
             UNION ALL SELECT N'ERROR: @ArchiveAfterHours must be provided when keyword "' + @json_filters + N'" is used', 16, 1 WHERE @ArchiveAfterHours IS NULL AND @json_filters IN (N'ALL', N'ACTIVE_TENANTS', N'DELETED_TENANTS')
             UNION ALL SELECT SPACE(@tab+ @space * 1) + N'@DeleteDelayHours is NULL. "delete_delay_hours" value(s) from JSON string will be used when available or default value otherwise (' + CAST(@constDefaultDeleteDelay AS nvarchar(100)) N')', 10, 1 WHERE @DeleteDelayHours IS NULL
-            UNION ALL SELECT N'ERROR: @ArchiveAfterHours must be bigger than 0 (>= 1)', 16, 1 WHERE @ArchiveAfterHours < 1
+            UNION ALL SELECT N'ERROR: @ArchiveAfterHours must be at least 0 (>= 0)', 16, 1 WHERE @ArchiveAfterHours < 0
             UNION ALL SELECT N'@RepeatOffsetHours must be greater than 1 when @RepeatArchive is set (@RepeatOffsetHours = ' + ISNULL(CAST(@RepeatOffsetHours AS nvarchar(100)), N'NULL') + ')', 16, 1 WHERE (@RepeatOffsetHours IS NULL OR @RepeatOffsetHours < 1) AND @RepeatArchive = 1
             UNION ALL SELECT N'@RepeatUntil must be greater than the current date and time', 16, 1 WHERE (@RepeatUntil <= @triggerTime) AND @RepeatArchive = 1
             ;
@@ -2100,7 +2119,6 @@ SELECT @startTimeFloat = CAST(@startTime AS float(53));
 
         IF NOT EXISTS(SELECT 1 FROM @messages WHERE severity >= 16) AND @dryRun = 0
         BEGIN
-
             BEGIN TRY
                 -- retrieve parsed filters and update target dates
                 INSERT @listFilters ([tenants], [level], [deleteOnly], [archiveDate], [deleteDate])
@@ -2178,10 +2196,11 @@ SELECT @startTimeFloat = CAST(@startTime AS float(53));
     FETCH CursorMessages INTO @cursorDate, @cursorProcedure, @cursorMessage, @cursorSeverity, @cursorState, @cursorNumber, @cursorLine;
 
     IF CURSOR_STATUS('local', 'CursorMessages') = 1
-    BEGIN
+    BEGIN            
         WHILE @@FETCH_STATUS = 0
         BEGIN;
-            IF @logToTable = 0 OR @errorCount > 0 OR @cursorSeverity >= @levelVerbose OR @cursorSeverity > 10 RAISERROR('%s', @cursorSeverity, @cursorState, @cursorMessage) WITH NOWAIT;
+            --IF @logToTable = 0 OR @errorCount > 0 OR @cursorSeverity >= @levelVerbose OR @cursorSeverity > 10
+             RAISERROR('%s', @cursorSeverity, @cursorState, @cursorMessage) WITH NOWAIT;
             --IF @cursorSeverity >= 16 RAISERROR('', 10, 1) WITH NOWAIT;
             FETCH CursorMessages INTO @cursorDate, @cursorProcedure, @cursorMessage, @cursorSeverity, @cursorState, @cursorNumber, @cursorLine;
         END
@@ -2327,9 +2346,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ArchiveLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ArchiveLogs]
--- ### [Version]: 2023-09-07T15:05:21+02:00
+-- ### [Version]: 2023-10-06T11:29:36+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.ArchiveLogs.sql
--- ### [Hash]: 30c2b77 [SHA256-107C2185F93F41E6376DAA0BB229C4F1106D075E073352A9B413F6CF4D4570A1]
+-- ### [Hash]: dc39c27 [SHA256-9291AFA80AC4261D5921B2B0D7CF4688E425669D45C9D49B7AEE3E63339A3862]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -2500,7 +2519,8 @@ BEGIN
         DECLARE @synonymIsValid bit;
         DECLARE @synonymCreateTable bit;
         DECLARE @synonymUpdateTable bit;
-        DECLARE @synonymExcludeColumns nvarchar(MAX) 
+        DECLARE @synonymExcludeColumns nvarchar(MAX);
+        DECLARE @isValid bit;
         ----------------------------------------------------------------------------------------------------      
         -- Message / Error Handling
         ----------------------------------------------------------------------------------------------------
@@ -2683,21 +2703,22 @@ BEGIN
 		----------------------------------------------------------------------------------------------------
         -- Check Permissions
         ----------------------------------------------------------------------------------------------------
-/*        -- Check SELECT & DELETE permission on [dbo].[Logs]
+/*        
+        -- Check SELECT & DELETE permission on [dbo].[Logs]
         INSERT INTO @messages ([Message], Severity, [State])
         SELECT 'Permission not effectively granted: ' + UPPER(p.permission_name), 10, 1
         FROM (VALUES(N'', N'SELECT'), (N'', N'DELETE')) AS p (subentity_name, permission_name)
         LEFT JOIN sys.fn_my_permissions(N'[dbo].[Logs]', N'OBJECT') eff ON eff.subentity_name = p.subentity_name AND eff.permission_name = p.permission_name
         WHERE eff.permission_name IS NULL
         ORDER BY p.permission_name;
-*/
+
         IF @@ROWCOUNT > 0 
         BEGIN
             INSERT INTO @messages ([Message], Severity, [State]) VALUES
                 (N'Error: missing permission', 10, 1)
                 , (N'SELECT and DELETE permissions are required on [dbo].[Logs] table', 16, 1);
         END
-
+*/
         -- Check @SaveMessagesToTable parameter
         SELECT @logToTable = [value] FROM @paramsYesNo WHERE [parameter] = ISNULL(LTRIM(RTRIM(@SaveMessagesToTable)), N'Y');
         IF @logToTable IS NULL 
@@ -2834,13 +2855,17 @@ BEGIN
         BEGIN
             -- Check Synonyms and source/Archive tables
             BEGIN TRY            
-                EXEC [Maintenance].[ValidateArchiveObjectsLogs] @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT, @CreateTable = @synonymCreateTable, @UpdateTable = @synonymUpdateTable, @SourceColumns = @sourceColumns OUTPUT, @ExcludeColumns = @synonymExcludeColumns;
+                SET @isValid = 1;
+                EXEC [Maintenance].[SetSourceTableLogs] @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT, @Columns = @sourceColumns OUTPUT;
+                INSERT INTO @messages ([Procedure], [Message], Severity, [State]) SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@synonymMessages, N'$') WITH ([Procedure] nvarchar(MAX), [Message] nvarchar(MAX), [Severity] tinyint, [State] tinyint);
+                SELECT @isValid = IIF(@isValid = 1 AND @synonymIsValid = 1, 1, 0);
+                EXEC [Maintenance].[SetArchiveTableLogs] @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT, @CreateTable = @synonymCreateTable, @UpdateTable = @synonymUpdateTable, @SourceColumns = @sourceColumns OUTPUT, @ExcludeColumns = @synonymExcludeColumns;
+                INSERT INTO @messages ([Procedure], [Message], Severity, [State]) SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@synonymMessages, N'$') WITH ([Procedure] nvarchar(MAX), [Message] nvarchar(MAX), [Severity] tinyint, [State] tinyint);
+                SELECT @isValid = IIF(@isValid = 1 AND @synonymIsValid = 1, 1, 0);
+--                EXEC [Maintenance].[ValidateArchiveObjectsLogs] @Messages = @synonymMessages OUTPUT, @IsValidx = @synonymIsValid OUTPUT, @CreateTable = @synonymCreateTable, @UpdateTable = @synonymUpdateTable, @SourceColumns = @sourceColumns OUTPUT, @ExcludeColumns = @synonymExcludeColumns;
+--                INSERT INTO @messages ([Procedure], [Message], Severity, [State]) SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@synonymMessages, N'$') WITH ([Procedure] nvarchar(MAX), [Message] nvarchar(MAX), [Severity] tinyint, [State] tinyint);
 
-                INSERT INTO @messages ([Procedure], [Message], Severity, [State])
-                SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@synonymMessages, N'$') WITH ([Procedure] nvarchar(MAX), [Message] nvarchar(MAX), [Severity] tinyint, [State] tinyint);
-
-                INSERT INTO @messages ([Message], Severity, [State])
-                SELECT 'ERORR: Synonyms and archive/source tables checks failed, see previous errors', 16, 1 WHERE ISNULL(@synonymIsValid, 0) = 0
+                INSERT INTO @messages ([Message], Severity, [State]) SELECT 'ERORR: Synonyms and archive/source tables checks failed, see previous errors', 16, 1 WHERE ISNULL(@IsValid, 0) = 0;
             END TRY
             BEGIN CATCH
                 -- Get Unknown error
@@ -2859,22 +2884,21 @@ BEGIN
         BEGIN
             BEGIN TRY
                 SELECT @archivedColumns = NULL;
-                SELECT @archivedColumns = COALESCE(@archivedColumns + N', ' + QUOTENAME([value]), QUOTENAME([value])) FROM OPENJSON(@sourceColumns)
+
+                SELECT @archivedColumns = COALESCE(@archivedColumns + N', ' + [value], [value]) FROM OPENJSON(@sourceColumns);
                 SELECT @sqlArchive = N'
                     INSERT INTO [Maintenance].[Synonym_Archive_Logs](' + @archivedColumns + N')
                     SELECT ' + @archivedColumns + N' 
                     FROM #tempListIds ids
                     INNER JOIN [Maintenance].[Synonym_Source_Logs] src ON ids.tempId = src.Id
                     WHERE tempDeleteOnly = 0 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Synonym_Archive_Logs] WHERE Id = ids.tempId)';
-                INSERT INTO @messages ([Message], Severity, [State]) VALUES 
-                (N'Archive query: ' + ISNULL(@sqlArchive, N'-'), 10, 1);
+                INSERT INTO @messages ([Message], Severity, [State]) VALUES (N'Archive query: ' + ISNULL(@sqlArchive, N'-'), 10, 1);
             END TRY
             BEGIN CATCH
                 -- Get Unknown error
                 SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();
                 -- Save Unknwon Errror
-                INSERT INTO @messages ([Message], Severity, [State]) VALUES 
-                    (N'ERORR: error(s) occured while preparing archive SQL query', 16, 1);
+                INSERT INTO @messages ([Message], Severity, [State]) VALUES (N'ERORR: error(s) occured while preparing archive SQL query', 16, 1);
                 THROW;
             END CATCH
         END
@@ -3160,7 +3184,7 @@ BEGIN
                         ) v FOR JSON PATH                                                                            --|
                     ), CurrentRunId = @runid                                                                         --|
                     FROM [Maintenance].[Archive_Logs] arc                                                            --|
-                    WHERE EXISTS (SELECT 1 FROM #tempListFilters WHERE ArchiveId = arc.Id);                              --|
+                    WHERE EXISTS (SELECT 1 FROM #tempListFilters WHERE ArchiveId = arc.Id);                          --|
                                                                                                                      --|
                     IF @@TRANCOUNT > 0 COMMIT;                                                                       --|
                     ---------------------------------------------------------------------------------------------------+
@@ -3200,7 +3224,7 @@ BEGIN
                         SELECT TOP(@maxLoopDeleteRows) src.Id, flt.SyncId, flt.DeleteOnly, flt.NoDelay
                         FROM #tempListFilters flt
                         INNER JOIN [Maintenance].[Synonym_Source_Logs] src ON src.TenantId = flt.TenantId AND src.Level = flt.LevelId
-                        WHERE ( (src.TimeStamp > flt.PreviousTimestamp AND src.TimeStamp <= flt.TargetTimestamp) OR (flt.LastId IS NOT NULL AND src.TimeStamp <= flt.PreviousTimestamp AND src.Id > flt.LastId ) ) AND src.Id >= flt.CurrentId AND src.Id <= @maxId AND src.Id >= @currentId
+                        WHERE ( (src.TimeStamp >= flt.PreviousTimestamp AND src.TimeStamp < flt.TargetTimestamp) OR (flt.LastId IS NOT NULL AND src.TimeStamp < flt.PreviousTimestamp AND src.Id > flt.LastId ) ) AND src.Id >= flt.CurrentId AND src.Id <= @maxId AND src.Id >= @currentId
                         ORDER BY src.Id ASC;
  
                         SELECT @countRowIds = @@ROWCOUNT;
@@ -3220,6 +3244,7 @@ BEGIN
                             SELECT @filtersArchived = @@ROWCOUNT, @globalFiltersArchived = ISNULL(@globalFiltersArchived, 0) + @@ROWCOUNT;
                             BREAK;
                         END
+
                         -----------------------------------------------------------------------------------------------------------------------+
                         -- START TRANSACTION BLOCK                                                                                             |
                         -----------------------------------------------------------------------------------------------------------------------+
@@ -3481,9 +3506,9 @@ GO
 ALTER PROCEDURE [Maintenance].[CleanupSyncedLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[CleanupSyncedLogs]
--- ### [Version]: 2023-09-07T15:05:21+02:00
+-- ### [Version]: 2023-10-06T11:29:36+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.CleanupSyncedLogs.sql
--- ### [Hash]: 30c2b77 [SHA256-04B3DA5260E4CC17A5C7D7726F34996D3223EF3EF4BDB8448C32381FDC18BFD1]
+-- ### [Hash]: dc39c27 [SHA256-C3303860B14BD78B7ADCF3CC0A5DC3D0E948CEE966CB52131620807747F68D62]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -3735,7 +3760,7 @@ BEGIN
         -- Check Permissions
         ----------------------------------------------------------------------------------------------------
         -- Check SELECT & DELETE permission on [dbo].[Logs]
-        INSERT INTO @messages ([Message], Severity, [State])
+        /*INSERT INTO @messages ([Message], Severity, [State])
         SELECT 'Permission not effectively granted: ' + UPPER(p.permission_name), 10, 1
         FROM (VALUES(N'', N'SELECT'), (N'', N'DELETE')) AS p (subentity_name, permission_name)
         LEFT JOIN sys.fn_my_permissions(N'[dbo].[Logs]', N'OBJECT') eff ON eff.subentity_name = p.subentity_name AND eff.permission_name = p.permission_name
@@ -3747,7 +3772,7 @@ BEGIN
             INSERT INTO @messages ([Message], Severity, [State]) VALUES
                 (N'Error: missing permission', 10, 1)
                 , (N'SELECT and DELETE permissions are required on [dbo].[Logs] table', 16, 1);
-        END
+        END*/
 
         -- Check @SaveMessagesToTable parameter
         SELECT @logToTable = [value] FROM @paramsYesNo WHERE [parameter] = ISNULL(LTRIM(RTRIM(@SaveMessagesToTable)), N'Y');
