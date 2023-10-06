@@ -6,23 +6,23 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- DROP PROCEDURE [Maintenance].[CleanupSyncedAuditLogs]
+-- DROP PROCEDURE [Maintenance].[ASyncCleanupQueues]
 ----------------------------------------------------------------------------------------------------
 
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[CleanupSyncedAuditLogs]') AND type in (N'P'))
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[ASyncCleanupQueues]') AND type in (N'P'))
 BEGIN
-    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[CleanupSyncedAuditLogs] AS'
-    PRINT '  + CREATE PROCEDURE: [Maintenance].[CleanupSyncedAuditLogs]';
+    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[ASyncCleanupQueues] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[ASyncCleanupQueues]';
 END
-ELSE PRINT '  = PROCEDURE [Maintenance].[CleanupSyncedAuditLogs] already exists' 
+ELSE PRINT '  = PROCEDURE [Maintenance].[ASyncCleanupQueues] already exists' 
 GO
 
-PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[CleanupSyncedAuditLogs]'
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[ASyncCleanupQueues]'
 GO  
 
-ALTER PROCEDURE [Maintenance].[CleanupSyncedAuditLogs]
+ALTER PROCEDURE [Maintenance].[ASyncCleanupQueues]
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: PROCEDURE [Maintenance].[CleanupSyncedAuditLogs]
+-- ### [Object]: PROCEDURE [Maintenance].[ASyncCleanupQueues]
 -- ### [Version]: 2020-10-01 00:00:00                                                         
 -- ### [Source]: ??????
 -- ### [Hash]: ??????
@@ -61,7 +61,6 @@ BEGIN
         DECLARE @runId int;  
         DECLARE @dryRun bit;
         DECLARE @isTimeOut bit = 0;
-        DECLARE @IsFinished bit = 0;
 
         DECLARE @startTime datetime = SYSDATETIME();
         DECLARE @startTimeFloat float(53);
@@ -76,9 +75,15 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         -- Sync Cursor
         ----------------------------------------------------------------------------------------------------
-        DECLARE @tempListSync TABLE([Id] [bigint] PRIMARY KEY NOT NULL, [DeleteOnDate] datetime NULL);
+--        DROP TABLE IF EXISTS #tempListSync;
+        DECLARE @tempListSync TABLE([Id] [bigint] PRIMARY KEY NOT NULL, [DeleteAfterDatetime] [datetime] NOT NULL, [FirstASyncId] [bigint] NULL, [LastAsyncId] [bigint] NULL, [CountASyncIds] [bigint] NULL, [IsDeleted] bit NULL, [IsSynced] bit NULL);
         DECLARE @cursorSyncId bigint;
-        DECLARE @cursorDeleteOnDate datetime;
+        DECLARE @cursorDeleteAfterDatetime datetime;
+        DECLARE @cursorFirstASyncId bigint;
+        DECLARE @cursorLastAsyncId bigint;
+        DECLARE @cursorCountASyncIds bigint;
+        DECLARE @cursorIsDeleted bit;
+        DECLARE @cursorIsSynced bit;
 
         ----------------------------------------------------------------------------------------------------
         -- Delete Loop
@@ -276,11 +281,11 @@ BEGIN
 		----------------------------------------------------------------------------------------------------
         -- Check Permissions
         ----------------------------------------------------------------------------------------------------
-        -- Check SELECT & DELETE permission on [dbo].[AuditLogs]
-        /*INSERT INTO @messages ([Message], Severity, [State])
+        -- Check SELECT & DELETE permission on [dbo].[QueueItems]
+        INSERT INTO @messages ([Message], Severity, [State])
         SELECT 'Permission not effectively granted: ' + UPPER(p.permission_name), 10, 1
         FROM (VALUES(N'', N'SELECT'), (N'', N'DELETE')) AS p (subentity_name, permission_name)
-        LEFT JOIN sys.fn_my_permissions(N'[dbo].[AuditLogs]', N'OBJECT') eff ON eff.subentity_name = p.subentity_name AND eff.permission_name = p.permission_name
+        LEFT JOIN sys.fn_my_permissions(N'[dbo].[QueueItems]', N'OBJECT') eff ON eff.subentity_name = p.subentity_name AND eff.permission_name = p.permission_name
         WHERE eff.permission_name IS NULL
         ORDER BY p.permission_name;
 
@@ -288,8 +293,8 @@ BEGIN
         BEGIN
             INSERT INTO @messages ([Message], Severity, [State]) VALUES
                 (N'Error: missing permission', 10, 1)
-                , (N'SELECT and DELETE permissions are required on [dbo].[AuditLogs] table', 16, 1);
-        END*/
+                , (N'SELECT and DELETE permissions are required on [dbo].[QueueItems] table', 16, 1);
+        END
 
         -- Check @SaveMessagesToTable parameter
         SELECT @logToTable = [value] FROM @paramsYesNo WHERE [parameter] = ISNULL(LTRIM(RTRIM(@SaveMessagesToTable)), N'Y');
@@ -411,7 +416,7 @@ BEGIN
         
         IF @SavedToRunId IS NULL OR NOT EXISTS(SELECT 1 FROM [Maintenance].[Runs] WHERE Id = @SavedToRunId AND EndDate IS NULL)
         BEGIN
-            INSERT INTO [Maintenance].[Runs]([Type], [Info], [StartTime]) SELECT N'Add Archive AuditLogs Trigger', N'PROCEDURE ' + @procName, @startTime;
+            INSERT INTO [Maintenance].[Runs]([Type], [Info], [StartTime]) SELECT N'Add Archive Queues Trigger', N'PROCEDURE ' + @procName, @startTime;
             SELECT @runId = @@IDENTITY, @SavedToRunId = @@IDENTITY;
             INSERT INTO @messages ([Message], Severity, [State]) VALUES 
                 (N'Messages saved to new Run Id: ' + CONVERT(nvarchar(MAX), @runId), 10, 1);
@@ -425,20 +430,20 @@ BEGIN
         BEGIN
             -- Check Synonyms and source/Archive tables
             BEGIN TRY            
-                EXEC [Maintenance].[ValidateArchiveObjectsAuditLogs] @IgnoreMissingColumns = 1, @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT;
+                EXEC [Maintenance].[ValidateASyncArchiveObjectsQueues] @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT;
 
                 INSERT INTO @messages ([Procedure], [Message], Severity, [State])
                 SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@synonymMessages, N'$') WITH ([Procedure] nvarchar(MAX), [Message] nvarchar(MAX), [Severity] tinyint, [State] tinyint);
 
                 INSERT INTO @messages ([Message], Severity, [State])
-                SELECT 'ERORR: Synonyms and Archive tables checks failed, see previous errors', 16, 1 WHERE ISNULL(@synonymIsValid, 0) = 0
+                SELECT 'ERORR: Synonyms and ASync tables checks failed, see previous errors', 16, 1 WHERE ISNULL(@synonymIsValid, 0) = 0
             END TRY
             BEGIN CATCH
                 INSERT INTO @messages ([Procedure], [Message], Severity, [State])
                 SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@synonymMessages, N'$') WITH ([Procedure] nvarchar(MAX), [Message] nvarchar(MAX), [Severity] tinyint, [State] tinyint);
 
                 INSERT INTO @messages ([Message], Severity, [State]) VALUES 
-                    (N'ERORR: error(s) occured while checking synonyms and Archive tables', 16, 1);
+                    (N'ERORR: error(s) occured while checking synonyms and Async tables', 16, 1);
                 THROW;
             END CATCH
         END
@@ -526,7 +531,7 @@ BEGIN
         -- Archive
         ----------------------------------------------------------------------------------------------------
         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @lineSeparator, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
-        EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = 'Start ASync AuditLogs Cleanup', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
+        EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = 'Start ASync Queues Cleanup', @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @lineSeparator, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
 
         INSERT INTO @messages([Date], [Procedure], [Message], [Severity], [State], [Number], [Line])
@@ -536,15 +541,19 @@ BEGIN
         EXEC sp_executesql @stmt = @stmtEmptyMessagesStack, @params = @paramsEmptyMessagesStack, @MessagesStack = @MessagesStack OUTPUT;
 
         BEGIN TRY
-            INSERT INTO @tempListSync([Id], [DeleteOnDate])
-            SELECT sts.SyncId, sts.DeletedOnDate
-            FROM [Maintenance].[Synonym_ASyncStatus_AuditLogs] sts
-            INNER JOIN [Maintenance].[Sync_AuditLogs] syn ON syn.Id = sts.SyncId
-            WHERE sts.IsDeleted = 1 AND syn.IsSynced <> 1;
+            INSERT INTO @tempListSync([Id], [DeleteAfterDatetime], [FirstASyncId], [LastAsyncId], [CountASyncIds], [IsDeleted], [IsSynced])
+            SELECT Id, DeleteAfterDatetime, FirstASyncId, LastASyncId, CountASyncIds, IsDeleted, IsSynced
+            FROM [Maintenance].[Synonym_ArchiveSync_Queues] 
+            WHERE ( CountASyncIds > 0 AND IsArchived = 1 AND IsDeleted <> 1 AND DeleteAfterDatetime < @startTime )
+            UNION
+            SELECT syn.Id, syn.DeleteAfterDatetime, syn.FirstASyncId, syn.LastASyncId, syn.CountASyncIds, syn.IsDeleted, syn.IsSynced
+            FROM [Maintenance].[ASyncStatus_Queues] sts 
+            INNER JOIN [Maintenance].[Synonym_ArchiveSync_Queues] syn ON syn.Id = sts.SyncId
+           WHERE sts.IsDeleted = 1;
 
             IF @@ROWCOUNT = 0
             BEGIN 
-                SET @message = N'Nothing to sync';
+                SET @message = N'Nothing to cleanup';
                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 0, @Number = @ERROR_NUMBER, @Line = @ERROR_LINE, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
             END
         END TRY
@@ -558,62 +567,64 @@ BEGIN
             THROW;
         END CATCH
 
+        DROP TABLE IF EXISTS #tempIds
+        CREATE TABLE #tempIds(Id bigint)
         SET @globalIds = 0;
 
         IF CURSOR_STATUS('local', 'CursorSyncIds') >= 0 CLOSE CursorSyncIds;
         IF CURSOR_STATUS('local', 'CursorSyncIds') >= -1 DEALLOCATE CursorSyncIds;
 
         DECLARE CursorSyncIds CURSOR FAST_FORWARD LOCAL FOR 
-            SELECT [Id], [DeleteOnDate] FROM @tempListSync ORDER BY [DeleteOnDate] ASC;
+            SELECT [Id], [DeleteAfterDatetime], [FirstASyncId], [LastAsyncId], [CountASyncIds], [IsDeleted], [IsSynced] FROM @tempListSync ORDER BY [DeleteAfterDatetime] ASC;
 
         OPEN CursorSyncIds;
-        FETCH CursorSyncIds INTO @cursorSyncId, @cursorDeleteOnDate;
+        FETCH CursorSyncIds INTO @cursorSyncId, @cursorDeleteAfterDatetime, @cursorFirstASyncId, @cursorLastAsyncId, @cursorCountASyncIds, @cursorIsDeleted, @cursorIsSynced;
 
         IF CURSOR_STATUS('local', 'CursorSyncIds') = 1
         BEGIN 
             WHILE @@FETCH_STATUS = 0 --> Cursor Loop Sync Id
             BEGIN;
                 SET @message = N'Sync Id [' + CAST(@cursorSyncId AS nvarchar(100)) + N']: ';
+                IF EXISTS(SELECT 1 FROM [Maintenance].[ASyncStatus_Queues] WHERE [SyncId] = @cursorSyncId AND [IsDeleted] = 1)
+                BEGIN
+                    SELECT @message = @message + IIF(@cursorIsSynced = 1, N' remove (already deleted and synced)', N'skip (deleted but not synced yet)')
+                    EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
+
+                    DELETE FROM [Maintenance].[ASyncStatus_Queues] WHERE [SyncId] = @cursorSyncId AND [IsDeleted] = 1 AND @cursorIsSynced = 1;
+                    FETCH CursorSyncIds INTO @cursorSyncId, @cursorDeleteAfterDatetime, @cursorFirstASyncId, @cursorLastAsyncId, @cursorCountASyncIds, @cursorIsDeleted, @cursorIsSynced;
+                    CONTINUE;
+                END
+
+                SELECT @message = @message + N'Start';
                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
+                INSERT INTO [Maintenance].[ASyncStatus_Queues]([SyncId], [FirstASyncId]) SELECT @cursorSyncId, @cursorFirstASyncId WHERE NOT EXISTS(SELECT 1 FROM [Maintenance].[ASyncStatus_Queues] WHERE [SyncId] = @cursorSyncId)
+                SELECT @firstId = COALESCE([LastASyncId] + 1, [FirstASyncId], @cursorFirstASyncId) FROM [Maintenance].[ASyncStatus_Queues] WHERE [SyncId] = @cursorSyncId
+                UPDATE [Maintenance].[ASyncStatus_Queues] SET [FirstASyncId] = @firstId WHERE [SyncId] = @cursorSyncId
 
                 SET @totalIds = 0;
                 WHILE 0 >= 0
                 BEGIN
-                    DELETE TOP(@maxLoopDeleteRows) FROM [Maintenance].[Delete_AuditLogs] WHERE [SyncId] = @cursorSyncId;
-                    SELECT @countIds = @@ROWCOUNT;
-
-                    IF @countIds = 0
+                    INSERT INTO #tempIds(Id)
+                    SELECT TOP(@maxLoopDeleteRows) Id FROM [Maintenance].[Synonym_ASyncDelete_Queues] WHERE [SyncId] = @cursorSyncId AND Id >= @firstId ORDER BY Id ASC;
+                    IF @@ROWCOUNT = 0
                     BEGIN
                         SET @message = SPACE(@tab * 1) + 'Cleanup finished (total = ' + CAST(@totalIds AS nvarchar(100)) + N')';
                         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
 
-                        UPDATE stt SET [IsDeleted] = 1, [DeletedOnDate] = @cursorDeleteOnDate, [IsSynced] = 1, [SyncedOnDate] = SYSDATETIME() FROM [Maintenance].[Sync_AuditLogs] stt WHERE [Id] = @cursorSyncId;
-
-                        SELECT @IsFinished = IIF(EXISTS (SELECT 1 FROM [Maintenance].[Sync_AuditLogs] WHERE ArchiveId = (SELECT ArchiveId FROM [Maintenance].[Sync_AuditLogs] WHERE Id = @cursorSyncId) AND IsSynced <> 1), 0, 1);
-
-                        UPDATE arc SET 
-                            [CurrentRunId] = @runId
-                            , IsDeleted = @IsFinished
-                            , DeletedOnDate = IIF(@IsFinished = 1, @cursorDeleteOnDate, NULL)
-                            , IsFinished = @IsFinished
-                            , FinishedOnDate = IIF(@IsFinished = 1, SYSDATETIME(), NULL)
-                            , IsSuccess = @IsFinished
-                            , [Message] = IIF(@IsFinished = 1, N'All Archive Filter(s) and cleanup finished', N'Partial Cleanup')
-                            , PreviousRunIds = (
-                                SELECT [runid], [message], [timestamp] FROM (
-                                    SELECT [runid] = @runId, [message] = N'All Archive Filter(s) and cleanup finished]', [timestamp] = SYSDATETIME() WHERE @IsFinished = 1
-                                    UNION ALL SELECT [runid] = @runId, [message] = IIF(@IsFinished = 1, N'Cleanup finished', N'Partial Cleanup'), [timestamp] = SYSDATETIME()
-                                    UNION ALL SELECT [runid], [message], [timestamp] FROM OPENJSON(PreviousRunIds) WITH ([runid] nvarchar(MAX) N'$.runid', [message] nvarchar(MAX) N'$.message', [timestamp] datetime2 N'$.timestamp')
-                                ) v FOR JSON PATH
-                            )
-                        FROM [Maintenance].[Archive_AuditLogs] arc
-                        INNER JOIN [Maintenance].[Sync_AuditLogs] syn ON syn.ArchiveId = arc.Id
-                        WHERE syn.Id = @cursorSyncId;
-
+                        UPDATE stt SET [IsDeleted] = 1, [DeletedOnDate] = SYSDATETIME() FROM [Maintenance].[ASyncStatus_Queues] stt WHERE [SyncId] = @cursorSyncId;
                         BREAK;
                     END
+                    SELECT @firstId = MIN(Id), @lastId = MAX(Id), @countIds = COUNT(*) FROM #tempIds;
 
-                    SET @message = SPACE(@tab * 1) + 'cleanup: ' + CAST(@countIds AS nvarchar(100)) + N'';
+                    BEGIN TRAN
+                    DELETE ent FROM [dbo].[QueueItemComments] src INNER JOIN #tempIds ids ON ids.Id = src.QueueItemId;                    
+                    DELETE ent FROM [dbo].[QueueItemEvents] src INNER JOIN #tempIds ids ON ids.Id = src.QueueItemId;                    
+                    DELETE lgs FROM [dbo].[QueueItems] src INNER JOIN #tempIds ids ON ids.Id = src.Id;                    
+                    UPDATE stt SET [LastAsyncId] = @lastId FROM [Maintenance].[ASyncStatus_Queues] stt WHERE [SyncId] = @cursorSyncId;
+                    IF @@TRANCOUNT > 0 COMMIT
+                    TRUNCATE TABLE #tempIds;
+
+                    SET @message = SPACE(@tab * 1) + 'delete: ' + CAST(@firstId AS nvarchar(100)) + N' - ' + CAST(@lastId AS nvarchar(100)) + N' (' + CAST(@countIds AS nvarchar(100)) + N')';
                     EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
                     SELECT @firstId = @lastId + 1, @totalIds = @totalIds + @countIds, @globalIds = @globalIds + @countIds;                    
 
@@ -625,10 +636,11 @@ BEGIN
                         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
                         BREAK;
                     END 
+
                 END --> end loop
                 IF @isTimeOut = 1 BREAK;
 
-                FETCH CursorSyncIds INTO @cursorSyncId, @cursorDeleteOnDate;
+                FETCH CursorSyncIds INTO @cursorSyncId, @cursorDeleteAfterDatetime, @cursorFirstASyncId, @cursorLastAsyncId, @cursorCountASyncIds, @cursorIsDeleted, @cursorIsSynced;
             END --> Cursor Loop Sync Id
         END
         ELSE 

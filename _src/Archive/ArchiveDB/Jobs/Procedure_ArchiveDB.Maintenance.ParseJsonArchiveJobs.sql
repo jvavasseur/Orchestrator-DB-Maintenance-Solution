@@ -287,6 +287,8 @@ BEGIN
             THROW;
         END CATCH;
 
+        UPDATE @jsonArray_tenants SET [keep] = 0 WHERE [IsDeleted] IS NULL AND [value_name] IN (N'#ACTIVE_TENANTS#', N'#DELETED_TENANTS#')
+
         ----------------------------------------------------------------------------------------------------
         -- JSON string - keys and types checks
         ----------------------------------------------------------------------------------------------------

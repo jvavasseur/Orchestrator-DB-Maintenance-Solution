@@ -7,22 +7,22 @@ GO
 
 
 ----------------------------------------------------------------------------------------------------
--- DROP PROCEDURE [Maintenance].[ParseJsonArchiveAuditLogs]
+-- DROP PROCEDURE [Maintenance].[ParseJsonArchiveQueues]
 ----------------------------------------------------------------------------------------------------
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[ParseJsonArchiveAuditLogs]') AND type in (N'P'))
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[ParseJsonArchiveQueues]') AND type in (N'P'))
 BEGIN
-        EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[ParseJsonArchiveAuditLogs] AS'
-    PRINT '  + CREATE PROCEDURE: [Maintenance].[ParseJsonArchiveAuditLogs]';
+        EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[ParseJsonArchiveQueues] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[ParseJsonArchiveQueues]';
 END
-ELSE PRINT '  = PROCEDURE [Maintenance].[ParseJsonArchiveAuditLogs] already exists' 
+ELSE PRINT '  = PROCEDURE [Maintenance].[ParseJsonArchiveQueues] already exists' 
 GO
 
-PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[ParseJsonArchiveAuditLogs]'
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[ParseJsonArchiveQueues]'
 GO
 
-ALTER PROCEDURE [Maintenance].[ParseJsonArchiveAuditLogs]
+ALTER PROCEDURE [Maintenance].[ParseJsonArchiveQueues]
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: PROCEDURE [Maintenance].[ParseJsonArchiveAuditLogs]
+-- ### [Object]: PROCEDURE [Maintenance].[ParseJsonArchiveQueues]
 -- ### [Version]: 2020-10-01 00:00:00                                                         
 -- ### [Source]: ??????
 -- ### [Hash]: ??????
@@ -52,24 +52,31 @@ BEGIN
         -- JSON elements local tables
         DECLARE @jsons TABLE ([key] int, [value] nvarchar(MAX), [type] int, [type_name] nvarchar(10));
         DECLARE @jsonArray_elements TABLE([key] int, [name] nvarchar(MAX), [value] nvarchar(MAX), [type] int, [type_name] nvarchar(10));
+        DECLARE @jsonArray_Status TABLE([key] int, [status_key] int, [name] nvarchar(100), [status_name] nvarchar(128), [status_id] int);
+        --, [keep] bit, [exclude] nvarchar(128), [IsDeleted] bit);
         DECLARE @jsonArray_tenants TABLE([key] int, [value_name] nvarchar(100), [value_id] int, [Tenant_Name] nvarchar(128), [Tenant_Id] int, [keep] bit, [exclude] nvarchar(128), [IsDeleted] bit);
+        DECLARE @jsonValues_Status TABLE([key] int, [status_key] int, [name] nvarchar(MAX), [value] nvarchar(MAX), [type] int, [type_name] nvarchar(10));
         DECLARE @jsonValues_tenants TABLE([key] int, [value_name] nvarchar(128), [value_id] int)--, [Tenant_Name] nvarchar(128), [TenantId] int);
         DECLARE @jsonValues_exclude TABLE([key] int, [value_name] nvarchar(128), [value_id] int)--, [Tenant_Name] nvarchar(128), [TenantId] int);
         DECLARE @json_errors TABLE([id] tinyint NOT NULL, [key] int NOT NULL, [message] nvarchar(MAX) NOT NULL);
 
-        DECLARE @elements_settings TABLE([key] int, [delete_only] bit, [after_hours] int, [delete_delay_hours] int,  [disabled] bit);
+        DECLARE @elements_settings TABLE([key] int, [after_hours] int, [delete_delay_hours] int,  [disabled] bit);
+        DECLARE @status_settings TABLE([key] int, [status_key] int, [after_hours] int, [delete_delay_hours] int,  [disabled] bit);
 
         ----------------------------------------------------------------------------------------------------
         -- Constant / Default value
         ----------------------------------------------------------------------------------------------------
         DECLARE @json_types TABLE(id tinyint, [name] nvarchar(10));
         INSERT INTO @json_types(id, [name]) VALUES (0, 'null'), (1, 'string'), (2, 'number'), (3, 'true/false'), (4, 'array'), (5, 'object');
+        DECLARE @log_Status TABLE(id int, [status] nvarchar(20));
+        INSERT INTO @log_Status(Id, [status]) VALUES (2, 'Failed'), (3, 'Successful'), (4, 'Abandoned'), (5, 'Retried'), (6, 'Deleted');
+
 
         ----------------------------------------------------------------------------------------------------      
         -- Message / Error Handling
         ----------------------------------------------------------------------------------------------------
         DECLARE @message nvarchar(MAX);
---        DECLARE @messages TABLE(id int IDENTITY(0, 1) PRIMARY KEY, [date] datetime2 DEFAULT SYSDATETIME(), [procedure] nvarchar(MAX) NOT NULL DEFAULT QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')), [message] nvarchar(MAX) NOT NULL, severity tinyint NOT NULL, state tinyint NOT NULL, [number] int, [line] int);
+--        DECLARE @messages TABLE(id int IDENTITY(0, 1) PRIMARY KEY, [date] datetime2 DEFAULT SYSDATETIME(), [procedure] nvarchar(MAX) NOT NULL DEFAULT QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')), [message] nvarchar(MAX) NOT NULL, severity tinyint NOT NULL, status tinyint NOT NULL, [number] int, [line] int);
         DECLARE @ERROR_NUMBER INT, @ERROR_SEVERITY INT, @ERROR_STATE INT, @ERROR_PROCEDURE NVARCHAR(126), @ERROR_LINE INT, @ERROR_MESSAGE NVARCHAR(2048) ;
 
 		----------------------------------------------------------------------------------------------------
@@ -125,11 +132,8 @@ BEGIN
         
         -- get defaut settigns for each objects in main aray
         BEGIN TRY;
-            INSERT INTO @elements_settings([key], [delete_only], [after_hours], [delete_delay_hours], [disabled])
+            INSERT INTO @elements_settings([key], [after_hours], [delete_delay_hours], [disabled])
             SELECT jsn.[key]
-                , [delete_only] = CASE WHEN ( SELECT COUNT(*) FROM @jsonArray_elements WHERE [key] = jsn.[key] AND [name] = N'delete_only' ) > 1 THEN 0 ELSE
-                    ISNULL( ( SELECT MIN(ISNULL(IIF( ([type] = 3 AND [value] = N'true') OR ([type] = 2 AND [value] >= 1) , 1, 0), 0)) FROM @jsonArray_elements WHERE [key] = jsn.[key] AND [name] = N'delete_only' AND [type] IN (2, 3, 4) ), 0)
-                    END
                 , [after_hours] = (SELECT MAX([value]) FROM @jsonArray_elements WHERE [key] = jsn.[key] AND [name] = N'after_hours' AND [type] = 2 )
                 , [delete_delay_hours] = (SELECT MAX([value]) FROM @jsonArray_elements WHERE [key] = jsn.[key] AND [name] = N'delete_delay_hours' AND [type] = 2 )
                 , [disabled] = CASE WHEN ( SELECT COUNT(*) FROM @jsonArray_elements WHERE [key] = jsn.[key] AND [name] = N'disabled' ) > 1 THEN 0 ELSE
@@ -141,6 +145,57 @@ BEGIN
         END TRY 
         BEGIN CATCH;
             SET @message = N'ERROR[R2]: error(s) occured while retrieving elements'' settings from JSON string';
+            THROW;
+        END CATCH;
+
+        ----------------------------------------------------------------------------------------------------
+        -- Parse and extract Status
+        ----------------------------------------------------------------------------------------------------
+        -- get each elements from each objects in Status arrays
+        BEGIN TRY;
+            INSERT INTO @jsonValues_Status([key], [status_key], [name], [value], [type], [type_name])
+            SELECT elm.[key], [status_key] = stt.[key] + 1, [name] = CASE WHEN LTRIM(RTRIM(val.[key])) IN (N'disable', N'disabled') THEN N'disabled' ELSE LTRIM(RTRIM(val.[key])) END
+                , [value] = val.[value], [value_type] = val.[type], [value_type_name] = tps.[name]
+            FROM @jsonArray_elements elm --ON elm.[key] = jsn.[key] 
+            INNER JOIN @elements_settings stg ON stg.[key] = elm.[key]
+            OUTER APPLY OPENJSON(elm.[value]) stt
+            OUTER APPLY OPENJSON(stt.[value]) val
+            INNER JOIN @json_types tps ON tps.id = val.[type]
+            WHERE elm.[name] = N'status' AND elm.[type] = 4 AND stt.[type] = 5 AND stg.[disabled] = 0;
+        END TRY 
+        BEGIN CATCH;
+            SET @message = N'ERROR[R3]: error(s) occured while retrieving "status" from JSON string';
+            THROW;
+        END CATCH;
+
+        -- merge default settings for each objects in status arrays
+        BEGIN TRY;
+            INSERT INTO @status_settings([key], [status_key], [after_hours], [delete_delay_hours], [disabled])
+            SELECT stt.[key], stt.[status_key]
+                , [after_hours] = (SELECT MAX([value]) FROM @jsonValues_Status WHERE [key] = stt.[key] AND [status_key] = stt.[status_key] AND [name] = N'after_hours' AND [type] = 2 )
+                , [delete_delay_hours] = (SELECT MAX([value]) FROM @jsonValues_Status WHERE [key] = stt.[key] AND [status_key] = stt.[status_key] AND [name] = N'delete_delay_hours' AND [type] = 2 )
+                , [disabled] = ISNULL( ( SELECT MIN(ISNULL(IIF( ([type] = 3 AND [value] = N'true') OR ([type] = 2 AND [value] >= 1) , 1, 0), 0)) FROM @jsonValues_Status WHERE [key] = stt.[key] AND [status_key] = stt.[status_key] AND [name] = N'disabled' AND [type] IN (2, 3, 4) ), 0)
+            FROM (SELECT DISTINCT [key], [status_key] FROM @jsonValues_Status) stt
+        END TRY 
+        BEGIN CATCH;
+            SET @message = N'ERROR[R4]: error(s) occured while retrieving "status" settings from JSON string';
+            THROW;
+        END CATCH;
+
+        -- merge Status values and string arrays
+        BEGIN TRY;
+            INSERT INTO @jsonArray_Status([key], [status_key], [name], [status_name], [status_id])
+            SELECT stt.[key], stt.[status_key], stt.[name]
+            , [status_name] = LTRIM(RTRIM( IIF(stt.[type] = 1, stt.[value], IIF(val.[type] = 1, val.[value], NULL)) ))
+            , [status_id] = LTRIM(RTRIM( IIF(stt.[type] = 2, stt.[value], IIF(val.[type] = 2, val.[value], NULL)) ))
+            FROM @status_settings sts 
+            INNER JOIN @jsonValues_Status stt ON stt.[key] = sts.[key] AND sts.[status_key] = stt.[status_key] AND sts.[disabled] = 0
+            OUTER APPLY OPENJSON( IIF(stt.[type] = 4, stt.[value], NULL) ) val
+            WHERE stt.[type] IN (1, 2, 4) AND stt.[name] IN (N'archive', N'delete') AND (val.[type] IS NULL OR val.[type] IN (1, 2) )
+                AND stt.[value] IS NOT NULL
+        END TRY 
+        BEGIN CATCH;
+            SET @message = N'ERROR[R5]: error(s) occured while merging "status" value(s) and string array(s) from JSON string';
             THROW;
         END CATCH;
 
@@ -252,12 +307,12 @@ BEGIN
         END CATCH;
 
         BEGIN TRY;
-            -- 1 - J1: array contains invalid key (not 'tenants', N'delete_only', N'after_hours', N'delete_delay_hours') 
+            -- 1 - J1: array contains invalid key (not 'tenants', N'status', N'after_hours', N'delete_delay_hours') 
             INSERT INTO @json_errors([id], [key], [message])
             SELECT DISTINCT [id] = 1, [key] = elm.[key], [message] = N'ERROR[J1]: array #' + CAST(elm.[key] AS nvarchar(10)) + N' => invalid key "' + elm.[name] COLLATE DATABASE_DEFAULT + N'"'
             FROM @jsonArray_elements elm 
             INNER JOIN @elements_settings sts ON sts.[key] = elm.[key]
-            WHERE sts.[disabled] = 0 AND elm.[name] NOT IN (N'tenants', N'exclude', N'delete_only', N'after_hours', N'delete_delay_hours', N'disabled', N'comment', N'comments');
+            WHERE sts.[disabled] = 0 AND elm.[name] NOT IN (N'tenants', N'exclude', N'status', N'after_hours', N'delete_delay_hours', N'disabled', N'comment', N'comments');
         END TRY
         BEGIN CATCH;
             SET @message = N'ERROR[J1]: error(s) occured while checking invalid key(s) in JSON string';
@@ -265,12 +320,12 @@ BEGIN
         END CATCH;
 
         BEGIN TRY;
-            -- 2 - J2: missing key(s) in object ('tenants')
+            -- 2 - J2: missing key(s) in object ('tenants', 'status')
             INSERT INTO @json_errors([id], [key], [message])
             SELECT DISTINCT [id] = 2, [key] = jsn.[key], N'ERROR[J2]: array #' + CAST(jsn.[key] AS nvarchar(10)) + N' => missing key "' + v.[name]
             FROM @jsons jsn 
             INNER JOIN @elements_settings sts ON sts.[key] = jsn.[key]
-            CROSS JOIN (VALUES(N'tenants')) v([name]) 
+            CROSS JOIN (VALUES(N'tenants'), (N'status')) v([name]) 
             WHERE sts.[disabled] = 0 AND NOT EXISTS(SELECT 1 FROM @jsonArray_elements WHERE [key] = jsn.[key] AND [name] = v.[name]);
         END TRY
         BEGIN CATCH;
@@ -279,17 +334,17 @@ BEGIN
         END CATCH;
 
         BEGIN TRY;
-            -- 3 - J3: invalid type for key (tenants => number, string or array ; delete_only => true/false or 0/1 ; others => number)
+            -- 3 - J3: invalid type for key (tenants => number, string or array ; status => object ; others => number)
             INSERT INTO @json_errors([id], [key], [message])
             SELECT DISTINCT [id] = 3, [key] = elm.[key], [message] = N'ERROR[J3]: array #' + CAST(elm.[key] AS nvarchar(10)) + N' => invalid "' + elm.[type_name] + '" type for key "' + elm.[name] + N'" (only ' +
                 CASE WHEN elm.[name] IN (N'tenants', N'exclude') THEN N'number, string or array' 
-                WHEN elm.[name] = N'delete_only' THEN N'true/false or 0/1' 
+                WHEN elm.[name] = N'status' THEN N'array' 
                 WHEN elm.[name] = N'disabled' THEN N'true/false or 0/1' 
                 ELSE N'number' END + N' expected)'
             FROM @elements_settings sts 
             INNER JOIN @jsonArray_elements elm ON elm.[key] = sts.[key] AND sts.[disabled] = 0
             WHERE (elm.[name] = N'tenants' AND elm.[type] NOT IN (1, 2, 4)) 
-                OR (elm.[name] = N'delete_only' AND elm.[type] NOT IN (2, 3))
+                OR (elm.[name] = N'status' AND elm.[type] <> 4) 
                 OR (elm.[name] IN (N'after_hours', N'delete_delay_hours') AND elm.[type] <> 2)
                 OR (elm.[name] = N'disabled' AND elm.[type] NOT IN (2, 3));
         END TRY
@@ -312,17 +367,17 @@ BEGIN
             THROW;
         END CATCH;
 
-        -- 5 - J5: empty tenants
+        -- 5 - J5: empty tenants / status array
         BEGIN TRY
             INSERT INTO @json_errors([id], [key], [message])
             SELECT DISTINCT [id] = 5, [key] =elm.[key], [message] = N'ERROR[J5]: array #' + CAST(elm.[key] AS nvarchar(10)) + N' => "' + elm.[name] + '" array is empty (' +  CASE WHEN elm.[name] IN (N'tenants', N'exclude') THEN N'number(s) or string(s)' ELSE N'archive or delete object(s)' END + N' expected)'
             FROM @elements_settings sts 
             INNER JOIN @jsonArray_elements elm ON elm.[key] = sts.[key] AND sts.[disabled] = 0
             OUTER APPLY OPENJSON(elm.[value]) val
-            WHERE elm.[name] IN (N'tenants', N'exclude') AND elm.[type] = 4 AND val.[key] IS NULL;
+            WHERE elm.[name] IN (N'tenants', N'exclude', N'status') AND elm.[type] = 4 AND val.[key] IS NULL;
         END TRY
         BEGIN CATCH;
-            SET @message = N'ERROR[J5]: error(s) occured while checking empty array(s) ("tenants") in JSON string';
+            SET @message = N'ERROR[J5]: error(s) occured while checking empty array(s) ("tenants" or "status") in JSON string';
             THROW;
         END CATCH;
 
@@ -337,7 +392,7 @@ BEGIN
             INNER JOIN @jsonArray_elements elm ON elm.[key] = sts.[key] AND sts.[disabled] = 0
             CROSS APPLY OPENJSON(elm.[value]) val
             INNER JOIN @json_types tps ON tps.id = val.[type]
-            WHERE elm.[type] = 4 AND ( ( elm.[name] IN (N'tenants', N'exclude') AND val.[type] NOT IN (1, 2) ) );
+            WHERE elm.[type] = 4 AND ( ( elm.[name] IN (N'tenants', N'exclude') AND val.[type] NOT IN (1, 2) ) OR ( elm.[name] = N'status' AND val.[type] NOT IN (5) ));
         END TRY
         BEGIN CATCH;
             SET @message = N'ERROR[T0]: error(s) occured while checking invalid type(s) in "tenants" array(s) in JSON string';
@@ -383,13 +438,143 @@ BEGIN
         END CATCH;
 
         ----------------------------------------------------------------------------------------------------
+        -- JSON string - Status checks
+        ----------------------------------------------------------------------------------------------------
+        -- 10 - L0: array contains invalid key (not 'archive', 'delete', 'after_hours', 'delete_delay_hours', 'disabled') 
+        BEGIN TRY
+            INSERT INTO @json_errors([id], [key], [message])
+            SELECT DISTINCT [id] = 10, [key] = stt.[key], [message] = N'ERROR[L0]: array #' + CAST([key] AS nvarchar(10)) + N' / status #' +  CAST([status_key] AS nvarchar(10)) + N' => invalid key "' + stt.[name] COLLATE DATABASE_DEFAULT + N'"'
+            FROM @jsonValues_Status stt 
+            WHERE stt.[name] NOT IN (N'archive', N'delete', N'after_hours', N'delete_delay_hours', N'disabled', N'comment', N'comments');
+        END TRY
+        BEGIN CATCH;
+            SET @message = N'ERROR[L0]: error(s) occured while checking invalid type(s) in "status" array(s) in JSON string';
+            THROW;
+        END CATCH;
+
+        -- 11 - L1: missing key(s) in object ('archive', 'delete')
+        BEGIN TRY;
+            INSERT INTO @json_errors([id], [key], [message])
+            SELECT DISTINCT [id] = 11, [key] = stt.[key]/*, stt.[status_key]*/, [message] = N'ERROR[L1]: array #' + CAST([key] AS nvarchar(10)) + N' / status #' +  CAST([status_key] AS nvarchar(10)) + N' => missing key (archive or delete or both)"'
+            FROM @status_settings stt 
+            WHERE NOT EXISTS(SELECT 1 FROM @jsonValues_Status WHERE [key] = stt.[key] AND [status_key] = stt.[status_key] AND [name] IN (N'archive', N'delete') );
+        END TRY
+        BEGIN CATCH;
+            SET @message = N'ERROR[L1]: error(s) occured while checking missing key(s) "archive" or "delete" object(s) in JSON string';
+            THROW;
+        END CATCH;
+
+        -- 12 - L3: invalid type for key (archive/delete => number, string or array ; disabled => true/false or number ; others => number)
+        BEGIN TRY;
+            INSERT INTO @json_errors([id], [key], [message])
+            SELECT DISTINCT [id] = 12, [key] = sts.[key], [message] = N'ERROR[L3]: array #' + CAST(sts.[key] AS nvarchar(10)) + N' / status #' +  CAST(sts.[status_key] AS nvarchar(10)) + N' => invalid "' + vst.[type_name] + '" type for key "' + vst.[name] + N'" (only ' +
+                CASE WHEN vst.[name] IN (N'archive', N'delete') THEN N'number, string or array' 
+                WHEN vst.[name] = N'disabled' THEN N'true/false or 0/1' 
+                ELSE N'number' END + N' expected)'
+            FROM @status_settings sts 
+            INNER JOIN @jsonValues_Status vst ON vst.[key] = sts.[key] AND sts.[status_key] = vst.[status_key] AND sts.[disabled] = 0
+            WHERE (vst.[name] IN (N'archive', N'delete') AND vst.[type] NOT IN (1, 2, 4)) 
+                OR (vst.[name] IN (N'after_hours', N'delete_delay_hours') AND vst.[type] <> 2) 
+                OR (vst.[name] = N'disabled' AND vst.[type] NOT IN (2, 3));
+        END TRY
+        BEGIN CATCH;
+            SET @message = N'ERROR[L3]: error(s) occured while checking invalid type(s) in "status" in JSON string';
+            THROW;
+        END CATCH;
+
+        -- 13 - L4: duplicate elements
+        BEGIN TRY;
+            INSERT INTO @json_errors([id], [key], [message])
+            SELECT [id] = 13, [key] = sts.[key], [message] = N'ERROR[L4]: array #' + CAST(sts.[key] AS nvarchar(10)) + N' / status #' +  CAST(sts.[status_key] AS nvarchar(10)) + N' => duplicate "' + vst.[name] + '" found ' + CAST(COUNT(*) AS nvarchar(10)) + N' times (only 1 expected)'
+            FROM @status_settings sts 
+            INNER JOIN @jsonValues_Status vst ON vst.[key] = sts.[key] AND sts.[status_key] = vst.[status_key] AND sts.[disabled] = 0
+            GROUP BY sts.[key], sts.[status_key], vst.[name]
+            HAVING COUNT(*) > 1;
+        END TRY
+        BEGIN CATCH;
+            SET @message = N'ERROR[L4]: error(s) occured while checking duplicate element(s) in "status" in JSON string';
+            THROW;
+        END CATCH;
+
+        -- 14 - L5: empty archive / delete array
+        BEGIN TRY;
+            INSERT INTO @json_errors([id], [key], [message])
+            SELECT DISTINCT [id] = 14, [key] = sts.[key], [message] = N'ERROR[L5]: array #' + CAST(sts.[key] AS nvarchar(10)) + N' / status #' +  CAST(sts.[status_key] AS nvarchar(10)) + N' => "' + vst.[name] + '" array is empty (number(s) or string(s) expected)'
+            FROM @status_settings sts 
+            INNER JOIN @jsonValues_Status vst ON vst.[key] = sts.[key] AND sts.[status_key] = vst.[status_key] AND sts.[disabled] = 0
+            OUTER APPLY OPENJSON(vst.[value]) val
+            WHERE vst.[name] IN (N'archive', N'delete') AND vst.[type] = 4 AND val.[key] IS NULL;
+        END TRY
+        BEGIN CATCH;
+            SET @message = N'ERROR[L5]: error(s) occured while checking empty "archive" or "delete" array(s) in "status" array(s) in JSON string';
+            THROW;
+        END CATCH;
+
+        -- 15 - L6: invalid type(s) in tenants array (only number or string)
+        BEGIN TRY
+            INSERT INTO @json_errors([id], [key], [message])
+            SELECT DISTINCT [id] = 15, [key] = sts.[key], [message] = N'ERROR[L6]: array #' + CAST(sts.[key] AS nvarchar(10)) + N' / status #' +  CAST(sts.[status_key] AS nvarchar(10)) + N' => invalid "' + tps.[name] COLLATE DATABASE_DEFAULT + '" type in "' + vst.[name] + '" array (only number(s) or string(s) expected)'
+            FROM @status_settings sts 
+            INNER JOIN @jsonValues_Status vst ON vst.[key] = sts.[key] AND sts.[status_key] = vst.[status_key] AND sts.[disabled] = 0
+            CROSS APPLY OPENJSON(vst.[value]) val
+            INNER JOIN @json_types tps ON tps.id = val.[type]
+            WHERE vst.[type] = 4 AND vst.[name] IN (N'archive', N'delete') AND val.[type] NOT IN (1, 2);
+        END TRY 
+        BEGIN CATCH
+            SET @message = N'ERROR[L6]: errors occured while checking invalid types in "archive" or "delete" elements(s) in "status" array(s) in JSON string';
+            THROW;
+        END CATCH
+
+        -- 16 - L7: invalid status type/id
+        BEGIN TRY;
+            INSERT INTO @json_errors([id], [key], [message])
+            SELECT [id] = 16, [key] = stt.[key], [message] = N'ERROR[L7]: array #' + CAST(stt.[key] AS nvarchar(10)) + N' / status #' +  CAST(stt.[status_key] AS nvarchar(10)) + N' => invalid status ' + IIF(stt.[status_name] IS NOT NULL, N'"' + stt.[status_name] + N'"', CAST(stt.[status_id] AS nvarchar(10))) + N' in "' + stt.[name] + N'" (4/Faulted, 5/Successful,6/Stopped, 7/Suspended, 8/Resumed expected)'
+            FROM @jsonArray_Status stt
+            LEFT JOIN @log_Status lgl ON lgl.[id] = stt.[status_id] OR lgl.[status] = stt.[status_name]
+            WHERE --stt.[status_name] <> N'ALL' AND lgl.[id] IS NULL AND (stt.[status_name] IS NOT NULL OR stt.[status_id] IS NOT NULL)
+          lgl.[id] IS NULL AND ( (stt.[status_name] <> N'ALL' AND stt.[status_name] IS NOT NULL) OR stt.[status_id] IS NOT NULL)
+        END TRY 
+        BEGIN CATCH
+            SET @message = N'ERROR[L7]: errors occured while checking invalid status type(s) or id(s) in JSON string';
+            THROW;
+        END CATCH
+
+        -- 17 - L8: duplicate status type/id
+        BEGIN TRY;
+            INSERT INTO @json_errors([id], [key], [message])
+            SELECT [id] = 17, [key] = stt.[key], [message] = N'ERROR[L8]: array #' + CAST(stt.[key] AS nvarchar(10)) + N' => duplicate status "' + lgl.[status] + '" found ' + CAST(COUNT(DISTINCT stt.[status_key]) AS nvarchar(10)) + N' times (only 1 expected)'
+            FROM @jsonArray_Status stt
+            INNER JOIN @log_Status lgl ON lgl.[id] = stt.[status_id] OR lgl.[status] = stt.[status_name]
+            GROUP BY stt.[key], lgl.[id], lgl.[status]
+            HAVING COUNT(DISTINCT stt.[status_key]) > 1
+        END TRY 
+        BEGIN CATCH
+            SET @message = N'ERROR[L8]: errors occured while checking duplicate status type(s) or id(s) in JSON string';
+            THROW;
+        END CATCH
+
+        -- 18 - L9: invalid status with all
+        BEGIN TRY;
+            INSERT INTO @json_errors([id], [key], [message])
+            SELECT [id] = 18, [key] = stt.[key], [message] = N'ERROR[L9]: array #' + CAST(stt.[key] AS nvarchar(10)) + N' => status "' + lgl.[status] + '" (' + CAST(lgl.[id] AS nvarchar(10)) + N' ) is invalid when alias "all" is present'
+            FROM @jsonArray_Status stt
+            INNER JOIN @log_Status lgl ON lgl.[id] = stt.[status_id] OR lgl.[status] = stt.[status_name]
+            WHERE EXISTS(SELECT 1 FROM @jsonArray_Status WHERE [key] = stt.[key] AND [status_name] = N'all');
+        END TRY 
+        BEGIN CATCH
+            SET @message = N'ERROR[L9]: errors occured while checking ALL status type(s) in JSON string';
+            THROW;
+        END CATCH
+
+        ----------------------------------------------------------------------------------------------------
         -- Missing After Hours checks
         ----------------------------------------------------------------------------------------------------
         BEGIN TRY;
             INSERT INTO @json_errors([id], [key], [message])
-            SELECT [id] = 18, [key] = els.[key], [message] = N'ERROR[H0]: array #' + CAST(els.[key] AS nvarchar(10)) + N' => @AfterHours default value is not provided and "after_hours" value missing in both element objects'
-            FROM @elements_settings els 
-            WHERE els.[disabled] = 0 AND @AfterHours IS NULL AND els.[after_hours] IS NULL;
+            SELECT [id] = 18, [key] = lvs.[key], [message] = N'ERROR[H0]: array #' + CAST(els.[key] AS nvarchar(10)) + N' / status #' +  CAST(lvs.[status_key] AS nvarchar(10)) + N' => @AfterHours default value is not provided and "after_hours" value missing in both element and status objects'
+            FROM @status_settings lvs 
+            INNER JOIN @elements_settings els ON els.[key] = lvs.[key]
+            WHERE lvs.[disabled] = 0 AND @AfterHours IS NULL AND els.[after_hours] IS NULL AND lvs.[after_hours] IS NULL;
         END TRY 
         BEGIN CATCH
             SET @message = N'ERROR[H0]: errors occured while checking [after_hours] parameter(s)';
@@ -401,12 +586,13 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         BEGIN TRY;
             INSERT INTO @json_errors([id], [key], [message])
-            SELECT [id] = 19, [key] = els.[key], [message] = N'ERROR[H1]: array #' + CAST(els.[key] AS nvarchar(10)) + N' => @DeleteDelayHours default value is not provided and "delete_delay_hours" value missing in both element objects'
-            FROM @elements_settings els 
-            WHERE els.[disabled] = 0 AND @DeleteDelayHhours IS NULL AND els.[delete_delay_hours] IS NULL;
+            SELECT [id] = 19, [key] = lvs.[key], [message] = N'ERROR[H1]: array #' + CAST(els.[key] AS nvarchar(10)) + N' / status #' +  CAST(lvs.[status_key] AS nvarchar(10)) + N' => @DeleteDelayHours default value is not provided and "delete_delay_hours" value missing in both element and status objects'
+            FROM @status_settings lvs 
+            INNER JOIN @elements_settings els ON els.[key] = lvs.[key]
+            WHERE lvs.[disabled] = 0 AND @DeleteDelayHhours IS NULL AND els.[delete_delay_hours] IS NULL AND lvs.[delete_delay_hours] IS NULL;
         END TRY 
         BEGIN CATCH
-            SET @message = N'ERROR[H1]: errors occured while checking [after_hours] parameter(s)';
+            SET @message = N'ERROR[H1]: errors occured while checking [delete_delay_hours] parameter(s)';
             THROW;
         END CATCH
 
@@ -415,14 +601,17 @@ BEGIN
             SET @IsValid = 1;
 
             SELECT @Settings = (
-                SELECT DISTINCT [t] = tnt.[Tenant_Id]
-                    , [o] = 0--elm.[delete_only] 
-                    , [h] = COALESCE(elm.[after_hours], @AfterHours)
-                    , [d] = COALESCE(elm.[delete_delay_hours], @DeleteDelayHhours, 0)
+                SELECT DISTINCT [t] = tnt.[Tenant_Id], [s] = lgs.[Id]
+                    , [o] = IIF(stt.[name] = N'delete', 1, 0)
+                    , [h] = COALESCE(sts.[after_hours], elm.[after_hours], @AfterHours)
+                    , [d] = COALESCE(sts.[delete_delay_hours], elm.[delete_delay_hours], @DeleteDelayHhours, 0)
                 FROM @elements_settings elm
                 INNER JOIN @jsonArray_tenants tnt ON tnt.[key] = elm.[key]
-                WHERE elm.[disabled] = 0 AND tnt.[keep] = 1
-                ORDER BY  [t]
+                INNER JOIN @status_settings sts ON elm.[key] = sts.[key]
+                INNER JOIN @jsonArray_Status stt ON sts.[key] = stt.[key] AND sts.[status_key] = stt.[status_key]
+                INNER JOIN @log_Status lgs ON lgs.[id] = stt.[status_id] OR lgs.[status] = stt.[status_name] OR stt.[status_name] = N'ALL'
+                WHERE elm.[disabled] = 0 AND sts.[disabled] = 0 AND tnt.[keep] = 1
+                ORDER BY  [t], [s]
                 FOR JSON PATH, INCLUDE_NULL_VALUES
             )
         END
@@ -432,7 +621,7 @@ BEGIN
     END CATCH
 
     --IF @@TRANCOUNT > 0 ROLLBACK;
-    --SET @Messages = ( SELECT * FROM (SELECT TOP(100) [message], [severity] = 10, [state] = 1 FROM @json_errors ORDER BY [key] ASC, [id] ASC) x FOR XML RAW('message'), TYPE );
+    --SET @Messages = ( SELECT * FROM (SELECT TOP(100) [message], [severity] = 10, [status] = 1 FROM @json_errors ORDER BY [key] ASC, [id] ASC) x FOR XML RAW('message'), TYPE );
     SET @Messages = ( 
         SELECT [Procedure] = QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')), [Message], [Severity], [State] 
         FROM (

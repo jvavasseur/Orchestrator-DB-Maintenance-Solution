@@ -63,9 +63,12 @@ BEGIN
         DECLARE @dryRun bit;
 
         DECLARE @startTime datetime = SYSDATETIME();
---SET @StartTime = N'20230401 00:00:00';     
-DECLARE @startTimeFloat float(53);
-SELECT @startTimeFloat = CAST(@startTime AS float(53));
+        --SET @StartTime = N'20230401 00:00:00';     
+        DECLARE @startTimeFloat float(53);
+        SELECT @startTimeFloat = CAST(@startTime AS float(53));
+
+        DECLARE @tenantsSynonymIsValid bit;
+        DECLARE @tenantsSynonymMessages nvarchar(MAX);        
 
         DECLARE @triggerTime datetime;
         DECLARE @triggerFloatingTime float(53);
@@ -232,6 +235,20 @@ SELECT @startTimeFloat = CAST(@startTime AS float(53));
         -- Check uses_quoted_identifier
         UNION ALL SELECT 'ERROR: QUOTED_IDENTIFIER must be set to ON for this Stored Procedure', 16, 1 FROM sys.sql_modules WHERE [object_id] = @@PROCID AND uses_quoted_identifier <> 1;
 
+        BEGIN TRY
+            EXEC [Maintenance].[SetSourceTableTenants] @IsValid = @tenantsSynonymIsValid OUTPUT, @Messages = @tenantsSynonymMessages OUTPUT;
+
+            INSERT INTO @messages([message], [severity], [state])
+            SELECT [Message], [Severity], 0 FROM OPENJSON(@tenantsSynonymMessages, N'$') WITH ([Message] nvarchar(MAX), [Severity] tinyint)
+            UNION ALL SELECT 'Tenants synonym must be set using [Maintenance].[SetSourceTableTenants]', 16, 0 WHERE @tenantsSynonymIsValid = 0;
+        END TRY
+        BEGIN CATCH
+            SET @message = N'ERROR: error(s) occurcered while validating Tenants synonym with with [Maintenance].[SetSourceTableTenants]'
+            INSERT INTO @messages ([Message], Severity, [State]) VALUES
+                    (ERROR_MESSAGE(), 10, 1)
+                    , (@message, 16, 1)
+        END CATCH
+
         ----------------------------------------------------------------------------------------------------
         -- Parameters
         ----------------------------------------------------------------------------------------------------
@@ -256,9 +273,14 @@ SELECT @startTimeFloat = CAST(@startTime AS float(53));
                 , ('Parameter @SaveMessagesToTable is invalid: ' + LTRIM(RTRIM(@SaveMessagesToTable)), 16, 1);
         END
 
+        SET @levelVerbose = 10;
+
         ----------------------------------------------------------------------------------------------------
         -- Parameters' Validation
         ----------------------------------------------------------------------------------------------------
+        -- Check @@ArchiveTriggerTime
+        SELECT @triggerTime = ISNULL(@ArchiveTriggerTime, SYSDATETIME());
+        SELECT @triggerFloatingTime = CAST(@triggerTime AS float(53));
 
         -- Check Parameters
         IF EXISTS(SELECT 1 FROM @messages WHERE severity >= 16) 
@@ -268,10 +290,6 @@ SELECT @startTimeFloat = CAST(@startTime AS float(53));
         ELSE
         BEGIN
             SELECT @json_filters = LTRIM(RTRIM(@Filters));
-
-            -- Check @@ArchiveTriggerTime
-            SELECT @triggerTime = ISNULL(@ArchiveTriggerTime, SYSDATETIME());
-            SELECT @triggerFloatingTime = CAST(@triggerTime AS float(53));
 
             -- Check @ArchiveAfterHours / @DeleteDelayHours
             SELECT @globalDeleteDelay = ISNULL(@DeleteDelayHours, @constDefaultDeleteDelay);
@@ -283,7 +301,7 @@ SELECT @startTimeFloat = CAST(@startTime AS float(53));
             UNION ALL SELECT SPACE(@tab+ @space * 1) + N'@ArchiveAfterHours is NULL. "after_hours" value(s) from JSON string will be used', 10, 1 WHERE @ArchiveAfterHours IS NULL AND @json_filters NOT IN (N'ALL', N'ACTIVE_TENANTS', N'DELETED_TENANTS')
             UNION ALL SELECT N'ERROR: @ArchiveAfterHours must be provided when keyword "' + @json_filters + N'" is used', 16, 1 WHERE @ArchiveAfterHours IS NULL AND @json_filters IN (N'ALL', N'ACTIVE_TENANTS', N'DELETED_TENANTS')
             UNION ALL SELECT SPACE(@tab+ @space * 1) + N'@DeleteDelayHours is NULL. "delete_delay_hours" value(s) from JSON string will be used when available or default value otherwise (' + CAST(@constDefaultDeleteDelay AS nvarchar(100)) N')', 10, 1 WHERE @DeleteDelayHours IS NULL
-            UNION ALL SELECT N'ERROR: @ArchiveAfterHours must be bigger than 0 (>= 1)', 16, 1 WHERE @ArchiveAfterHours < 1
+            UNION ALL SELECT N'ERROR: @ArchiveAfterHours must be at least 0 (>= 0)', 16, 1 WHERE @ArchiveAfterHours < 0
             UNION ALL SELECT N'@RepeatOffsetHours must be greater than 1 when @RepeatArchive is set (@RepeatOffsetHours = ' + ISNULL(CAST(@RepeatOffsetHours AS nvarchar(100)), N'NULL') + ')', 16, 1 WHERE (@RepeatOffsetHours IS NULL OR @RepeatOffsetHours < 1) AND @RepeatArchive = 1
             UNION ALL SELECT N'@RepeatUntil must be greater than the current date and time', 16, 1 WHERE (@RepeatUntil <= @triggerTime) AND @RepeatArchive = 1
             ;

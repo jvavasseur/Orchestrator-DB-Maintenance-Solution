@@ -6,23 +6,23 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- DROP PROCEDURE [Maintenance].[ArchiveAuditLogs]
+-- DROP PROCEDURE [Maintenance].[ArchiveQueues]
 ----------------------------------------------------------------------------------------------------
 
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[ArchiveAuditLogs]') AND type in (N'P'))
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[ArchiveQueues]') AND type in (N'P'))
 BEGIN
-    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[ArchiveAuditLogs] AS'
-    PRINT '  + CREATE PROCEDURE: [Maintenance].[ArchiveAuditLogs]';
+    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[ArchiveQueues] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[ArchiveQueues]';
 END
-ELSE PRINT '  = PROCEDURE [Maintenance].[ArchiveAuditLogs] already exists' 
+ELSE PRINT '  = PROCEDURE [Maintenance].[ArchiveQueues] already exists' 
 GO
 
-PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[ArchiveAuditLogs]'
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[ArchiveQueues]'
 GO  
 
-ALTER PROCEDURE [Maintenance].[ArchiveAuditLogs]
+ALTER PROCEDURE [Maintenance].[ArchiveQueues]
 ----------------------------------------------------------------------------------------------------
--- ### [Object]: PROCEDURE [Maintenance].[ArchiveAuditLogs]
+-- ### [Object]: PROCEDURE [Maintenance].[ArchiveQueues]
 -- ### [Version]: 2020-10-01 00:00:00                                                         
 -- ### [Source]: ??????
 -- ### [Hash]: ??????
@@ -47,7 +47,8 @@ ALTER PROCEDURE [Maintenance].[ArchiveAuditLogs]
     , @CreateArchiveTable nvarchar(MAX) = NULL -- Y{es} or N{o} => Archive table refered by Synonym is create when missing (default if NULL or empty = N)
     , @UpdateArchiveTable nvarchar(MAX) = NULL -- Y{es} or N{o} => Archive table refered by Synonym is update when column(s) are missing (default if NULL or empty = N)
     , @ExcludeColumns nvarchar(MAX) = NULL -- JSON string with array of string with column name(s)
-    , @ExcludeEntitiesColumns nvarchar(MAX) = NULL -- JSON string with array of string with column name(s)
+    , @ExcludeCommentsColumns nvarchar(MAX) = NULL -- JSON string with array of string with column name(s)
+    , @ExcludeEventsColumns nvarchar(MAX) = NULL -- JSON string with array of string with column name(s)
     /* Error Handling */
     , @OnErrorRetry tinyint = NULL -- between 0 and 20 => retry up to 20 times (default if NULL = 10)
     , @OnErrorWaitMillisecond smallint = 1000 -- wait for milliseconds between each Retry (default if NULL = 1000ms)
@@ -111,8 +112,10 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         DECLARE @archivedColumns nvarchar(MAX);
         DECLARE @sqlArchive nvarchar(MAX);
-        DECLARE @archivedEntitiesColumns nvarchar(MAX);
-        DECLARE @sqlArchiveEntities nvarchar(MAX);
+        DECLARE @archivedCommentsColumns nvarchar(MAX);
+        DECLARE @sqlArchiveComments nvarchar(MAX);
+        DECLARE @archivedEventsColumns nvarchar(MAX);
+        DECLARE @sqlArchiveEvents nvarchar(MAX);
         ----------------------------------------------------------------------------------------------------
         -- Delete 
         ----------------------------------------------------------------------------------------------------
@@ -196,12 +199,14 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         DECLARE @synonymMessages nvarchar(MAX);
         DECLARE @sourceColumns nvarchar(MAX);
-        DECLARE @sourceEntitiesColumns nvarchar(MAX);
+        DECLARE @sourceCommentsColumns nvarchar(MAX);
+        DECLARE @sourceEventsColumns nvarchar(MAX);
         DECLARE @synonymIsValid bit;
         DECLARE @synonymCreateTable bit;
         DECLARE @synonymUpdateTable bit;
         DECLARE @synonymExcludeColumns nvarchar(MAX);
-        DECLARE @synonymExcludeEntitiesColumns nvarchar(MAX);
+        DECLARE @synonymExcludeCommentsColumns nvarchar(MAX);
+        DECLARE @synonymExcludeEventsColumns nvarchar(MAX);
         DECLARE @isValid bit;
         ----------------------------------------------------------------------------------------------------      
         -- Message / Error Handling
@@ -369,10 +374,15 @@ BEGIN
         IF ISJSON(@synonymExcludeColumns) = 0 
         INSERT INTO @messages ([Message], Severity, [State]) SELECT N'ERROR: @synonymExcludeColumns is not a valid JSON string with an array of string(s) ["col1", "col2", ...]', 16, 1 WHERE ISJSON(@synonymExcludeColumns) = 0;
 
-        -- Check Exclude Entities columns
-        SELECT @synonymExcludeEntitiesColumns = NULLIF(LTRIM(RTRIM(@ExcludeEntitiesColumns)), N'');
-        IF ISJSON(@synonymExcludeEntitiesColumns) = 0 
-        INSERT INTO @messages ([Message], Severity, [State]) SELECT N'ERROR: @synonymExcludeEntitiesColumns is not a valid JSON string with an array of string(s) ["col1", "col2", ...]', 16, 1 WHERE ISJSON(@synonymExcludeEntitiesColumns) = 0;
+        -- Check Exclude Comments columns
+        SELECT @synonymExcludeCommentsColumns = NULLIF(LTRIM(RTRIM(@ExcludeCommentsColumns)), N'');
+        IF ISJSON(@synonymExcludeCommentsColumns) = 0 
+        INSERT INTO @messages ([Message], Severity, [State]) SELECT N'ERROR: @synonymExcludeCommentsColumns is not a valid JSON string with an array of string(s) ["col1", "col2", ...]', 16, 1 WHERE ISJSON(@synonymExcludeCommentsColumns) = 0;
+
+        -- Check Exclude Events columns
+        SELECT @synonymExcludeEventsColumns = NULLIF(LTRIM(RTRIM(@ExcludeEventsColumns)), N'');
+        IF ISJSON(@synonymExcludeEventsColumns) = 0 
+        INSERT INTO @messages ([Message], Severity, [State]) SELECT N'ERROR: @synonymExcludeEventsColumns is not a valid JSON string with an array of string(s) ["col1", "col2", ...]', 16, 1 WHERE ISJSON(@synonymExcludeEventsColumns) = 0;
 
 		----------------------------------------------------------------------------------------------------
         -- Check Output Settings
@@ -390,12 +400,12 @@ BEGIN
 		----------------------------------------------------------------------------------------------------
         -- Check Permissions
         ----------------------------------------------------------------------------------------------------
-/*
-        -- Check SELECT & DELETE permission on [dbo].[AuditLogs]
+/*        
+        -- Check SELECT & DELETE permission on [dbo].[QueueItems]
         INSERT INTO @messages ([Message], Severity, [State])
         SELECT 'Permission not effectively granted: ' + UPPER(p.permission_name), 10, 1
         FROM (VALUES(N'', N'SELECT'), (N'', N'DELETE')) AS p (subentity_name, permission_name)
-        LEFT JOIN sys.fn_my_permissions(N'[dbo].[AuditLogs]', N'OBJECT') eff ON eff.subentity_name = p.subentity_name AND eff.permission_name = p.permission_name
+        LEFT JOIN sys.fn_my_permissions(N'[dbo].[QueueItems]', N'OBJECT') eff ON eff.subentity_name = p.subentity_name AND eff.permission_name = p.permission_name
         WHERE eff.permission_name IS NULL
         ORDER BY p.permission_name;
 
@@ -403,9 +413,10 @@ BEGIN
         BEGIN
             INSERT INTO @messages ([Message], Severity, [State]) VALUES
                 (N'Error: missing permission', 10, 1)
-                , (N'SELECT and DELETE permissions are required on [dbo].[AuditLogs] table', 16, 1);
+                , (N'SELECT and DELETE permissions are required on [dbo].[QueueItems] table', 16, 1);
         END
 */
+
         -- Check @SaveMessagesToTable parameter
         SELECT @logToTable = [value] FROM @paramsYesNo WHERE [parameter] = ISNULL(LTRIM(RTRIM(@SaveMessagesToTable)), N'Y');
         IF @logToTable IS NULL 
@@ -528,7 +539,7 @@ BEGIN
         
         IF @SavedToRunId IS NULL OR NOT EXISTS(SELECT 1 FROM [Maintenance].[Runs] WHERE Id = @SavedToRunId AND EndDate IS NULL)
         BEGIN
-            INSERT INTO [Maintenance].[Runs]([Type], [Info], [StartTime]) SELECT N'Add Archive AuditLogs Trigger', N'PROCEDURE ' + @procName, @startTime;
+            INSERT INTO [Maintenance].[Runs]([Type], [Info], [StartTime]) SELECT N'Add Archive Queues Trigger', N'PROCEDURE ' + @procName, @startTime;
             SELECT @runId = @@IDENTITY, @SavedToRunId = @@IDENTITY;
             INSERT INTO @messages ([Message], Severity, [State]) VALUES 
                 (N'Messages saved to new Run Id: ' + CONVERT(nvarchar(MAX), @runId), 10, 1);
@@ -543,31 +554,35 @@ BEGIN
             -- Check Synonyms and source/Archive tables
             BEGIN TRY            
                 SET @isValid = 1;
-
-                EXEC [Maintenance].[SetSourceTableAuditLogs] @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT, @Columns = @sourceColumns OUTPUT;
+                EXEC [Maintenance].[SetSourceTableQueueItems] @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT, @Columns = @sourceColumns OUTPUT;
+                INSERT INTO @messages ([Procedure], [Message], Severity, [State]) SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@synonymMessages, N'$') WITH ([Procedure] nvarchar(MAX), [Message] nvarchar(MAX), [Severity] tinyint, [State] tinyint);
+                SELECT @isValid = IIF(@isValid = 1 AND @synonymIsValid = 1, 1, 0);
+                EXEC [Maintenance].[SetSourceTableQueueItemComments] @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT, @Columns = @sourceCommentsColumns OUTPUT;
+                INSERT INTO @messages ([Procedure], [Message], Severity, [State]) SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@synonymMessages, N'$') WITH ([Procedure] nvarchar(MAX), [Message] nvarchar(MAX), [Severity] tinyint, [State] tinyint);
+                SELECT @isValid = IIF(@isValid = 1 AND @synonymIsValid = 1, 1, 0);
+                EXEC [Maintenance].[SetSourceTableQueueItemEvents] @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT, @Columns = @sourceEventsColumns OUTPUT;
                 INSERT INTO @messages ([Procedure], [Message], Severity, [State]) SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@synonymMessages, N'$') WITH ([Procedure] nvarchar(MAX), [Message] nvarchar(MAX), [Severity] tinyint, [State] tinyint);
                 SELECT @isValid = IIF(@isValid = 1 AND @synonymIsValid = 1, 1, 0);
 
-                EXEC [Maintenance].[SetSourceTableAuditLogEntities] @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT, @Columns = @sourceEntitiesColumns OUTPUT;
+                EXEC [Maintenance].[SetArchiveTableQueueItems] @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT, @CreateTable = @synonymCreateTable, @UpdateTable = @synonymUpdateTable, @SourceColumns = @sourceColumns OUTPUT, @ExcludeColumns = @synonymExcludeColumns;
                 INSERT INTO @messages ([Procedure], [Message], Severity, [State]) SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@synonymMessages, N'$') WITH ([Procedure] nvarchar(MAX), [Message] nvarchar(MAX), [Severity] tinyint, [State] tinyint);
                 SELECT @isValid = IIF(@isValid = 1 AND @synonymIsValid = 1, 1, 0);
-
-                EXEC [Maintenance].[SetArchiveTableAuditLogs] @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT, @CreateTable = @synonymCreateTable, @UpdateTable = @synonymUpdateTable, @SourceColumns = @sourceColumns OUTPUT, @ExcludeColumns = @synonymExcludeColumns;
+                EXEC [Maintenance].[SetArchiveTableQueueItemComments] @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT, @CreateTable = @synonymCreateTable, @UpdateTable = @synonymUpdateTable, @SourceColumns = @sourceCommentsColumns OUTPUT, @ExcludeColumns = @synonymExcludeCommentsColumns;
                 INSERT INTO @messages ([Procedure], [Message], Severity, [State]) SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@synonymMessages, N'$') WITH ([Procedure] nvarchar(MAX), [Message] nvarchar(MAX), [Severity] tinyint, [State] tinyint);
                 SELECT @isValid = IIF(@isValid = 1 AND @synonymIsValid = 1, 1, 0);
-
-                EXEC [Maintenance].[SetArchiveTableAuditLogEntities] @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT, @CreateTable = @synonymCreateTable, @UpdateTable = @synonymUpdateTable, @SourceColumns = @sourceEntitiesColumns OUTPUT, @ExcludeColumns = @synonymExcludeEntitiesColumns;
+                EXEC [Maintenance].[SetArchiveTableQueueItemEvents] @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT, @CreateTable = @synonymCreateTable, @UpdateTable = @synonymUpdateTable, @SourceColumns = @sourceEventsColumns OUTPUT, @ExcludeColumns = @synonymExcludeEventsColumns;
                 INSERT INTO @messages ([Procedure], [Message], Severity, [State]) SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@synonymMessages, N'$') WITH ([Procedure] nvarchar(MAX), [Message] nvarchar(MAX), [Severity] tinyint, [State] tinyint);
                 SELECT @isValid = IIF(@isValid = 1 AND @synonymIsValid = 1, 1, 0);
-
---                EXEC [Maintenance].[ValidateArchiveObjectsAuditLogs] @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT, @CreateTable = @synonymCreateTable, @UpdateTable = @synonymUpdateTable, @SourceColumns = @sourceColumns OUTPUT, @ExcludeColumns = @synonymExcludeColumns, @sourceEntitiesColumns = @sourceEntitiesColumns OUTPUT, @synonymExcludeEntitiesColumns = @synonymExcludeEntitiesColumns OUTPUT;
+--                EXEC [Maintenance].[ValidateArchiveObjectsQueues] @Messages = @synonymMessages OUTPUT, @IsValid = @synonymIsValid OUTPUT, @CreateTable = @synonymCreateTable, @UpdateTable = @synonymUpdateTable, @SourceColumns = @sourceColumns OUTPUT, @ExcludeColumns = @synonymExcludeColumns, @sourceCommentsColumns = @sourceCommentsColumns OUTPUT, @synonymExcludeCommentsColumns = @synonymExcludeCommentsColumns OUTPUT, @sourceEventsColumns = @sourceEventsColumns OUTPUT, @synonymExcludeEventsColumns = @synonymExcludeEventsColumns OUTPUT;
 --                INSERT INTO @messages ([Procedure], [Message], Severity, [State]) SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@synonymMessages, N'$') WITH ([Procedure] nvarchar(MAX), [Message] nvarchar(MAX), [Severity] tinyint, [State] tinyint);
 
-                INSERT INTO @messages ([Message], Severity, [State]) SELECT 'ERORR: Synonyms and archive/source tables checks failed, see previous errors', 16, 1 WHERE ISNULL(@isValid, 0) = 0;
+                INSERT INTO @messages ([Message], Severity, [State])
+                SELECT 'ERORR: Synonyms and archive/source tables checks failed, see previous errors', 16, 1 WHERE ISNULL(@isValid, 0) = 0
             END TRY
             BEGIN CATCH
                 -- Get Unknown error
                 SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();
+
                 INSERT INTO @messages ([Procedure], [Message], Severity, [State])
                 SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@synonymMessages, N'$') WITH ([Procedure] nvarchar(MAX), [Message] nvarchar(MAX), [Severity] tinyint, [State] tinyint);
 
@@ -581,44 +596,64 @@ BEGIN
         BEGIN
             BEGIN TRY
                 SELECT @archivedColumns = NULL;
-                SELECT @archivedColumns = COALESCE(@archivedColumns + N', ' + [value], [value]) FROM OPENJSON(@sourceColumns);                
+                SELECT @archivedColumns = COALESCE(@archivedColumns + N', ' + [value], [value]) FROM OPENJSON(@sourceColumns);
                 SELECT @sqlArchive = N'
-                    INSERT INTO [Maintenance].[Synonym_Archive_AuditLogs](' + @archivedColumns + N')
+                    INSERT INTO [Maintenance].[Synonym_Archive_QueueItems](' + @archivedColumns + N')
                     SELECT ' + @archivedColumns + N' 
                     FROM #tempListIds ids
-                    INNER JOIN [Maintenance].[Synonym_Source_AuditLogs] src ON ids.tempId = src.Id
-                    WHERE tempDeleteOnly = 0 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Synonym_Archive_AuditLogs] WHERE Id = ids.tempId)';
-                INSERT INTO @messages ([Message], Severity, [State]) VALUES 
-                (N'Archive query: ' + ISNULL(@sqlArchive, N'-'), 10, 1);
+                    INNER JOIN [Maintenance].[Synonym_Source_QueueItems] src ON ids.tempId = src.Id
+                    WHERE tempDeleteOnly = 0 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Synonym_Archive_QueueItems] WHERE Id = ids.tempId)';
+                INSERT INTO @messages ([Message], Severity, [State]) VALUES (N'Archive Queue Items query: ' + ISNULL(@sqlArchive, N'-'), 10, 1);
             END TRY
             BEGIN CATCH
                 -- Get Unknown error
                 SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();
                 -- Save Unknwon Errror
-                INSERT INTO @messages ([Message], Severity, [State]) VALUES 
-                    (N'ERORR: error(s) occured while preparing archive SQL query', 16, 1);
+                INSERT INTO @messages ([Message], Severity, [State]) VALUES (N'ERORR: error(s) occured while preparing archive Queue Items SQL query', 16, 1);
                 THROW;
             END CATCH
         END
-        -- Prepare Entities columns and archive query
+        -- Prepare Comments columns and archive query
         IF NOT EXISTS(SELECT 1 FROM @messages WHERE severity > 10)
         BEGIN
             BEGIN TRY
-                SELECT @archivedEntitiesColumns = NULL;
-                SELECT @archivedEntitiesColumns = COALESCE(@archivedEntitiesColumns + N', ' + [value], [value]) FROM OPENJSON(@sourceEntitiesColumns);
+                SELECT @archivedCommentsColumns = NULL;
+                SELECT @archivedCommentsColumns = COALESCE(@archivedCommentsColumns + N', ' + [value], [value]) FROM OPENJSON(@sourceCommentsColumns)
                 SELECT @sqlArchive = N'
-                    INSERT INTO [Maintenance].[Synonym_Archive_AuditLogsEntities](' + @archivedEntitiesColumns + N')
-                    SELECT ' + @archivedEntitiesColumns + N' 
+                    INSERT INTO [Maintenance].[Synonym_Archive_QueueItemComments](' + @archivedCommentsColumns + N')
+                    SELECT ' + @archivedCommentsColumns + N' 
                     FROM #tempListIds ids
-                    INNER JOIN [Maintenance].[Synonym_Source_AuditLogsEntities] src ON ids.tempId = src.AuditLogId
-                    WHERE tempDeleteOnly = 0 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Synonym_Archive_AuditLogsEntities] WHERE Id = ids.tempId)';
-                INSERT INTO @messages ([Message], Severity, [State]) VALUES (N'Archive Entities query: ' + ISNULL(@sqlArchive, N'-'), 10, 1);
+                    INNER JOIN [Maintenance].[Synonym_Source_QueueItemComments] src ON ids.tempId = src.QueueItemId
+                    WHERE tempDeleteOnly = 0 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Synonym_Archive_QueueItemComments] WHERE Id = src.Id)';
+                INSERT INTO @messages ([Message], Severity, [State]) VALUES (N'Archive Queue Item Comments query: ' + ISNULL(@sqlArchive, N'-'), 10, 1);
             END TRY
             BEGIN CATCH
                 -- Get Unknown error
                 SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();
                 -- Save Unknwon Errror
-                INSERT INTO @messages ([Message], Severity, [State]) VALUES (N'ERORR: error(s) occured while preparing archive Entities SQL query', 16, 1);
+                INSERT INTO @messages ([Message], Severity, [State]) VALUES (N'ERORR: error(s) occured while preparing archive Queue Item Comments SQL query', 16, 1);
+                THROW;
+            END CATCH
+        END
+        -- Prepare Events columns and archive query
+        IF NOT EXISTS(SELECT 1 FROM @messages WHERE severity > 10)
+        BEGIN
+            BEGIN TRY
+                SELECT @archivedEventsColumns = NULL;
+                SELECT @archivedEventsColumns = COALESCE(@archivedEventsColumns + N', ' + [value], [value]) FROM OPENJSON(@sourceEventsColumns)
+                SELECT @sqlArchive = N'
+                    INSERT INTO [Maintenance].[Synonym_Archive_QueueItemEvents](' + @archivedEventsColumns + N')
+                    SELECT ' + @archivedEventsColumns + N' 
+                    FROM #tempListIds ids
+                    INNER JOIN [Maintenance].[Synonym_Source_QueueItemEvents] src ON ids.tempId = src.QueueItemId
+                    WHERE tempDeleteOnly = 0 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Synonym_Archive_QueueItemEvents] WHERE Id = src.Id)';
+                INSERT INTO @messages ([Message], Severity, [State]) VALUES (N'Archive Queue Item Events query: ' + ISNULL(@sqlArchive, N'-'), 10, 1);
+            END TRY
+            BEGIN CATCH
+                -- Get Unknown error
+                SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();
+                -- Save Unknwon Errror
+                INSERT INTO @messages ([Message], Severity, [State]) VALUES (N'ERORR: error(s) occured while preparing archive Queue Item Events SQL query', 16, 1);
                 THROW;
             END CATCH
         END
@@ -717,7 +752,7 @@ BEGIN
 
         -- Create temp table (Filter List / Repeat Triggers)
         DROP TABLE IF EXISTS #tempListFilters;
-        CREATE TABLE #tempListFilters(OrderId smallint, ArchiveId bigint, SyncId bigint, CurrentId bigint, TargetId bigint, LastId bigint, TargetTimestamp datetime, PreviousTimestamp datetime , TenantId int, DeleteOnly bit, NoDelay bit, PRIMARY KEY(TenantId, SyncId));
+        CREATE TABLE #tempListFilters(OrderId smallint, ArchiveId bigint, SyncId bigint, CurrentId bigint, TargetId bigint, LastId bigint, TargetTimestamp datetime, PreviousTimestamp datetime , TenantId int, StatusId int, DeleteOnly bit, NoDelay bit, PRIMARY KEY(TenantId, StatusId, SyncId));
         DROP TABLE IF EXISTS #tempRepeatTriggersTable;
         CREATE TABLE #tempRepeatTriggersTable(Id bigint, [Name] nvarchar(100), /*[PreviousRunIds] bigint,*/ [Definition] nvarchar(MAX)/*, TargetTimestamp*/, ArchiveTriggerTime datetime, ArchiveAfterHours smallint, DeleteDelayHours smallint, RepeatArchive bit, RepeatOffsetHours smallint, RepeatUntil datetime, CountValidFilters int)
 
@@ -733,20 +768,20 @@ BEGIN
                 SELECT @totalRowIds = 0, @totalDeleteOnlyIds = 0, @totalDeleted = 0
 
                 --  Get Filters
-                INSERT INTO #tempListFilters(ArchiveId, SyncId, CurrentId, TargetId, TargetTimestamp, PreviousTimestamp, TenantId, DeleteOnly, NoDelay, OrderId)
-                SELECT TOP(@topLoopFilters) snc.ArchiveId, flt.SyncId, CurrentId = ISNULL(flt.CurrentId, 0), flt.TargetId, flt.TargetTimeStamp, flt.PreviousTimestamp , flt.TenantId, flt.DeleteOnly
+                INSERT INTO #tempListFilters(ArchiveId, SyncId, CurrentId, TargetId, TargetTimestamp, PreviousTimestamp, TenantId, StatusId, DeleteOnly, NoDelay, OrderId)
+                SELECT TOP(@topLoopFilters) snc.ArchiveId, flt.SyncId, CurrentId = ISNULL(flt.CurrentId, 0), flt.TargetId, flt.TargetTimeStamp, flt.PreviousTimestamp , flt.TenantId, flt.StatusId, flt.DeleteOnly
                     , IIF( @deleteIfNoDelay = 1 AND (snc.DeleteAfterDatetime = flt.TargetTimestamp OR @ignoreDelay = 1), 1, 0)
-                    , OrderId = ROW_NUMBER() OVER(PARTITION BY flt.TenantId ORDER BY flt.TargetTimeStamp ASC)
-                FROM [Maintenance].[Filter_AuditLogs] flt 
-                INNER JOIN [Maintenance].[Sync_AuditLogs] snc ON snc.Id = flt.SyncId
-                INNER JOIN [Maintenance].[Archive_AuditLogs] arc ON arc.Id = snc.ArchiveId
+                    , OrderId = ROW_NUMBER() OVER(PARTITION BY flt.TenantId, flt.StatusId ORDER BY flt.TargetTimeStamp ASC)
+                FROM [Maintenance].[Filter_Queues] flt 
+                INNER JOIN [Maintenance].[Sync_Queues] snc ON snc.Id = flt.SyncId
+                INNER JOIN [Maintenance].[Archive_Queues] arc ON arc.Id = snc.ArchiveId
                 WHERE flt.IsArchived = 0 AND snc.IsArchived = 0 AND (flt.TargetId IS NULL OR flt.CurrentId IS NULL OR flt.CurrentId < flt.TargetId) AND arc.ToDo = 1 AND arc.ArchiveTriggerTime < @StartTime
                 ORDER BY flt.PreviousTimestamp ASC, TargetTimestamp ASC;
 
                 SELECT @countFilterIds = ISNULL(COUNT(*), 0), @countArchiveIds = ISNULL(COUNT(DISTINCT ArchiveId), 0) FROM #tempListFilters;
                 SELECT @targetTimestamp = MAX(TargetTimeStamp) FROM #tempListFilters WHERE TargetTimeStamp IS NOT NULL;
 
-                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_AuditLogs] WITH(INDEX([IX_TenantId_IsGlobal_ExecutionTime])) WHERE ExecutionTime <= @targetTimestamp;
+                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_QueueItems] --WITH(INDEX([IX_TenantId_IsGlobal_ExecutionTime])) WHERE ExecutionTime <= @targetTimestamp;
                 DECLARE @maxTargetId bigint;
 
                 SELECT @maxTargetId = MAX(ISNULL(TargetId, 0)) FROM #tempListFilters;
@@ -771,9 +806,9 @@ BEGIN
 
                 INSERT INTO #tempRepeatTriggersTable(Id, [Name], [Definition], ArchiveTriggerTime, ArchiveAfterHours, DeleteDelayHours, RepeatArchive, RepeatOffsetHours, RepeatUntil, CountValidFilters)
                 SELECT Id, [Name]/*, [PreviousRunIds]*/, [Definition]/*, TargetTimestamp*/, CAST( CAST(ArchiveTriggerTime AS float(53)) + ABS(@floatingHour * RepeatOffsetHours) AS datetime), ArchiveAfterHours, DeleteDelayHours, RepeatArchive, RepeatOffsetHours, RepeatUntil, CountValidFilters
-                FROM [Maintenance].[Archive_AuditLogs] arc 
+                FROM [Maintenance].[Archive_Queues] arc 
                 WHERE arc.[ToDo] = 1 AND arc.RepeatArchive = 1 AND (RepeatUntil IS NULL OR RepeatUntil >= CAST( CAST(ArchiveTriggerTime AS float(53)) + ABS(@floatingHour * RepeatOffsetHours) AS datetime))
-                    AND NOT EXISTS (SELECT  1 FROM [Maintenance].[Archive_AuditLogs] WHERE Id > arc.Id AND ParentArchiveId = arc.Id) 
+                    AND NOT EXISTS (SELECT  1 FROM [Maintenance].[Archive_Queues] WHERE Id > arc.Id AND ParentArchiveId = arc.Id) 
                     AND ( (arc.CountValidFilters = 0 AND arc.[TargetTimestamp] <= ISNULL(@targetTimestamp, SYSDATETIME())) OR EXISTS(SELECT 1 FROM #tempListFilters WHERE ArchiveId = arc.Id) ) 
                 ORDER BY Id ASC;
 
@@ -789,7 +824,7 @@ BEGIN
                             UNION ALL SELECT [runid], [message], [timestamp] FROM OPENJSON(PreviousRunIds) WITH ([runid] nvarchar(MAX) N'$.runid', [message] nvarchar(MAX) N'$.message', [timestamp] datetime2 N'$.timestamp')
                         ) v FOR JSON PATH
                     )
-                    FROM [Maintenance].[Archive_AuditLogs] arc 
+                    FROM [Maintenance].[Archive_Queues] arc 
                     INNER JOIN #tempRepeatTriggersTable tbl ON tbl.Id = arc.Id;
 
                     IF CURSOR_STATUS('local', 'CursorRepeatClose') >= 0 CLOSE CursorRepeatClose;
@@ -811,7 +846,7 @@ BEGIN
                                 SET @message = SPACE(@tab * 2) + N'Repeat Archive Id [' + CAST(@cursorId AS nvarchar(100)) + N'] on ' + CONVERT(nvarchar(100), @cursorArchiveTriggerTime, 120);
                                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
 
-                                EXEC [Maintenance].[AddArchiveTriggerAuditLogs] @SavedTorunId = @runId, @DryRunOnly = 0, @Name = @cursorName, @ArchiveTriggerTime = @cursorArchiveTriggerTime, @ArchiveAfterHours = @cursorArchiveAfterHours, @DeleteDelayHours = @cursorDeleteDelayHours, @Filters = @cursorDefinition, @RepeatArchive = @cursorRepeatArchive, @RepeatOffsetHours = @cursorRepeatOffsetHours, @RepeatUntil = @cursorRepeatUntil, @ParentArchiveId = @cursorId
+                                EXEC [Maintenance].[AddArchiveTriggerQueues] @SavedTorunId = @runId, @DryRunOnly = 0, @Name = @cursorName, @ArchiveTriggerTime = @cursorArchiveTriggerTime, @ArchiveAfterHours = @cursorArchiveAfterHours, @DeleteDelayHours = @cursorDeleteDelayHours, @Filters = @cursorDefinition, @RepeatArchive = @cursorRepeatArchive, @RepeatOffsetHours = @cursorRepeatOffsetHours, @RepeatUntil = @cursorRepeatUntil, @ParentArchiveId = @cursorId
                             END
                             FETCH CursorRepeatClose INTO @cursorId, @cursorName, @cursorDefinition, @cursorArchiveTriggerTime, @cursorArchiveAfterHours, @cursorDeleteDelayHours, @cursorRepeatArchive, @cursorRepeatOffsetHours, @cursorRepeatUntil, @cursorCountValidFilters
                         END
@@ -841,16 +876,16 @@ BEGIN
 
             IF @countFilterIds < 1
             BEGIN
-                SET @message = SPACE(@tab * 1) + N'No remaining filters found in [Maintenance].[Filter_AuditLogs]'
+                SET @message = SPACE(@tab * 1) + N'No remaining filters found in [Maintenance].[Filter_Queues]'
                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
             END
             ELSE
             BEGIN
                 -- Update status for Archive with no valid filter
-                IF EXISTS (SELECT 1 FROM [Maintenance].[Archive_AuditLogs] arc WHERE arc.[ToDo] = 1 AND arc.CountValidFilters = 0 AND arc.[TargetTimestamp] < @targetTimestamp)
+                IF EXISTS (SELECT 1 FROM [Maintenance].[Archive_Queues] arc WHERE arc.[ToDo] = 1 AND arc.CountValidFilters = 0 AND arc.[TargetTimestamp] < @targetTimestamp)
                 BEGIN
                     SELECT @message = NULL;
-                    SELECT  @message = COALESCE(@message + ', ' + CAST(Id AS nvarchar(100)), CAST(Id AS nvarchar(100)) ) FROM [Maintenance].[Archive_AuditLogs] arc WHERE arc.[ToDo] = 1 AND arc.CountValidFilters = 0 AND arc.[TargetTimestamp] <= @targetTimestamp ORDER BY Id;
+                    SELECT  @message = COALESCE(@message + ', ' + CAST(Id AS nvarchar(100)), CAST(Id AS nvarchar(100)) ) FROM [Maintenance].[Archive_Queues] arc WHERE arc.[ToDo] = 1 AND arc.CountValidFilters = 0 AND arc.[TargetTimestamp] <= @targetTimestamp ORDER BY Id;
                     SET @message = SPACE(@tab * 1) + N'Close Archive Trigger(s) with no filter(s): ' + @message;
                     EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
 
@@ -861,7 +896,7 @@ BEGIN
                             UNION ALL SELECT [runid], [message], [timestamp] FROM OPENJSON(PreviousRunIds) WITH ([runid] nvarchar(MAX) N'$.runid', [message] nvarchar(MAX) N'$.message', [timestamp] datetime2 N'$.timestamp')
                         ) v FOR JSON PATH
                     )
-                    FROM [Maintenance].[Archive_AuditLogs] arc WHERE arc.[ToDo] = 1 AND arc.CountValidFilters = 0 AND arc.[TargetTimestamp] <= @targetTimestamp;
+                    FROM [Maintenance].[Archive_Queues] arc WHERE arc.[ToDo] = 1 AND arc.CountValidFilters = 0 AND arc.[TargetTimestamp] <= @targetTimestamp;
                 END    
 
                 SET @message =  SPACE(@tab * 1) + N'Archive Filter(s) found: ' + ISNULL(CAST(@countFilterIds AS nvarchar(100)), N'-');
@@ -885,15 +920,15 @@ BEGIN
                     BEGIN TRAN;                                                                                      --|
                                                                                                                      --|
                     UPDATE flt SET TargetId = lst.TargetId                                                           --|
-                    FROM [Maintenance].[Filter_AuditLogs] flt                                                        --|
-                    INNER JOIN #tempListFilters lst ON lst.SyncId = flt.SyncId AND lst.TenantId = flt.TenantId;      --|
+                    FROM [Maintenance].[Filter_Queues] flt                                                           --|
+                    INNER JOIN #tempListFilters lst ON lst.SyncId = flt.SyncId AND lst.TenantId = flt.TenantId AND lst.StatusId = flt.StatusId;      --|
                                                                                                                      --|
-                    -- Add Last Current Id to each 1st filter per Tenant from most recent Archiving trigger(s) per Tenant
+                    -- Add Last Current Id to each 1st filter per Tenant/Status from most recent Archiving trigger(s) per Tenant/Status
                     UPDATE lst SET LastId = oap.LastId FROM #tempListFilters lst                                     --|
                     CROSS APPLY (                                                                                    --|
                         SELECT LastId = MAX(TargetId)                                                                --|
-                        FROM [Maintenance].[Filter_AuditLogs] flt                                                    --|
-                        WHERE flt.TenantId = lst.TenantId AND flt.IsArchived = 1 AND flt.CurrentId = flt.TargetId    --|
+                        FROM [Maintenance].[Filter_Queues] flt                                                       --|
+                        WHERE flt.TenantId = lst.TenantId AND flt.StatusId = lst.StatusId AND flt.IsArchived = 1 AND flt.CurrentId = flt.TargetId    --|
                     ) oap                                                                                            --|
                     WHERE lst.OrderId = 1;                                                                           --|
                                                                                                                      --|
@@ -903,7 +938,7 @@ BEGIN
                             UNION ALL SELECT [runid], [message], [timestamp] FROM OPENJSON(PreviousRunIds) WITH ([runid] nvarchar(MAX) N'$.runid', [message] nvarchar(MAX) N'$.message', [timestamp] datetime2 N'$.timestamp')
                         ) v FOR JSON PATH                                                                            --|
                     ), CurrentRunId = @runid                                                                         --|
-                    FROM [Maintenance].[Archive_AuditLogs] arc                                                       --|
+                    FROM [Maintenance].[Archive_Queues] arc                                                          --|
                     WHERE EXISTS (SELECT 1 FROM #tempListFilters WHERE ArchiveId = arc.Id);                          --|
                                                                                                                      --|
                     IF @@TRANCOUNT > 0 COMMIT;                                                                       --|
@@ -943,8 +978,9 @@ BEGIN
                         INSERT INTO #tempListIds(tempId, tempSyncId, tempDeleteOnly, tempNoDelay)
                         SELECT TOP(@maxLoopDeleteRows) src.Id, flt.SyncId, flt.DeleteOnly, flt.NoDelay
                         FROM #tempListFilters flt
-                        INNER JOIN [Maintenance].[Synonym_Source_AuditLogs] src ON src.TenantId = flt.TenantId
-                        WHERE ( (src.ExecutionTime >= flt.PreviousTimestamp AND src.ExecutionTime < flt.TargetTimestamp) OR (flt.LastId IS NOT NULL AND src.ExecutionTime < flt.PreviousTimestamp AND src.Id > flt.LastId ) ) AND src.Id >= flt.CurrentId AND src.Id <= @maxId AND src.Id >= @currentId
+                        INNER JOIN [Maintenance].[Synonym_Source_QueueItems] src ON src.TenantId = flt.TenantId AND src.Status = flt.StatusId
+--                      WHERE ( (src.ExecutionTime >= flt.PreviousTimestamp AND src.ExecutionTime < flt.TargetTimestamp) OR (flt.LastId IS NOT NULL AND src.ExecutionTime < flt.PreviousTimestamp AND src.Id > flt.LastId ) ) AND src.Id >= flt.CurrentId AND src.Id <= @maxId AND src.Id >= @currentId
+                        WHERE /*(*/ (flt.PreviousTimestamp <= src.CreationTime  AND flt.TargetTimestamp > src.CreationTime) /*OR (flt.LastId IS NOT NULL AND flt.PreviousTimestamp > src.ExecutionTime AND src.Id > flt.LastId ) )*/ /*AND src.Id >= flt.CurrentId*/ AND src.Id <= @maxId AND src.Id >= @currentId
                         ORDER BY src.Id ASC;
  
                         SELECT @countRowIds = @@ROWCOUNT;
@@ -958,8 +994,8 @@ BEGIN
                             -- If nothing left, save status...
                             -- Update IsArchived when current Id(s) reach Target Id
                             UPDATE flt SET CurrentId = @maxId, IsArchived = 1
-                            FROM [Maintenance].[Filter_AuditLogs] flt
-                            INNER JOIN #tempListFilters lst ON lst.TenantId = flt.TenantId AND lst.SyncId = flt.SyncId --AND flt.CurrentId >= flt.TargetId
+                            FROM [Maintenance].[Filter_Queues] flt
+                            INNER JOIN #tempListFilters lst ON lst.TenantId = flt.TenantId AND lst.StatusId = flt.StatusId AND lst.SyncId = flt.SyncId --AND flt.CurrentId >= flt.TargetId
 
                             SELECT @filtersArchived = @@ROWCOUNT, @globalFiltersArchived = ISNULL(@globalFiltersArchived, 0) + @@ROWCOUNT;
                             BREAK;
@@ -969,20 +1005,22 @@ BEGIN
                         -----------------------------------------------------------------------------------------------------------------------+
                         BEGIN TRAN                                                                                                           --|
                         EXEC sp_executesql @stmt = @sqlArchive;                                                                              --|
-                        EXEC sp_executesql @stmt = @sqlArchiveEntities;                                                                     --|
+                        EXEC sp_executesql @stmt = @sqlArchiveComments;                                                                      --|
+                        EXEC sp_executesql @stmt = @sqlArchiveEvents;                                                                        --|
                                                                                                                                              --|
                         -- Add Delete info                                                                                                   --|
-                        INSERT INTO [Maintenance].[Delete_AuditLogs](SyncId, Id)                                                             --|
+                        INSERT INTO [Maintenance].[Delete_Queues](SyncId, Id)                                                                --|
                         SELECT tempSyncId, tempId FROM #tempListIds ids                                                                      --|
-                        WHERE NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_AuditLogs] WHERE Id = ids.tempId) AND tempNoDelay = 0;          --|
+                        WHERE NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_Queues] WHERE Id = ids.tempId) AND tempNoDelay = 0;             --|
                                                                                                                                              --|
-                        DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_AuditLogsEntities] src ON src.AuditLogsId = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
-                        DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_AuditLogs] src ON src.Id = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
+                        DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_QueueItemComments] src ON src.QueueItemId = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
+                        DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_QueueItemEvents] src ON src.QueueItemId = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
+                        DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_QueueItems] src ON src.Id = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
                                                                                                                                              --|
                         -- Update current Id(s)                                                                                              --|
                         UPDATE flt SET CurrentId = @currentLoopId                                                                            --|
-                        FROM [Maintenance].[Filter_AuditLogs] flt                                                                            --|
-                        INNER JOIN #tempListFilters lst ON lst.TenantId = flt.TenantId AND lst.SyncId = flt.SyncId                           --|
+                        FROM [Maintenance].[Filter_Queues] flt                                                                               --|
+                        INNER JOIN #tempListFilters lst ON lst.TenantId = flt.TenantId AND lst.StatusId = flt.StatusId AND lst.SyncId = flt.SyncId--|
                         WHERE @currentLoopId IS NOT NULL;                                                                                    --|
                                                                                                                                              --|
                         IF @@TRANCOUNT > 0 COMMIT;                                                                                           --|
@@ -1030,45 +1068,45 @@ BEGIN
 
                 -- Update Sync status when all filters are Archived
                 UPDATE snc SET IsArchived = 1
-                    , IsDeleted = IIF( @deleteIfNoDelay = 1 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_AuditLogs] WHERE syncId = snc.Id), 1, 0)
-                    , DeletedOnDate = IIF( @deleteIfNoDelay = 1 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_AuditLogs] WHERE syncId = snc.Id), SYSDATETIME(), NULL)
-                    , IsSynced = IIF( @deleteIfNoDelay = 1 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_AuditLogs] WHERE syncId = snc.Id), 1, 0)
-                    , SyncedOnDate = IIF( @deleteIfNoDelay = 1 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_AuditLogs] WHERE syncId = snc.Id), SYSDATETIME(), NULL)
-                    , FirstASyncId = (SELECT MIN(Id) FROM [Maintenance].[Delete_AuditLogs] WHERE syncId = snc.Id)
-                    , LastASyncId = (SELECT MAX(Id) FROM [Maintenance].[Delete_AuditLogs] WHERE syncId = snc.Id)
-                    , CountASyncIds = (SELECT COUNT(*) FROM [Maintenance].[Delete_AuditLogs] WHERE syncId = snc.Id)
-                FROM [Maintenance].[Sync_AuditLogs] snc
-                INNER JOIN [Maintenance].[Archive_AuditLogs] arc ON arc.Id = snc.ArchiveId
+                    , IsDeleted = IIF( @deleteIfNoDelay = 1 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_Queues] WHERE syncId = snc.Id), 1, 0)
+                    , DeletedOnDate = IIF( @deleteIfNoDelay = 1 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_Queues] WHERE syncId = snc.Id), SYSDATETIME(), NULL)
+                    , IsSynced = IIF( @deleteIfNoDelay = 1 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_Queues] WHERE syncId = snc.Id), 1, 0)
+                    , SyncedOnDate = IIF( @deleteIfNoDelay = 1 AND NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_Queues] WHERE syncId = snc.Id), SYSDATETIME(), NULL)
+                    , FirstASyncId = (SELECT MIN(Id) FROM [Maintenance].[Delete_Queues] WHERE syncId = snc.Id)
+                    , LastASyncId = (SELECT MAX(Id) FROM [Maintenance].[Delete_Queues] WHERE syncId = snc.Id)
+                    , CountASyncIds = (SELECT COUNT(*) FROM [Maintenance].[Delete_Queues] WHERE syncId = snc.Id)
+                FROM [Maintenance].[Sync_Queues] snc
+                INNER JOIN [Maintenance].[Archive_Queues] arc ON arc.Id = snc.ArchiveId
                 WHERE EXISTS(SELECT 1 FROM #tempListFilters WHERE SyncId = snc.Id) AND
-                    NOT EXISTS (SELECT 1 FROM [Maintenance].[Filter_AuditLogs] WHERE SyncId = snc.Id AND IsArchived = 0);
+                    NOT EXISTS (SELECT 1 FROM [Maintenance].[Filter_Queues] WHERE SyncId = snc.Id AND IsArchived = 0);
                 SELECT @syncArchived = @@ROWCOUNT;
 
                 -- Update Archive status when all sync and filters are archived
                 UPDATE arc SET IsArchived = 1, ArchivedOnDate = SYSDATETIME()
-                    , IsDeleted = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_AuditLogs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), 1, 0)
-                    , DeletedOnDate = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_AuditLogs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), SYSDATETIME(), NULL)
-                    , IsFinished = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_AuditLogs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), 1, 0)
-                    , FinishedOnDate = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_AuditLogs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), SYSDATETIME(), NULL)
-                    , IsSuccess = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_AuditLogs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), 1, 0)
-                    , [Message] = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_AuditLogs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), N'Cleanup finished', 'Archiving finished')
+                    , IsDeleted = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_Queues] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), 1, 0)
+                    , DeletedOnDate = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_Queues] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), SYSDATETIME(), NULL)
+                    , IsFinished = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_Queues] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), 1, 0)
+                    , FinishedOnDate = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_Queues] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), SYSDATETIME(), NULL)
+                    , IsSuccess = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_Queues] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), 1, 0)
+                    , [Message] = IIF(NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_Queues] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0), N'Cleanup finished', 'Archiving finished')
                     , PreviousRunIds = (
                         SELECT [runid], [message], [timestamp] FROM (
-                            SELECT [runid] = @runId, [message] = N'Cleanup finished', [timestamp] = SYSDATETIME() WHERE NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_AuditLogs] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0)
+                            SELECT [runid] = @runId, [message] = N'Cleanup finished', [timestamp] = SYSDATETIME() WHERE NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_Queues] WHERE ArchiveId = lst.ArchiveId AND IsSynced = 0)
                             UNION ALL SELECT [runid] = @runId, [message] = N'All Archive Filter(s) finished]', [timestamp] = SYSDATETIME()
                             UNION ALL SELECT [runid], [message], [timestamp] FROM OPENJSON(PreviousRunIds) WITH ([runid] nvarchar(MAX) N'$.runid', [message] nvarchar(MAX) N'$.message', [timestamp] datetime2 N'$.timestamp')
                         ) v FOR JSON PATH
                     )
-                FROM [Maintenance].[Archive_AuditLogs] arc
+                FROM [Maintenance].[Archive_Queues] arc
                 INNER JOIN #tempListFilters lst ON lst.ArchiveId = arc.Id
-                WHERE NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_AuditLogs] WHERE ArchiveId = lst.ArchiveId AND IsArchived = 0);
+                WHERE NOT EXISTS (SELECT 1 FROM [Maintenance].[Sync_Queues] WHERE ArchiveId = lst.ArchiveId AND IsArchived = 0);
 
                 SELECT @triggerArchived = @@ROWCOUNT, @globalTriggerArchived = ISNULL(@globalTriggerArchived, 0) + @@ROWCOUNT;
 
-                SELECT @message = SPACE(@tab * 2) + N'Archive Filter(s) finished: ' + CAST(ISNULL(@filtersArchived, 0) AS nvarchar(100)) + N' / ' + CAST(ISNULL(@countFilterIds, 0) AS nvarchar(100)) + N' (remaining filters = '+ CAST(ISNULL(COUNT(*), 0) AS nvarchar(100)) + N')' FROM [Maintenance].[Filter_AuditLogs] WHERE IsArchived <> 1;
+                SELECT @message = SPACE(@tab * 2) + N'Archive Filter(s) finished: ' + CAST(ISNULL(@filtersArchived, 0) AS nvarchar(100)) + N' / ' + CAST(ISNULL(@countFilterIds, 0) AS nvarchar(100)) + N' (remaining filters = '+ CAST(ISNULL(COUNT(*), 0) AS nvarchar(100)) + N')' FROM [Maintenance].[Filter_Queues] WHERE IsArchived <> 1;
                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
                 SELECT @message = SPACE(@tab * 2) + N'Archive Sync(s) finished: ' + ISNULL(CAST(@syncArchived AS nvarchar(100)), N'-');
                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
-                SELECT @message = SPACE(@tab * 1) + N'Archive(s) finished: ' + ISNULL(CAST(@triggerArchived AS nvarchar(100)), N'-') + N' (in progress = ' + CAST(@countArchiveIds - ISNULL(@triggerArchived, 0) AS nvarchar(100)) + N', to do = '+ CAST(ISNULL(COUNT(*), 0) AS nvarchar(100)) + N')' FROM [Maintenance].[Archive_AuditLogs] WHERE [Todo] = 1 AND ArchiveTriggerTime < @StartTime;
+                SELECT @message = SPACE(@tab * 1) + N'Archive(s) finished: ' + ISNULL(CAST(@triggerArchived AS nvarchar(100)), N'-') + N' (in progress = ' + CAST(@countArchiveIds - ISNULL(@triggerArchived, 0) AS nvarchar(100)) + N', to do = '+ CAST(ISNULL(COUNT(*), 0) AS nvarchar(100)) + N')' FROM [Maintenance].[Archive_Queues] WHERE [Todo] = 1 AND ArchiveTriggerTime < @StartTime;
                 EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
             END
 
@@ -1098,14 +1136,14 @@ BEGIN
         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
 
         SELECT @message = SPACE(@tab * 1) + 'Remaining Archive Trigger(s): ' + CAST(COUNT(*) AS nvarchar(100)) + IIF(COUNT(*) > 0, N' (outstanding = '+ CAST(SUM(IIF(arc.ArchiveTriggerTime < @startTime, 1, 0)) AS nvarchar(100)) + N', upcoming = ' + CAST(SUM(IIF(arc.ArchiveTriggerTime >= @startTime, 1, 0)) AS nvarchar(100)) + N')', '')
-        FROM [Maintenance].[Archive_AuditLogs] arc
+        FROM [Maintenance].[Archive_Queues] arc
         WHERE arc.ToDo = 1
         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
 
         SELECT @message = SPACE(@tab * 1) + 'Remaining Filter(s): ' + CAST(COUNT(*) AS nvarchar(100)) + IIF(COUNT(*) > 0, N' (outstanding = '+ CAST(SUM(IIF(arc.ArchiveTriggerTime < @startTime, 1, 0)) AS nvarchar(100)) + N', upcoming = ' + CAST(SUM(IIF(arc.ArchiveTriggerTime >= @startTime, 1, 0)) AS nvarchar(100)) + N')', '')
-        FROM [Maintenance].[Filter_AuditLogs] flt 
-        INNER JOIN [Maintenance].[Sync_AuditLogs] snc ON snc.Id = flt.SyncId
-        INNER JOIN [Maintenance].[Archive_AuditLogs] arc ON arc.Id = snc.ArchiveId 
+        FROM [Maintenance].[Filter_Queues] flt 
+        INNER JOIN [Maintenance].[Sync_Queues] snc ON snc.Id = flt.SyncId
+        INNER JOIN [Maintenance].[Archive_Queues] arc ON arc.Id = snc.ArchiveId 
         WHERE flt.IsArchived = 0 AND snc.IsArchived = 0 AND (flt.TargetId IS NULL OR flt.CurrentId IS NULL OR flt.CurrentId < flt.TargetId) AND arc.ToDo = 1 --AND arc.ArchiveTriggerTime < @StartTime
         EXEC [Maintenance].[AddRunMessage] @RunId = @runId, @Procedure = @procName, @Message = @message, @Severity = 10, @State = 1, @VerboseLevel = @levelVerbose, @LogToTable = @logToTable, @MessagesStack = @MessagesStack OUTPUT;
 
