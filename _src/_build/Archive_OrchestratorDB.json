@@ -17,6 +17,10 @@
          , { "path":"_src/Archive/OrchestratorDB/Jobs/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsJobs.sql"}
          , { "path":"_src/Archive/OrchestratorDB/Jobs/Procedure_OrchestratorDB.Maintenance.ASyncCleanupJobs.sql"}
 
+         , { "path":"_src/Archive/OrchestratorDB/Queues/Table_OrchestratorDB.Maintenance.ASyncStatus_Queues.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Queues/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsQueues.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Queues/Procedure_OrchestratorDB.Maintenance.ASyncCleanupQueues.sql"}
+
          , { "path":"_src/Archive/OrchestratorDB/AuditLogs/Table_OrchestratorDB.Maintenance.ASyncStatus_AuditLogs.sql"}
          , { "path":"_src/Archive/OrchestratorDB/AuditLogs/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsAuditLogs.sql"}
          , { "path":"_src/Archive/OrchestratorDB/AuditLogs/Procedure_OrchestratorDB.Maintenance.ASyncCleanupAuditLogs.sql"}
@@ -52,6 +56,20 @@
          , { "path":"_src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjects.sql"}
          , { "path":"_src/Archive/OrchestratorDB/Jobs/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsJobs.sql"}
          , { "path":"_src/Archive/OrchestratorDB/Jobs/Procedure_OrchestratorDB.Maintenance.ASyncCleanupJobs.sql"}
+      ]
+   },
+   {
+      "Name":"Orchestrator Archive -= Queues =- (Source = Orchestrator DB)",
+      "file":"Orchestrator-DB-Maintenance/Maintenance-Orchestrator-OrchestratorDB-Archive-Queues.sql",
+      "sources":[
+         { "path":"_src/Schemas/Schema_Maintenance.sql"}
+         , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
+         , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
+         , { "path":"_src/Runs/Procedure_*.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Queues/Table_OrchestratorDB.Maintenance.ASyncStatus_Queues.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjects.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Queues/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsQueues.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Queues/Procedure_OrchestratorDB.Maintenance.ASyncCleanupQueues.sql"}
       ]
    },
    {
