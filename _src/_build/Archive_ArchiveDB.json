@@ -50,9 +50,10 @@
          , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.SetSourceTableQueueItemComments.sql"}
          , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.SetSourceTableQueueItemEvents.sql"}
          , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.SetSourceTableASyncStatus_Queues.sql"}
-         , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.ParseJsonArchiveQueueItems.sql"}
-         , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.ParseJsonArchiveQueueItemComments.sql"}
-         , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.ParseJsonArchiveQueueItemEvents.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.SetArchiveTableQueueItems.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.SetArchiveTableQueueItemComments.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.SetArchiveTableQueueItemEvents.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.ParseJsonArchiveQueues.sql"}
          , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.AddArchiveTriggerQueues.sql"}
          , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.ArchiveQueues.sql"}
          , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.SimpleArchivingQueues.sql"}
@@ -167,9 +168,10 @@
          , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.SetSourceTableQueueItemComments.sql"}
          , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.SetSourceTableQueueItemEvents.sql"}
          , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.SetSourceTableASyncStatus_Queues.sql"}
-         , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.ParseJsonArchiveQueueItems.sql"}
-         , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.ParseJsonArchiveQueueItemComments.sql"}
-         , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.ParseJsonArchiveQueueItemEvents.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.SetArchiveTableQueueItems.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.SetArchiveTableQueueItemComments.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.SetArchiveTableQueueItemEvents.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.ParseJsonArchiveQueues.sql"}
          , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.AddArchiveTriggerQueues.sql"}
          , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.ArchiveQueues.sql"}
          , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.SimpleArchivingQueues.sql"}
