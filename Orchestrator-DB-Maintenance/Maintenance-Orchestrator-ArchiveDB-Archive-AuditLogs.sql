@@ -956,6 +956,597 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
+-- DROP PROCEDURE [Maintenance].[SetArchiveTable]
+----------------------------------------------------------------------------------------------------
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[SetArchiveTable]') AND type in (N'P'))
+BEGIN
+    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[SetArchiveTable] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[SetArchiveTable]';
+END
+ELSE PRINT '  = PROCEDURE [Maintenance].[SetArchiveTable] already exists' 
+GO
+
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[SetArchiveTable]'
+GO
+
+ALTER PROCEDURE [Maintenance].[SetArchiveTable]
+----------------------------------------------------------------------------------------------------
+-- ### [Object]: PROCEDURE [Maintenance].[SetArchiveTable]
+-- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetArchiveTable.sql
+-- ### [Hash]: dc39c27 [SHA256-7BFFFCA6A305C98C99E2A8F1D371B2496F4FAB7F3D574F786FE123DA3F9D744E]
+-- ### [Docs]: https://???.???
+-- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
+-- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
+-- !!! ~~~~~~~~~ SQL Server >= 2016 SP1
+----------------------------------------------------------------------------------------------------
+    @SynonymSourceName nvarchar(256)
+    , @SynonymSourceSchema nvarchar(256)
+    , @SynonymArchiveName nvarchar(256)
+    , @SynonymArchiveSchema nvarchar(256)
+	, @ArchiveTableName nvarchar(250) = NULL
+	, @ArchiveTableSchema nvarchar(250) = NULL
+    , @ClusteredName nvarchar(128)
+    , @ExcludeColumns nvarchar(MAX) = NULL
+    , @IgnoreMissingColumns bit = 0
+    , @CreateOrUpdateSynonym bit = 0
+    , @CreateTable bit = 1
+    , @UpdateTable bit = 1
+    , @RemoveIdentity bit = 0
+    , @SourceColumns nvarchar(MAX) OUTPUT
+    , @IsValid bit = 0 OUTPUT
+    , @Messages nvarchar(MAX) OUTPUT
+AS
+BEGIN
+    BEGIN TRY 
+        SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+		SET LOCK_TIMEOUT 5000;
+        SET ARITHABORT ON;
+        SET NOCOUNT ON;
+        SET NUMERIC_ROUNDABORT OFF;
+
+        ----------------------------------------------------------------------------------------------------
+        -- Source Variables
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @sourceIsValid bit = 0;
+        DECLARE @sourceMessages nvarchar(MAX);
+        DECLARE @sourceJsonColumns nvarchar(MAX);
+        DECLARE @listSourceColumns TABLE(Id int, [name] nvarchar(128), [type] nvarchar(128), max_length smallint, precision tinyint, scale tinyint
+            , [datatype] AS ( [type] + 
+                    CASE WHEN type IN ('varchar', 'char', 'varbinary', 'binary', 'text') THEN '(' + CASE WHEN max_length = -1 THEN 'MAX' ELSE CAST(max_length AS VARCHAR(5)) END + ')'
+                    WHEN type IN ('nvarchar', 'nchar', 'ntext') THEN '(' + CASE WHEN max_length = -1 THEN 'MAX' ELSE CAST(max_length / 2 AS VARCHAR(5)) END + ')'
+                    WHEN type IN ('datetime2', 'time2', 'datetimeoffset') THEN '(' + CAST(scale AS VARCHAR(5)) + ')'
+                    WHEN type IN ('decimal', 'numeric') THEN '(' + CAST([precision] AS VARCHAR(5)) + ',' + CAST(scale AS VARCHAR(5)) + ')'
+                    WHEN type IN ('float') THEN '(' + CAST([precision] AS VARCHAR(5)) + ')'
+                    ELSE '' END )
+        );
+        DECLARE @listExcludeColumns TABLE([key] nvarchar(4000), [value] nvarchar(MAX), [type] int);
+        DECLARE @jsonExclude nvarchar(MAX);
+        ----------------------------------------------------------------------------------------------------
+        -- Archive variables
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @archiveObjectId bigint;
+        DECLARE @archiveTable nvarchar(256);
+        DECLARE @archiveSchema nvarchar(128);
+        DECLARE @archiveTable2Parts nvarchar(256);
+        DECLARE @listArchiveColumns TABLE(Id int, [name] nvarchar(128), [type] nvarchar(128), max_length smallint, precision tinyint, scale tinyint
+            , [datatype] AS ( [type] + 
+                    CASE WHEN type IN ('varchar', 'char', 'varbinary', 'binary', 'text') THEN '(' + CASE WHEN max_length = -1 THEN 'MAX' ELSE CAST(max_length AS VARCHAR(5)) END + ')'
+                    WHEN type IN ('nvarchar', 'nchar', 'ntext') THEN '(' + CASE WHEN max_length = -1 THEN 'MAX' ELSE CAST(max_length / 2 AS VARCHAR(5)) END + ')'
+                    WHEN type IN ('datetime2', 'time2', 'datetimeoffset') THEN '(' + CAST(scale AS VARCHAR(5)) + ')'
+                    WHEN type IN ('decimal', 'numeric') THEN '(' + CAST([precision] AS VARCHAR(5)) + ',' + CAST(scale AS VARCHAR(5)) + ')'
+                    WHEN type IN ('float') THEN '(' + CAST([precision] AS VARCHAR(5)) + ')'
+                    ELSE '' END )
+        );
+        ----------------------------------------------------------------------------------------------------
+        -- Misc      
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @sql nvarchar(max);
+        ----------------------------------------------------------------------------------------------------      
+        -- Message / Error Handling
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @message nvarchar(MAX);
+        DECLARE @ERROR_NUMBER INT, @ERROR_SEVERITY INT, @ERROR_STATE INT, @ERROR_PROCEDURE NVARCHAR(126), @ERROR_LINE INT, @ERROR_MESSAGE NVARCHAR(2048);
+        DECLARE @space tinyint = 2;
+        DECLARE @tab tinyint = 0;
+        DECLARE @json_errors TABLE([id] tinyint NOT NULL, [severity] int NOT NULL, [message] nvarchar(MAX) NOT NULL);
+
+        ----------------------------------------------------------------------------------------------------      
+        -- Checks Synonyms and Tables
+        ----------------------------------------------------------------------------------------------------
+        -- Check Missing Synonym
+        BEGIN TRY
+            -- Synonym for Source table
+            EXEC [Maintenance].[SetSourceTable] @SynonymName = @SynonymSourceName, @SynonymSchema = @SynonymSourceSchema
+                , @Columns = @sourceJsonColumns OUTPUT
+                , @IsValid = @sourceIsValid OUTPUT
+                , @Messages = @sourceMessages OUTPUT
+            ;
+            INSERT INTO @json_errors([id], [severity], [message])
+            SELECT 0, [Severity], [Message] FROM OPENJSON(@sourceMessages, N'$') WITH ([Message] nvarchar(MAX), [Severity] tinyint);
+        END TRY
+        BEGIN CATCH;
+            IF @@TRANCOUNT > 0 ROLLBACK;
+            SET @message = N'ERROR[SS0]: error(s) occured while checking Source synonym and table';
+            THROW;
+        END CATCH; 
+
+        BEGIN TRY
+            -- Synonym for Archive table
+            SELECT @archiveTable = LTRIM(RTRIM(@ArchiveTableName)), @archiveSchema = LTRIM(RTRIM(@ArchiveTableSchema));
+            SELECT @archiveTable2Parts = ISNULL(QUOTENAME(@archiveSchema) + N'.' + QUOTENAME(@archiveTable), N'');
+            SELECT @archiveTable = ISNULL(@archiveTable, N''), @archiveSchema = ISNULL(@archiveSchema, N'');
+
+            INSERT INTO @json_errors([id], [severity], [message])
+            SELECT 11, 16, N'ERROR[AS1]: Synonym ' + QUOTENAME(@SynonymArchiveSchema) + N'.' + QUOTENAME(@SynonymArchiveName) + N' not found and @ArchiveTableName not provided' WHERE NOT EXISTS(SELECT 1 FROM sys.synonyms WHERE [name] = @SynonymArchiveName AND schema_id = SCHEMA_ID(@SynonymArchiveSchema)) AND  @archiveTable = N''
+            UNION ALL SELECT 11, 16, N'ERROR[AS1]: Synonym ' + QUOTENAME(@SynonymArchiveSchema) + N'.' + QUOTENAME(@SynonymArchiveName) + N' not found and @ArchiveTableSchema not provided' WHERE NOT EXISTS(SELECT 1 FROM sys.synonyms WHERE [name] = @SynonymArchiveName AND schema_id = SCHEMA_ID(@SynonymArchiveSchema)) AND  @archiveSchema = N''
+            UNION ALL SELECT 13, 16, N'ERROR[AS3]: Synonym ' + QUOTENAME(@SynonymArchiveSchema) + N'.' + QUOTENAME(@SynonymArchiveName) + N' not found and @CreateOrUpdateSynonym not enabled' WHERE  NOT EXISTS(SELECT 1 FROM sys.synonyms WHERE [name] = @SynonymArchiveName AND schema_id = SCHEMA_ID(@SynonymArchiveSchema)) AND @archiveTable2Parts <> N'' /*AND @archiveTable2Parts <> N''*/ AND @CreateOrUpdateSynonym <> 1
+            ;
+        END TRY
+        BEGIN CATCH;
+            IF @@TRANCOUNT > 0 ROLLBACK;
+            SET @message = N'ERROR[AS0]: error(s) occured while checking Archive synonyms';
+            THROW;
+        END CATCH; 
+
+        -- Check Source Table
+        IF NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10)
+        BEGIN
+            BEGIN TRY
+                INSERT INTO @listSourceColumns([id], [name], [type], [max_length], [precision], [scale])
+                SELECT [id], [name], [type], [max_length], [precision], [scale] FROM OPENJSON(@sourceJsonColumns, N'$')
+                WITH ([id] int N'$.column_id', [name] nvarchar(128) N'$.column', [type] nvarchar(128), max_length smallint, precision tinyint, scale tinyint)
+
+                IF @@ROWCOUNT = 0 INSERT INTO @json_errors([id], [severity], [message]) SELECT 20, 16, N'ERROR[TS1]: No column retrieved from remote source table';
+            END TRY
+            BEGIN CATCH
+                SET @message = N'ERROR[TS0]: error(s) occured while checking remote source table';
+                THROW;
+            END CATCH
+        END
+
+        -- Check Exclude list
+        IF NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10)
+        BEGIN
+            BEGIN TRY
+                SELECT @jsonExclude = ISNULL(LTRIM(RTRIM(@ExcludeColumns)), N'')
+                IF ISJSON(@jsonExclude) = 1 
+                BEGIN
+                    INSERT INTO @listExcludeColumns([key], [value], [type])
+                    SELECT [key], LTRIM(RTRIM([value])), [type] FROM OPENJSON(@ExcludeColumns, N'$')
+                END
+                INSERT INTO @json_errors([id], [severity], [message])
+                SELECT 21, 16, N'ERROR[EX1] @ExcludeColumns is not a valid JSON string, an array of string(s) is expected: ["col1", "col2", ...]' WHERE @jsonExclude IS NOT NULL AND @jsonExclude <> N'' AND ISJSON(@ExcludeColumns) = 0
+                UNION ALL SELECT 21, 16, N'ERROR[EX2] @ExcludeColumns contains invalid type(s), only an array of string(s) is expected: ["col1", "col2", ...]' WHERE EXISTS(SELECT 1 FROM @listExcludeColumns WHERE [type] <> 1) 
+                UNION ALL SELECT 21, 16, N'ERROR[EX3] column ' + QUOTENAME(@clusteredName) + N' cannot be excluded (Primary / Clustered Key)' WHERE EXISTS(SELECT 1 FROM @listExcludeColumns WHERE [value] = @clusteredName) 
+                UNION ALL SELECT 21, 16, N'ERROR[EX4] column ' + QUOTENAME(exc.[value]) + N' not found in Source table' FROM @listExcludeColumns exc WHERE exc.[value] <> N'' AND exc.[value] IS NOT NULL AND exc.[type] = 1 AND NOT EXISTS(SELECT 1 FROM @listSourceColumns WHERE [name] = exc.[value]) 
+            END TRY
+            BEGIN CATCH
+                SET @message = N'ERROR[EX0]: error(s) occured while checking exclude list';
+                THROW;
+            END CATCH
+        END
+
+
+        -- Check Archive Table
+        IF NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10)
+        BEGIN
+            BEGIN TRY
+                SELECT @archiveTable2Parts = base_object_name FROM sys.synonyms WHERE [name] = @SynonymArchiveName AND schema_id = SCHEMA_ID(@SynonymArchiveSchema) AND (@archiveTable2Parts IS NULL OR @archiveTable2Parts = N'');
+                SELECT @archiveSchema = ISNULL(LTRIM(RTRIM(@ArchiveTableSchema)), PARSENAME(@archiveTable2Parts, 2)), @archiveTable = ISNULL(LTRIM(RTRIM(@ArchiveTableName)), PARSENAME(@archiveTable2Parts, 1)), @archiveObjectId = OBJECT_ID(@archiveTable2Parts)
+
+                INSERT INTO @listArchiveColumns([id], [name], [type], [max_length], [precision], [scale])
+                SELECT col.column_id, [column] = col.name, [type] = tpe.name, col.max_length, col.precision, col.scale
+                FROM sys.columns AS col
+                INNER JOIN sys.types AS tpe ON col.system_type_id = tpe.system_type_id AND tpe.system_type_id = tpe.user_type_id
+                WHERE [object_id] = @archiveObjectId;
+
+                INSERT INTO @json_errors([id], [severity], [message])
+                SELECT 31, 16, N'ERROR[TA1]: Synonym ' + QUOTENAME(@SynonymArchiveSchema) + N'.' + QUOTENAME(@SynonymArchiveName) + N' refers to a non existing schema: ' + QUOTENAME(@archiveSchema) WHERE NOT EXISTS (SELECT 1 FROM sys.schemas WHERE [schema_id] = SCHEMA_ID(@archiveSchema))
+                UNION ALL SELECT 32, 16, N'ERROR[TA2]: @CreateTable is not enabled and Synonym ' + QUOTENAME(@SynonymArchiveSchema) + N'.' + QUOTENAME(@SynonymArchiveName) + N' refers to a non existing table: ' + @archiveTable + N'' WHERE @archiveObjectId IS NULL AND @CreateTable <> 1
+                UNION ALL SELECT 33, 16, N'ERROR[TA3]: datatype mismatch between source and archive table on column ' + QUOTENAME(src.[name]) + N': ' + src.[datatype] + N' vs ' + arc.[datatype]  FROM @listSourceColumns src
+                    INNER JOIN @listArchiveColumns arc ON arc.[name] = src.[name] AND (arc.[type] <> src.[type] OR arc.[max_length] <> src.[max_length] OR arc.[precision] <> src.[precision] OR arc.[scale] <> src.[scale])
+                UNION ALL SELECT 34, 16, N'ERROR[TA4]: missing column on archive table (@UpdateTable not set): ' +  QUOTENAME(src.[name]) FROM @listSourceColumns src 
+                    WHERE NOT EXISTS(SELECT 1 FROM @listArchiveColumns WHERE [name] = src.[name]) AND @UpdateTable <> 1 AND @archiveObjectId IS NOT NULL AND (@IgnoreMissingColumns IS NULL OR @IgnoreMissingColumns = 0)
+                UNION ALL SELECT 35, 16, N'ERROR[TA5]: Synonym ' + QUOTENAME(@SynonymArchiveSchema) + N'.' + QUOTENAME(@SynonymArchiveName) + N' must refer to a user table: ' + QUOTENAME(@archiveSchema) + N'.' + QUOTENAME(@archiveTable) WHERE OBJECTPROPERTY(@archiveObjectId, 'IsTable') = 0
+                UNION ALL SELECT 36, 16, N'ERROR[TA6]: Synonym ' + QUOTENAME(@SynonymArchiveSchema) + N'.' + QUOTENAME(@SynonymArchiveName) + N' must refer to a user table with no IDENTITY column: ' + QUOTENAME(@archiveSchema) + N'.' + QUOTENAME(@archiveTable) WHERE OBJECTPROPERTY(@archiveObjectId, 'TableHasIdentity') = 1
+                UNION ALL SELECT 37, 16, N'ERROR[TA7]: column is missing from source table:' + @clusteredName WHERE NOT EXISTS(SELECT 1 FROM @listSourceColumns WHERE [name] = @clusteredName)
+                ;
+            END TRY
+            BEGIN CATCH
+                IF @@TRANCOUNT > 0 ROLLBACK;
+                SET @message = N'ERROR[TA0]: error(s) occured while checking archive table';
+                THROW;
+            END CATCH
+        END   
+
+        ----------------------------------------------------------------------------------------------------      
+        -- Create or Update Synonym / Table / Column
+        ----------------------------------------------------------------------------------------------------
+        IF NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10)
+        BEGIN
+            -- Get list of Columns from source table
+            SELECT @SourceColumns = NULL;
+            DELETE col FROM @listSourceColumns col WHERE EXISTS(SELECT 1 FROM @listExcludeColumns WHERE [value] = col.[name])
+            SELECT @SourceColumns = COALESCE(@SourceColumns + N', "' + QUOTENAME([name]) + N'"', N'"' + QUOTENAME([name]) + N'"') FROM @listSourceColumns col ORDER BY Id;
+            SELECT @SourceColumns = N'['+ @SourceColumns + N']';
+
+            -- Start Transaction for all upcoming schema changes
+            BEGIN TRAN
+            -- Create Archive synonym if missing or outdated
+            BEGIN TRY
+                IF NOT EXISTS (SELECT 1 FROM sys.synonyms WHERE [name] = @SynonymArchiveName AND schema_id = SCHEMA_ID(@SynonymArchiveSchema) AND base_object_name = @archiveTable2Parts) AND @archiveTable2Parts <> N'' AND @CreateOrUpdateSynonym = 1
+                BEGIN
+                    SET @sql = NULL;
+                    INSERT INTO @json_errors([id], [severity], [message]) SELECT 10, 10, N'Create or alter Archive Synonym '+ QUOTENAME(@SynonymArchiveSchema) + N'.' + QUOTENAME(@SynonymArchiveName) + ' with base object: ' + @archiveTable2Parts;
+                    SELECT @sql = N'DROP SYNONYM ' + QUOTENAME(@SynonymArchiveSchema) + N'.' + QUOTENAME(@SynonymArchiveName) + N';' FROM sys.synonyms WHERE [name] = @SynonymArchiveName AND schema_id = SCHEMA_ID(@SynonymArchiveSchema);
+                    SELECT @sql = ISNULL(@sql, N'') + N'CREATE SYNONYM ' + QUOTENAME(@SynonymArchiveSchema) + N'.' + QUOTENAME(@SynonymArchiveName) + N' FOR ' + @archiveTable2Parts + N';';
+                    EXEC sp_executesql @statement = @sql;
+                END
+            END TRY
+            BEGIN CATCH
+                IF @@TRANCOUNT > 0 ROLLBACK;
+                SET @message = N'ERROR[SU1]: error(s) occured while creating or updating Archive synomym';
+                THROW;
+            END CATCH
+            -- Create Archive base table or Add missing column(s)
+            BEGIN TRY
+                IF ( (@archiveObjectId IS NULL AND @CreateTable = 1) OR @UpdateTable = 1) AND EXISTS( SELECT 1 FROM @listSourceColumns src WHERE [name] <> @clusteredName AND NOT EXISTS(SELECT 1 FROM @listArchiveColumns WHERE [name] = src.[name]) )
+                BEGIN
+                    -- Prepare CREATE/ALTER statement
+                    SELECT @sql = NULL;
+                    SELECT @sql = COALESCE(@sql + N', ' + q.[query], q.[query])
+                    FROM (
+                        SELECT TOP(1024) [query] = QUOTENAME(src.[name]) + N' ' + src.[datatype] + N' NULL' + CHAR(13) + CHAR(10) 
+                        FROM @listSourceColumns src WHERE [name] <> @clusteredName AND NOT EXISTS(SELECT 1 FROM @listArchiveColumns WHERE [name] = src.[name]) AND src.[datatype] <> N'timestamp' --AND @UpdateTable <> 1 AND @archiveObjectId IS NOT NULL
+                        ORDER BY Id ASC
+                    ) q([query]);
+                    SELECT @message = COALESCE(@message + N', ' + src.[name], src.[name]) FROM @listSourceColumns src WHERE NOT EXISTS(SELECT 1 FROM @listArchiveColumns WHERE [name] = src.[name]) ORDER BY Id ASC;
+
+                    IF @archiveObjectId IS NULL --> CREATE
+                    BEGIN
+                        INSERT INTO @json_errors([id], [severity], [message])
+                        SELECT 30, 10, N'Create table refered to by archive synonym: ' + QUOTENAME(@SynonymArchiveSchema) + N'.' + QUOTENAME(@SynonymArchiveName) + N' => '+ QUOTENAME(@archiveSchema) + N'.' + QUOTENAME(@archiveTable) + N' (' + @message + N')';
+                        SELECT @sql = N'CREATE TABLE ' + QUOTENAME(@archiveSchema) + '.' + QUOTENAME(@archiveTable) + '(' + QUOTENAME([name]) + ' ['+ datatype + '] NOT NULL CONSTRAINT [PK_' + @archiveSchema + '.'+ @archiveTable + '] PRIMARY KEY CLUSTERED ([Id] ASC)' + CHAR(13) + CHAR(10) + N', ' + @sql + N');'
+                        FROM @listSourceColumns WHERE [name] = @clusteredName;
+                    END
+                    ELSE --> ALTER
+                    BEGIN
+                        INSERT INTO @json_errors([id], [severity], [message])
+                        SELECT 30, 10, N'Add missing column(s) to table refered to by archive synonym: ' + QUOTENAME(@SynonymArchiveSchema) + N'.' + QUOTENAME(@SynonymArchiveName) + N' => '+ QUOTENAME(@archiveSchema) + N'.' + QUOTENAME(@archiveTable) + N' (' + @message + N')';
+                        SELECT @sql = N'ALTER TABLE '+ QUOTENAME(@archiveSchema) + '.' + QUOTENAME(@archiveTable) + ' ADD ' + @sql + N';';
+                    END
+
+                    -- Execute create/alter table
+                    EXEC sp_executesql @stmt = @sql;
+                END
+            END TRY
+            BEGIN CATCH
+                IF @@TRANCOUNT > 0 ROLLBACK;
+                SET @message = N'ERROR[SU2]: error(s) occured while creating or updating source table';
+                THROW;
+            END CATCH
+            SET @message = NULL;
+            IF @@TRANCOUNT > 0 COMMIT
+        END
+    END TRY
+    BEGIN CATCH
+        SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();
+        IF @@TRANCOUNT > 0 ROLLBACK;
+    END CATCH
+
+--    SELECT TOP(100) 'message'= 'output', [Message] = LEFT([message], 4000), [Severity] = [severity], [State] = 1 FROM @json_errors ORDER BY [id] ASC
+    -- Check / Set @IsValid flag
+    SET @IsValid = IIF(NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10) AND @ERROR_NUMBER IS NULL AND @message IS NULL, 1, 0);
+
+    SET @Messages = --ISNULL(
+    ( 
+        SELECT [Procedure] = QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')), [Message], [Severity], [State] 
+        FROM (
+            SELECT [Message], [Severity], [State] FROM (
+                SELECT TOP(100) [Message] = LEFT([message], 4000), [Severity] = [severity], [State] = 1 FROM @json_errors ORDER BY [id] ASC
+            ) err
+            UNION ALL SELECT N'ERROR: ' + @ERROR_MESSAGE, 16, 1 WHERE @ERROR_MESSAGE IS NOT NULL
+            UNION ALL SELECT @message, 16, 1 WHERE @message IS NOT NULL
+        ) jsn
+        FOR JSON PATH)
+    --    , N'[]')
+    ;
+    RETURN 0;
+END
+GO
+
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+SET NOCOUNT ON;
+GO
+
+----------------------------------------------------------------------------------------------------
+-- DROP PROCEDURE [Maintenance].[SetSourceTable]
+----------------------------------------------------------------------------------------------------
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[SetSourceTable]') AND type in (N'P'))
+BEGIN
+    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[SetSourceTable] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[SetSourceTable]';
+END
+ELSE PRINT '  = PROCEDURE [Maintenance].[SetSourceTable] already exists' 
+GO
+
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[SetSourceTable]'
+GO
+
+ALTER PROCEDURE [Maintenance].[SetSourceTable]
+----------------------------------------------------------------------------------------------------
+-- ### [Object]: PROCEDURE [Maintenance].[SetSourceTable]
+-- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetSourceTable.sql
+-- ### [Hash]: dc39c27 [SHA256-45AC573DF06F2BF3CECAB5846176D1BE55C217062136931AF84831AA441EE4EF]
+-- ### [Docs]: https://???.???
+-- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
+-- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
+-- !!! ~~~~~~~~~ SQL Server >= 2016 SP1
+----------------------------------------------------------------------------------------------------
+    @SynonymName nvarchar(256)
+    , @SynonymSchema nvarchar(256)
+	, @SourceTableFullParts nvarchar(250) = NULL
+    , @SourceExpectedColumns nvarchar(MAX) = NULL
+    , @CreateOrUpdateSynonym bit = 0
+    , @Columns nvarchar(MAX) = NULL OUTPUT
+    , @IsValid bit = 0 OUTPUT
+    , @Messages nvarchar(MAX) OUTPUT
+AS
+BEGIN
+    BEGIN TRY 
+        SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+		SET LOCK_TIMEOUT 5000;
+        SET ARITHABORT ON;
+        SET NOCOUNT ON;
+        SET NUMERIC_ROUNDABORT OFF;
+
+        ----------------------------------------------------------------------------------------------------
+        -- ASync Delete Variables
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @sourceTable nvarchar(256);
+        DECLARE @sourceTable4Parts nvarchar(256);
+        DECLARE @paramsSourceTableChecks nvarchar(MAX) = N'@Message nvarchar(MAX) OUTPUT, @Columns nvarchar(MAX) OUTPUT';
+        DECLARE @stmtSourceTableChecks nvarchar(MAX) = N'';
+        DECLARE @sourceJsonColumns nvarchar(MAX);
+        DECLARE @expectedSourceColumns nvarchar(MAX)
+        ----------------------------------------------------------------------------------------------------
+        -- Misc      
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @sql nvarchar(max);
+        ----------------------------------------------------------------------------------------------------      
+        -- Message / Error Handling
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @message nvarchar(MAX);
+        DECLARE @ERROR_NUMBER INT, @ERROR_SEVERITY INT, @ERROR_STATE INT, @ERROR_PROCEDURE NVARCHAR(126), @ERROR_LINE INT, @ERROR_MESSAGE NVARCHAR(2048);
+        DECLARE @space tinyint = 2;
+        DECLARE @tab tinyint = 0;
+        DECLARE @json_errors TABLE([id] tinyint NOT NULL, [severity] int NOT NULL, [message] nvarchar(MAX) NOT NULL);
+
+        ----------------------------------------------------------------------------------------------------      
+        -- Checks Synonyms and Tables
+        ----------------------------------------------------------------------------------------------------
+        -- Check Missing Synonym
+        BEGIN TRY
+            -- Synonym for Source table
+            SELECT @sourceTable = ISNULL(LTRIM(RTRIM(@SourceTableFullParts)), N'');
+            SELECT @sourceTable4Parts = ISNULL(QUOTENAME(LTRIM(RTRIM(PARSENAME(@sourceTable, 4)))) + N'.', N'') + ISNULL(QUOTENAME(LTRIM(RTRIM(PARSENAME(@sourceTable, 3)))) + N'.', N'') + ISNULL(QUOTENAME(LTRIM(RTRIM(PARSENAME(@sourceTable, 2)))) + N'.', N'') + ISNULL(QUOTENAME(LTRIM(RTRIM(PARSENAME(@sourceTable, 1)))), N'');
+
+            INSERT INTO @json_errors([id], [severity], [message]) 
+            SELECT 0, 16, N'ERROR[SS1]: Synonym ' + QUOTENAME(@synonymSchema) + N'.' + QUOTENAME(@synonymName) + N' not found and @SourceTableFullParts not provided' WHERE NOT EXISTS(SELECT 1 FROM sys.synonyms WHERE [name] = @synonymName AND schema_id = SCHEMA_ID(@synonymSchema)) AND @sourceTable = N''
+            UNION ALL SELECT 1, 16, N'ERROR[SS2]: Synonym ' + QUOTENAME(@synonymSchema) + N'.' + QUOTENAME(@synonymName) + N' refers to an invalid @SourceTableFullParts''s name' WHERE @sourceTable <> N'' AND @sourceTable4Parts = N''
+            UNION ALL SELECT 2, 16, N'ERROR[SS3]: Synonym ' + QUOTENAME(@synonymSchema) + N'.' + QUOTENAME(@synonymName) + N' not found and @CreateSynonym not enabled' WHERE NOT EXISTS(SELECT 1 FROM sys.synonyms WHERE [name] = @synonymName AND schema_id = SCHEMA_ID(@synonymSchema)) AND @sourceTable <> N'' AND @sourceTable4Parts <> N'' AND @CreateOrUpdateSynonym <> 1
+            UNION ALL SELECT 3, 16, N'ERROR[SS4]: Synonym ' + QUOTENAME(@synonymSchema) + N'.' + QUOTENAME(@synonymName) + N' must refers to a 2 (or more) parts name with at least a schema and table name: [schema_name].[table_name]' WHERE @sourceTable <> N'' AND @sourceTable4Parts <> N'' AND PARSENAME(@sourceTable, 2) IS NULL
+            ;
+        END TRY
+        BEGIN CATCH;
+            IF @@TRANCOUNT > 0 ROLLBACK;
+            SET @message = N'ERROR[SS0]: error(s) occured while checking synonym';
+            THROW;
+        END CATCH; 
+
+        -- Check Source Table
+        IF NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10)
+        BEGIN
+            BEGIN TRY
+                SELECT @sourceTable4Parts = base_object_name FROM sys.synonyms WHERE [name] = @synonymName AND schema_id = SCHEMA_ID(@synonymSchema) AND (@sourceTable4Parts IS NULL OR @sourceTable4Parts = N'');
+
+                SELECT @stmtSourceTableChecks = N'
+                DROP TABLE IF EXISTS #tempASTable;
+                BEGIN TRY
+                    SELECT TOP(0) * INTO #tempSourceTableCheck FROM ' + @sourceTable4Parts + N';
+
+                    SELECT @Columns = (
+                        SELECT col.column_id, [column] = col.name, [type] = tpe.name, col.max_length, col.precision, col.scale
+                        FROM tempdb.sys.columns AS col
+                        INNER JOIN tempdb.sys.types AS tpe ON col.system_type_id = tpe.system_type_id AND tpe.system_type_id = tpe.user_type_id
+                        WHERE [object_id] = OBJECT_ID(N''tempdb.dbo.#tempSourceTableCheck'') AND tpe.[name] <> N''timestamp''
+                        FOR JSON PATH
+                    );
+                END TRY
+                BEGIN CATCH
+                    THROW;
+                END CATCH
+                ';
+                -- retrieve Source columns
+                EXEC sp_executesql @stmt = @stmtSourceTableChecks, @params = @paramsSourceTableChecks, @Message = NULL, @Columns = @sourceJsonColumns OUTPUT;
+
+                -- Set default columns if not provided
+                SELECT @expectedSourceColumns = ISNULL(LTRIM(RTRIM(@sourceExpectedColumns)), N'[{"column":"Id","type":"bigint"}]' );
+                -- check columns
+                WITH exp([name], [type], [max_length]) AS (
+                    SELECT [name], [type], [max_length]/*, [precision], [scale]*/ FROM OPENJSON(@expectedSourceColumns, N'$')
+                    WITH ([name] nvarchar(128) N'$.column', [type] nvarchar(128), max_length smallint/*, precision tinyint, scale tinyint*/)                
+                ), col([name], [type], [max_length]) AS(
+                    SELECT [name], [type], [max_length] FROM OPENJSON(@sourceJsonColumns, N'$')
+                    WITH ([name] nvarchar(128) N'$.column', [type] nvarchar(128), max_length smallint)
+                )
+                INSERT INTO @json_errors([id], [severity], [message])
+                SELECT 20, 16, N'ERROR[TS1]: No column retrieved from  Source table ' + @sourceTable4Parts + N' refered by synonym ' + QUOTENAME(@synonymSchema) + N'.' + QUOTENAME(@synonymName) WHERE NOT EXISTS(SELECT 1 FROM col)
+                UNION ALL SELECT 20, 16, N'ERROR[TS2]: Expected column ' + QUOTENAME(x.[name]) + N' not found in  Source table ' + @sourceTable4Parts + N' refered by synonym ' + QUOTENAME(@synonymSchema) + N'.' + QUOTENAME(@synonymName) FROM exp x WHERE NOT EXISTS(SELECT 1 FROM col WHERE [name] = x.[name])
+                UNION ALL SELECT 20, 16, N'ERROR[TS3]: Invalid type '+ QUOTENAME(c.[type]) + N' for column ' + QUOTENAME(x.[name]) + N' in  Source table ' + @sourceTable4Parts + N' refered by synonym ' + QUOTENAME(@synonymSchema) + N'.' + QUOTENAME(@synonymName) + N' (' + QUOTENAME(x.[type]) + N' expected)' FROM exp x INNER JOIN col c ON x.[name] = c.[name] AND x.[type] <> c.[type]
+                ;
+                SET @Columns = @sourceJsonColumns;
+            END TRY
+            BEGIN CATCH
+                SET @message = N'ERROR[TS0]: error(s) occured while checking Source table';
+                THROW;
+            END CATCH
+        END    
+        ----------------------------------------------------------------------------------------------------      
+        -- Create or Update Synonym(s) / Table / Columns
+        ----------------------------------------------------------------------------------------------------
+        IF NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10)
+        BEGIN
+            -- Start Transaction for all upcoming schema changes
+            BEGIN TRAN
+            -- Create synonym if missing or outdated
+            BEGIN TRY
+                IF NOT EXISTS (SELECT 1 FROM sys.synonyms WHERE [name] = @synonymName AND schema_id = SCHEMA_ID(@synonymSchema) AND base_object_name = @sourceTable4Parts) AND @sourceTable4Parts <> N'' AND @CreateOrUpdateSynonym = 1
+                BEGIN
+                    SET @sql = NULL;
+                    INSERT INTO @json_errors([id], [severity], [message]) SELECT 0, 10, N'Create or alter Synonym '+ QUOTENAME(@synonymSchema) + N'.' + QUOTENAME(@synonymName) + ' with base object ' + @sourceTable4Parts;
+                    SELECT @sql = N'DROP SYNONYM ' + QUOTENAME(@synonymSchema) + N'.' + QUOTENAME(@synonymName) + N';' FROM sys.synonyms WHERE [name] = @synonymName AND schema_id = SCHEMA_ID(@synonymSchema);
+                    SELECT @sql = ISNULL(@sql, N'') + N'CREATE SYNONYM ' + QUOTENAME(@synonymSchema) + N'.' + QUOTENAME(@synonymName) + N' FOR ' + @sourceTable4Parts + N';';
+                    EXEC sp_executesql @statement = @sql;
+                END
+            END TRY
+            BEGIN CATCH
+                SET @message = N'ERROR[SU0]: error(s) occured while creating or updating source synomym';
+                THROW;
+            END CATCH
+            SET @message = NULL;
+            IF @@TRANCOUNT > 0 COMMIT
+        END
+    END TRY
+    BEGIN CATCH
+        SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();
+        IF @@TRANCOUNT > 0 ROLLBACK;
+    END CATCH
+
+--    SELECT TOP(100) 'message'= 'output', [Message] = LEFT([message], 4000), [Severity] = [severity], [State] = 1 FROM @json_errors ORDER BY [id] ASC
+    -- Check / Set @IsValid flag
+    SET @IsValid = IIF(NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10) AND @ERROR_NUMBER IS NULL AND @message IS NULL, 1, 0);
+
+    SET @Messages = --ISNULL(
+    ( 
+        SELECT [Procedure] = QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')), [Message], [Severity], [State] 
+        FROM (
+            SELECT [Message], [Severity], [State] FROM (
+                SELECT TOP(100) [Message] = LEFT([message], 4000), [Severity] = [severity], [State] = 1 FROM @json_errors ORDER BY [id] ASC
+            ) err
+            UNION ALL SELECT N'ERROR: ' + @ERROR_MESSAGE, 16, 1 WHERE @ERROR_MESSAGE IS NOT NULL
+            UNION ALL SELECT @message, 16, 1 WHERE @message IS NOT NULL
+        ) jsn
+        FOR JSON PATH)
+    --    , N'[]')
+    ;
+    RETURN 0;
+END
+GO
+
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+SET NOCOUNT ON;
+GO
+
+----------------------------------------------------------------------------------------------------
+-- DROP PROCEDURE [Maintenance].[SetSourceTableTenants]
+----------------------------------------------------------------------------------------------------
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[SetSourceTableTenants]') AND type in (N'P'))
+BEGIN
+    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[SetSourceTableTenants] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[SetSourceTableTenants]';
+END
+ELSE PRINT '  = PROCEDURE [Maintenance].[SetSourceTableTenants] already exists' 
+GO
+
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[SetSourceTableTenants]'
+GO
+
+ALTER PROCEDURE [Maintenance].[SetSourceTableTenants]
+----------------------------------------------------------------------------------------------------
+-- ### [Object]: PROCEDURE [Maintenance].[SetSourceTableTenants]
+-- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetSourceTableTenants.sql
+-- ### [Hash]: dc39c27 [SHA256-74B9F309996353A8903409232EB175195D9750AAFE7F4EA80EBD411C921E8007]
+-- ### [Docs]: https://???.???
+-- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
+-- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
+-- !!! ~~~~~~~~~ SQL Server >= 2016 SP1
+----------------------------------------------------------------------------------------------------
+	@SourceTableFullParts nvarchar(256) = NULL
+    , @CreateOrUpdateSynonym bit = 0
+    , @Columns nvarchar(MAX) = NULL OUTPUT
+    , @IsValid bit = 0 OUTPUT
+    , @Messages nvarchar(MAX) = NULL OUTPUT
+AS
+BEGIN
+    BEGIN TRY 
+        SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+		SET LOCK_TIMEOUT 5000;
+        SET ARITHABORT ON;
+        SET NOCOUNT ON;
+        SET NUMERIC_ROUNDABORT OFF;
+
+        ----------------------------------------------------------------------------------------------------
+        -- Settings
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @synonymSourceName nvarchar(256) = N'Synonym_Source_Tenants';
+        DECLARE @synonymSourceSchema nvarchar(256) = N'Maintenance';
+        DECLARE @clusteredName nvarchar(128) = N'Id';
+        ----------------------------------------------------------------------------------------------------      
+        -- Message / Error Handling
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @message nvarchar(MAX);
+        DECLARE @ERROR_NUMBER INT, @ERROR_SEVERITY INT, @ERROR_STATE INT, @ERROR_PROCEDURE NVARCHAR(126), @ERROR_LINE INT, @ERROR_MESSAGE NVARCHAR(2048) ;
+
+        ----------------------------------------------------------------------------------------------------
+        -- Call Main Checks Procedure      
+        ----------------------------------------------------------------------------------------------------
+        EXEC [Maintenance].[SetSourceTable]
+            @SynonymName = @synonymSourceName
+            , @SynonymSchema = @synonymSourceSchema
+            , @SourceTableFullParts = @SourceTableFullParts
+            , @SourceExpectedColumns = N'[{"column":"Id","type":"int"}, {"column":"Key","type":"nvarchar"}, {"column":"Name","type":"nvarchar"}, {"column":"IsDeleted","type":"bit"}]'
+            , @CreateOrUpdateSynonym = @CreateOrUpdateSynonym
+            , @Columns = @Columns OUTPUT
+            , @IsValid = @IsValid OUTPUT
+            , @Messages = @Messages OUTPUT
+        ;
+    END TRY
+    BEGIN CATCH
+        SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();
+        SET @message = N'ERROR[CH0]: error(s) occured while checking source Tenants table';
+        SET @Messages = 
+        ( 
+            SELECT [Procedure] = QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')), [Message], [Severity], [State] 
+            FROM (
+                SELECT [Message]  = N'ERROR: ' + @ERROR_MESSAGE, [Severity] = 16, [State] = 1 WHERE @ERROR_MESSAGE IS NOT NULL
+                UNION ALL SELECT @message, 16, 1 WHERE @message IS NOT NULL
+            ) jsn
+            FOR JSON PATH
+        );
+        SET @IsValid = 0;
+    END CATCH
+    RETURN 0;
+END
+GO
+
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+SET NOCOUNT ON;
+GO
+
+----------------------------------------------------------------------------------------------------
 -- DROP PROCEDURE [Maintenance].[ValidateArchiveObjectsAuditLogs]
 ----------------------------------------------------------------------------------------------------
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[ValidateArchiveObjectsAuditLogs]') AND type in (N'P'))
@@ -1088,6 +1679,482 @@ BEGIN
     BEGIN CATCH
         SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();    
         SET @message = N'ERROR[CH0]: error(s) occured while checking source and archive Audit Logs objects';
+        SET @Messages = 
+        ( 
+            SELECT [Procedure] = QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')), [Message], [Severity], [State] 
+            FROM (
+                SELECT [Message]  = N'ERROR: ' + @ERROR_MESSAGE, [Severity] = 16, [State] = 1 WHERE @ERROR_MESSAGE IS NOT NULL
+                UNION ALL SELECT @message, 16, 1 WHERE @message IS NOT NULL
+            ) jsn
+            FOR JSON PATH
+        );
+        SET @IsValid = 0;
+    END CATCH
+    RETURN 0;
+END
+GO
+
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+SET NOCOUNT ON;
+GO
+
+----------------------------------------------------------------------------------------------------
+-- DROP PROCEDURE [Maintenance].[SetSourceTableAuditLogs]
+----------------------------------------------------------------------------------------------------
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[SetSourceTableAuditLogs]') AND type in (N'P'))
+BEGIN
+    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[SetSourceTableAuditLogs] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[SetSourceTableAuditLogs]';
+END
+ELSE PRINT '  = PROCEDURE [Maintenance].[SetSourceTableAuditLogs] already exists' 
+GO
+
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[SetSourceTableAuditLogs]'
+GO
+
+ALTER PROCEDURE [Maintenance].[SetSourceTableAuditLogs]
+----------------------------------------------------------------------------------------------------
+-- ### [Object]: PROCEDURE [Maintenance].[SetSourceTableAuditLogs]
+-- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.SetSourceTableAuditLogs.sql
+-- ### [Hash]: dc39c27 [SHA256-68195482960B9EC7DDB77FEC57C8FCFAB8E2BED85EF7B84ACC4E5C0A638E5F37]
+-- ### [Docs]: https://???.???
+-- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
+-- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
+-- !!! ~~~~~~~~~ SQL Server >= 2016 SP1
+----------------------------------------------------------------------------------------------------
+	@SourceTableFullParts nvarchar(256) = NULL
+    , @CreateOrUpdateSynonym bit = 0
+    , @Columns nvarchar(MAX) = NULL OUTPUT
+    , @IsValid bit = 0 OUTPUT
+    , @Messages nvarchar(MAX) = NULL OUTPUT
+AS
+BEGIN
+    BEGIN TRY 
+        SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+		SET LOCK_TIMEOUT 5000;
+        SET ARITHABORT ON;
+        SET NOCOUNT ON;
+        SET NUMERIC_ROUNDABORT OFF;
+
+        ----------------------------------------------------------------------------------------------------
+        -- Settings
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @synonymSourceName nvarchar(256) = N'Synonym_Source_AuditLogs';
+        DECLARE @synonymSourceSchema nvarchar(256) = N'Maintenance';
+        DECLARE @clusteredName nvarchar(128) = N'Id';
+        ----------------------------------------------------------------------------------------------------      
+        -- Message / Error Handling
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @message nvarchar(MAX);
+        DECLARE @ERROR_NUMBER INT, @ERROR_SEVERITY INT, @ERROR_STATE INT, @ERROR_PROCEDURE NVARCHAR(126), @ERROR_LINE INT, @ERROR_MESSAGE NVARCHAR(2048) ;
+
+        ----------------------------------------------------------------------------------------------------
+        -- Call Main Checks Procedure      
+        ----------------------------------------------------------------------------------------------------
+        EXEC [Maintenance].[SetSourceTable]
+            @SynonymName = @synonymSourceName
+            , @SynonymSchema = @synonymSourceSchema
+            , @SourceTableFullParts = @SourceTableFullParts
+            , @SourceExpectedColumns = N'[{"column":"Id","type":"bigint"}, {"column":"TenantId","type":"int"}, {"column":"ExecutionTime","type":"datetime"}]'
+            , @CreateOrUpdateSynonym = @CreateOrUpdateSynonym
+            , @Columns = @Columns OUTPUT
+            , @IsValid = @IsValid OUTPUT
+            , @Messages = @Messages OUTPUT
+        ;
+    END TRY
+    BEGIN CATCH
+        SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();
+        SET @message = N'ERROR[CH0]: error(s) occured while checking source AuditLogs table';
+        SET @Messages = 
+        ( 
+            SELECT [Procedure] = QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')), [Message], [Severity], [State] 
+            FROM (
+                SELECT [Message]  = N'ERROR: ' + @ERROR_MESSAGE, [Severity] = 16, [State] = 1 WHERE @ERROR_MESSAGE IS NOT NULL
+                UNION ALL SELECT @message, 16, 1 WHERE @message IS NOT NULL
+            ) jsn
+            FOR JSON PATH
+        );
+        SET @IsValid = 0;
+    END CATCH
+    RETURN 0;
+END
+GO
+
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+SET NOCOUNT ON;
+GO
+
+----------------------------------------------------------------------------------------------------
+-- DROP PROCEDURE [Maintenance].[SetSourceTableAuditLogEntities]
+----------------------------------------------------------------------------------------------------
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[SetSourceTableAuditLogEntities]') AND type in (N'P'))
+BEGIN
+    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[SetSourceTableAuditLogEntities] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[SetSourceTableAuditLogEntities]';
+END
+ELSE PRINT '  = PROCEDURE [Maintenance].[SetSourceTableAuditLogEntities] already exists' 
+GO
+
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[SetSourceTableAuditLogEntities]'
+GO
+
+ALTER PROCEDURE [Maintenance].[SetSourceTableAuditLogEntities]
+----------------------------------------------------------------------------------------------------
+-- ### [Object]: PROCEDURE [Maintenance].[SetSourceTableAuditLogEntities]
+-- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.SetSourceTableAuditLogEntities.sql
+-- ### [Hash]: dc39c27 [SHA256-E0DADE9C7D517591E323DA9C730AE914591232234358A0C6B7515899FDACEE4E]
+-- ### [Docs]: https://???.???
+-- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
+-- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
+-- !!! ~~~~~~~~~ SQL Server >= 2016 SP1
+----------------------------------------------------------------------------------------------------
+	@SourceTableFullParts nvarchar(256) = NULL
+    , @CreateOrUpdateSynonym bit = 0
+    , @Columns nvarchar(MAX) = NULL OUTPUT
+    , @IsValid bit = 0 OUTPUT
+    , @Messages nvarchar(MAX) = NULL OUTPUT
+AS
+BEGIN
+    BEGIN TRY 
+        SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+		SET LOCK_TIMEOUT 5000;
+        SET ARITHABORT ON;
+        SET NOCOUNT ON;
+        SET NUMERIC_ROUNDABORT OFF;
+
+        ----------------------------------------------------------------------------------------------------
+        -- Settings
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @synonymSourceName nvarchar(256) = N'Synonym_Source_AuditLogEntities';
+        DECLARE @synonymSourceSchema nvarchar(256) = N'Maintenance';
+        DECLARE @clusteredName nvarchar(128) = N'Id';
+        ----------------------------------------------------------------------------------------------------      
+        -- Message / Error Handling
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @message nvarchar(MAX);
+        DECLARE @ERROR_NUMBER INT, @ERROR_SEVERITY INT, @ERROR_STATE INT, @ERROR_PROCEDURE NVARCHAR(126), @ERROR_LINE INT, @ERROR_MESSAGE NVARCHAR(2048) ;
+
+        ----------------------------------------------------------------------------------------------------
+        -- Call Main Checks Procedure      
+        ----------------------------------------------------------------------------------------------------
+        EXEC [Maintenance].[SetSourceTable]
+            @SynonymName = @synonymSourceName
+            , @SynonymSchema = @synonymSourceSchema
+            , @SourceTableFullParts = @SourceTableFullParts
+            , @SourceExpectedColumns = N'[{"column":"Id","type":"bigint"}, {"column":"TenantId","type":"int"}, {"column":"EntityId","type":"bigint"}, {"column":"AuditLogId","type":"bigint"}]'
+            , @CreateOrUpdateSynonym = @CreateOrUpdateSynonym
+            , @Columns = @Columns OUTPUT
+            , @IsValid = @IsValid OUTPUT
+            , @Messages = @Messages OUTPUT
+        ;
+    END TRY
+    BEGIN CATCH
+        SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();
+        SET @message = N'ERROR[CH0]: error(s) occured while checking source AuditLogEntities table';
+        SET @Messages = 
+        ( 
+            SELECT [Procedure] = QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')), [Message], [Severity], [State] 
+            FROM (
+                SELECT [Message]  = N'ERROR: ' + @ERROR_MESSAGE, [Severity] = 16, [State] = 1 WHERE @ERROR_MESSAGE IS NOT NULL
+                UNION ALL SELECT @message, 16, 1 WHERE @message IS NOT NULL
+            ) jsn
+            FOR JSON PATH
+        );
+        SET @IsValid = 0;
+    END CATCH
+    RETURN 0;
+END
+GO
+
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+SET NOCOUNT ON;
+GO
+
+----------------------------------------------------------------------------------------------------
+-- DROP PROCEDURE [Maintenance].[SetSourceTableASyncStatus_AuditLogs]
+----------------------------------------------------------------------------------------------------
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[SetSourceTableASyncStatus_AuditLogs]') AND type in (N'P'))
+BEGIN
+    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[SetSourceTableASyncStatus_AuditLogs] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[SetSourceTableASyncStatus_AuditLogs]';
+END
+ELSE PRINT '  = PROCEDURE [Maintenance].[SetSourceTableASyncStatus_AuditLogs] already exists' 
+GO
+
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[SetSourceTableASyncStatus_AuditLogs]'
+GO
+
+ALTER PROCEDURE [Maintenance].[SetSourceTableASyncStatus_AuditLogs]
+----------------------------------------------------------------------------------------------------
+-- ### [Object]: PROCEDURE [Maintenance].[SetSourceTableASyncStatus_AuditLogs]
+-- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.SetSourceTableASyncStatus_AuditLogs.sql
+-- ### [Hash]: dc39c27 [SHA256-E7F20C7C862BCA46C924AB1DDB2AABFEA59B786F9940CC40835B4966EDFFFE09]
+-- ### [Docs]: https://???.???
+-- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
+-- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
+-- !!! ~~~~~~~~~ SQL Server >= 2016 SP1
+----------------------------------------------------------------------------------------------------
+	@SourceTableFullParts nvarchar(256) = NULL
+    , @CreateOrUpdateSynonym bit = 0
+    , @Columns nvarchar(MAX) = NULL OUTPUT
+    , @IsValid bit = 0 OUTPUT
+    , @Messages nvarchar(MAX) = NULL OUTPUT
+AS
+BEGIN
+    BEGIN TRY 
+        SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+		SET LOCK_TIMEOUT 5000;
+        SET ARITHABORT ON;
+        SET NOCOUNT ON;
+        SET NUMERIC_ROUNDABORT OFF;
+
+        ----------------------------------------------------------------------------------------------------
+        -- Settings
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @synonymSourceName nvarchar(256) = N'Synonym_ASyncStatus_AuditLogs';
+        DECLARE @synonymSourceSchema nvarchar(256) = N'Maintenance';
+        DECLARE @clusteredName nvarchar(128) = N'Id';
+        ----------------------------------------------------------------------------------------------------      
+        -- Message / Error Handling
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @message nvarchar(MAX);
+        DECLARE @ERROR_NUMBER INT, @ERROR_SEVERITY INT, @ERROR_STATE INT, @ERROR_PROCEDURE NVARCHAR(126), @ERROR_LINE INT, @ERROR_MESSAGE NVARCHAR(2048) ;
+
+        ----------------------------------------------------------------------------------------------------
+        -- Call Main Checks Procedure      
+        ----------------------------------------------------------------------------------------------------
+        EXEC [Maintenance].[SetSourceTable]
+            @SynonymName = @synonymSourceName
+            , @SynonymSchema = @synonymSourceSchema
+            , @SourceTableFullParts = @SourceTableFullParts
+            , @SourceExpectedColumns = N'[{"column":"SyncId","type":"bigint"}, {"column":"IsDeleted","type":"bit"}]'
+            , @CreateOrUpdateSynonym = @CreateOrUpdateSynonym
+            , @Columns = @Columns OUTPUT
+            , @IsValid = @IsValid OUTPUT
+            , @Messages = @Messages OUTPUT
+        ;
+    END TRY
+    BEGIN CATCH
+        SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();
+        SET @message = N'ERROR[CH0]: error(s) occured while checking source ASyncStatus_AuditLogs table';
+        SET @Messages = 
+        ( 
+            SELECT [Procedure] = QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')), [Message], [Severity], [State] 
+            FROM (
+                SELECT [Message]  = N'ERROR: ' + @ERROR_MESSAGE, [Severity] = 16, [State] = 1 WHERE @ERROR_MESSAGE IS NOT NULL
+                UNION ALL SELECT @message, 16, 1 WHERE @message IS NOT NULL
+            ) jsn
+            FOR JSON PATH
+        );
+        SET @IsValid = 0;
+    END CATCH
+    RETURN 0;
+END
+GO
+
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+SET NOCOUNT ON;
+GO
+
+----------------------------------------------------------------------------------------------------
+-- DROP PROCEDURE [Maintenance].[SetArchiveTableAuditLogs]
+----------------------------------------------------------------------------------------------------
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[SetArchiveTableAuditLogs]') AND type in (N'P'))
+BEGIN
+    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[SetArchiveTableAuditLogs] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[SetArchiveTableAuditLogs]';
+END
+ELSE PRINT '  = PROCEDURE [Maintenance].[SetArchiveTableAuditLogs] already exists' 
+GO
+
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[SetArchiveTableAuditLogs]'
+GO
+
+ALTER PROCEDURE [Maintenance].[SetArchiveTableAuditLogs]
+----------------------------------------------------------------------------------------------------
+-- ### [Object]: PROCEDURE [Maintenance].[SetArchiveTableAuditLogs]
+-- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.SetArchiveTableAuditLogs.sql
+-- ### [Hash]: dc39c27 [SHA256-A6036B2D88BE8440963DCCF100EE8AB4B5FD346243A11B3952AC36F21A81E3A7]
+-- ### [Docs]: https://???.???
+-- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
+-- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
+-- !!! ~~~~~~~~~ SQL Server >= 2016 SP1
+----------------------------------------------------------------------------------------------------
+	@ArchiveTableName nvarchar(250) = NULL
+	, @ArchiveTableSchema nvarchar(250) = NULL
+    , @ExcludeColumns nvarchar(MAX) = NULL
+    , @IgnoreMissingColumns nvarchar(MAX) = NULL
+    , @CreateOrUpdateSynonym bit = 1
+    , @CreateTable bit = 1
+    , @UpdateTable bit = 1
+    , @RemoveIdentity bit = 0
+    , @SourceColumns nvarchar(MAX) = NULL OUTPUT
+    , @IsValid bit = 0 OUTPUT
+    , @Messages nvarchar(MAX) = NULL OUTPUT
+AS
+BEGIN
+    BEGIN TRY 
+        SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+		SET LOCK_TIMEOUT 5000;
+        SET ARITHABORT ON;
+        SET NOCOUNT ON;
+        SET NUMERIC_ROUNDABORT OFF;
+
+        ----------------------------------------------------------------------------------------------------
+        -- Settings
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @synonymSourceName nvarchar(256) = N'Synonym_Source_AuditLogs';
+        DECLARE @synonymSourceSchema nvarchar(256) = N'Maintenance';
+        DECLARE @synonymArchiveName nvarchar(256) = N'Synonym_Archive_AuditLogs';
+        DECLARE @synonymArchiveSchema nvarchar(256) = N'Maintenance';
+        DECLARE @clusteredName nvarchar(128) = N'Id';
+        ----------------------------------------------------------------------------------------------------      
+        -- Message / Error Handling
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @message nvarchar(MAX);
+        DECLARE @ERROR_NUMBER INT, @ERROR_SEVERITY INT, @ERROR_STATE INT, @ERROR_PROCEDURE NVARCHAR(126), @ERROR_LINE INT, @ERROR_MESSAGE NVARCHAR(2048) ;
+
+        ----------------------------------------------------------------------------------------------------
+        -- Call Main Checks Procedure      
+        ----------------------------------------------------------------------------------------------------
+        EXEC [Maintenance].[SetArchiveTable]
+            @SynonymSourceName = @synonymSourceName, @SynonymSourceSchema = @synonymSourceSchema
+            , @SynonymArchiveName = @synonymArchiveName, @SynonymArchiveSchema = @synonymArchiveSchema
+            , @ArchiveTableName = @ArchiveTableName, @ArchiveTableSchema = @ArchiveTableSchema
+            , @ClusteredName = @clusteredName
+            , @ExcludeColumns = @ExcludeColumns
+            , @IgnoreMissingColumns = @IgnoreMissingColumns
+            , @CreateOrUpdateSynonym = @CreateOrUpdateSynonym
+            , @CreateTable = @CreateTable
+            , @UpdateTable = @UpdateTable
+            , @RemoveIdentity = @RemoveIdentity
+            , @SourceColumns = @SourceColumns OUTPUT
+            , @IsValid = @IsValid OUTPUT
+            , @Messages = @messages OUTPUT
+        ;
+    END TRY
+    BEGIN CATCH
+        SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();
+        SET @message = N'ERROR[CH0]: error(s) occured while checking archive AuditLogs objects';
+        SET @Messages = 
+        ( 
+            SELECT [Procedure] = QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')), [Message], [Severity], [State] 
+            FROM (
+                SELECT [Message]  = N'ERROR: ' + @ERROR_MESSAGE, [Severity] = 16, [State] = 1 WHERE @ERROR_MESSAGE IS NOT NULL
+                UNION ALL SELECT @message, 16, 1 WHERE @message IS NOT NULL
+            ) jsn
+            FOR JSON PATH
+        );
+        SET @IsValid = 0;
+    END CATCH
+    RETURN 0;
+END
+GO
+
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+SET NOCOUNT ON;
+GO
+
+----------------------------------------------------------------------------------------------------
+-- DROP PROCEDURE [Maintenance].[SetArchiveTableAuditLogEntities]
+----------------------------------------------------------------------------------------------------
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[SetArchiveTableAuditLogEntities]') AND type in (N'P'))
+BEGIN
+    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[SetArchiveTableAuditLogEntities] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[SetArchiveTableAuditLogEntities]';
+END
+ELSE PRINT '  = PROCEDURE [Maintenance].[SetArchiveTableAuditLogEntities] already exists' 
+GO
+
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[SetArchiveTableAuditLogEntities]'
+GO
+
+ALTER PROCEDURE [Maintenance].[SetArchiveTableAuditLogEntities]
+----------------------------------------------------------------------------------------------------
+-- ### [Object]: PROCEDURE [Maintenance].[SetArchiveTableAuditLogEntities]
+-- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.SetArchiveTableAuditLogEntities.sql
+-- ### [Hash]: dc39c27 [SHA256-2615469AB692E220CAB24CF52A3B9ADAB5ED4CDAC939A0946A48227E38A06C2C]
+-- ### [Docs]: https://???.???
+-- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
+-- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
+-- !!! ~~~~~~~~~ SQL Server >= 2016 SP1
+----------------------------------------------------------------------------------------------------
+	@ArchiveTableName nvarchar(250) = NULL
+	, @ArchiveTableSchema nvarchar(250) = NULL
+    , @ExcludeColumns nvarchar(MAX) = NULL
+    , @IgnoreMissingColumns nvarchar(MAX) = NULL
+    , @CreateOrUpdateSynonym bit = 1
+    , @CreateTable bit = 1
+    , @UpdateTable bit = 1
+    , @RemoveIdentity bit = 0
+    , @SourceColumns nvarchar(MAX) = NULL OUTPUT
+    , @IsValid bit = 0 OUTPUT
+    , @Messages nvarchar(MAX) = NULL OUTPUT
+AS
+BEGIN
+    BEGIN TRY 
+        SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+		SET LOCK_TIMEOUT 5000;
+        SET ARITHABORT ON;
+        SET NOCOUNT ON;
+        SET NUMERIC_ROUNDABORT OFF;
+
+        ----------------------------------------------------------------------------------------------------
+        -- Settings
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @synonymSourceName nvarchar(256) = N'Synonym_Source_AuditLogEntities';
+        DECLARE @synonymSourceSchema nvarchar(256) = N'Maintenance';
+        DECLARE @synonymArchiveName nvarchar(256) = N'Synonym_Archive_AuditLogEntities';
+        DECLARE @synonymArchiveSchema nvarchar(256) = N'Maintenance';
+        DECLARE @clusteredName nvarchar(128) = N'Id';
+        ----------------------------------------------------------------------------------------------------      
+        -- Message / Error Handling
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @message nvarchar(MAX);
+        DECLARE @ERROR_NUMBER INT, @ERROR_SEVERITY INT, @ERROR_STATE INT, @ERROR_PROCEDURE NVARCHAR(126), @ERROR_LINE INT, @ERROR_MESSAGE NVARCHAR(2048) ;
+
+        ----------------------------------------------------------------------------------------------------
+        -- Call Main Checks Procedure      
+        ----------------------------------------------------------------------------------------------------
+        EXEC [Maintenance].[SetArchiveTable]
+            @SynonymSourceName = @synonymSourceName, @SynonymSourceSchema = @synonymSourceSchema
+            , @SynonymArchiveName = @synonymArchiveName, @SynonymArchiveSchema = @synonymArchiveSchema
+            , @ArchiveTableName = @ArchiveTableName, @ArchiveTableSchema = @ArchiveTableSchema
+            , @ClusteredName = @clusteredName
+            , @ExcludeColumns = @ExcludeColumns
+            , @IgnoreMissingColumns = @IgnoreMissingColumns
+            , @CreateOrUpdateSynonym = @CreateOrUpdateSynonym
+            , @CreateTable = @CreateTable
+            , @UpdateTable = @UpdateTable
+            , @RemoveIdentity = @RemoveIdentity
+            , @SourceColumns = @SourceColumns OUTPUT
+            , @IsValid = @IsValid OUTPUT
+            , @Messages = @messages OUTPUT
+        ;
+    END TRY
+    BEGIN CATCH
+        SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();
+        SET @message = N'ERROR[CH0]: error(s) occured while checking archive AuditLogEntities objects';
         SET @Messages = 
         ( 
             SELECT [Procedure] = QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')), [Message], [Severity], [State] 
@@ -3335,6 +4402,124 @@ BEGIN
 
     SET @returnValue = ISNULL(@returnValue, 255);
     IF @runId IS NOT NULL UPDATE [Maintenance].[Runs] SET [EndDate] = SYSDATETIME(), [ErrorStatus] = @returnValue WHERE Id = @runId;
+
+    ----------------------------------------------------------------------------------------------------
+    -- End
+    ----------------------------------------------------------------------------------------------------
+    RETURN @returnValue;
+END
+GO
+
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+SET NOCOUNT ON;
+GO
+
+----------------------------------------------------------------------------------------------------
+-- DROP PROCEDURE [Maintenance].[SimpleArchivingAuditLogs]
+----------------------------------------------------------------------------------------------------
+
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[SimpleArchivingAuditLogs]') AND type in (N'P'))
+BEGIN
+    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[SimpleArchivingAuditLogs] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[SimpleArchivingAuditLogs]';
+END
+ELSE PRINT '  = PROCEDURE [Maintenance].[SimpleArchivingAuditLogs] already exists' 
+GO
+
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[SimpleArchivingAuditLogs]'
+GO  
+
+ALTER PROCEDURE [Maintenance].[SimpleArchivingAuditLogs]
+----------------------------------------------------------------------------------------------------
+-- ### [Object]: PROCEDURE [Maintenance].[SimpleArchivingAuditLogs]
+-- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.SimpleArchivingAuditLogs.sql
+-- ### [Hash]: dc39c27 [SHA256-31F8AD4CC530F690E4F048B857B048641B833CAD1899E5AB7CDB7B68303EFDAD]
+-- ### [Docs]: https://???.???
+-- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
+-- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
+-- !!! ~~~~~~~~~ SQL Server >= 2016 SP1
+----------------------------------------------------------------------------------------------------
+    @RetentionDate datetime = NULL
+    , @RetentionDays int = NULL
+    , @RetentionHours int = NULL
+    , @RoundUpPreviousDay bit = 1
+    /* Row count settings */
+    , @RowsDeletedForEachLoop int = 10000 -- Don't go above 50.000 (min = 1000, Max = 100.000)
+    , @MaxConcurrentFilters int = NULL -- NULL or 0 = default value => number of filter in chronoligical order processed by a single batch
+    /* Loop Limits */
+    , @MaxRunMinutes int = NULL -- NULL or 0 = unlimited
+    , @MaxBatchesLoops int = NULL -- NULL or 0 - unlimited
+    /* Dry Run */
+--    , @DryRunOnly nvarchar(MAX) = NULL -- Y{es} or N{o} => Only Check Parameters (default if NULL = Y)
+    /* Delete settings */
+	, @SynchronousDeleteIfNoDelay bit = 1
+	, @IgnoreDeleteDelay bit = 1
+
+    /* Archive table(s) settings */
+    , @CreateArchiveTable nvarchar(MAX) = 1 -- Y{es} or N{o} => Archive table refered by Synonym is create when missing (default if NULL or empty = N)
+    , @UpdateArchiveTable nvarchar(MAX) = 1 -- Y{es} or N{o} => Archive table refered by Synonym is update when column(s) are missing (default if NULL or empty = N)
+    , @ExcludeColumns nvarchar(MAX) = NULL -- JSON string with array of string with column name(s)
+    /* Error Handling */
+    , @OnErrorRetry tinyint = NULL -- between 0 and 20 => retry up to 20 times (default if NULL = 10)
+    , @OnErrorWaitMillisecond smallint = 1000 -- wait for milliseconds between each Retry (default if NULL = 1000ms)
+    /* Messge Logging */
+    , @SaveMessagesToTable nvarchar(MAX) = 'Y' -- Y{es} or N{o} => Save to [maintenance].[messages] table (default if NULL = Y)
+    , @SavedMessagesRetentionDays smallint = 30
+    , @SavedToRunId int = NULL OUTPUT
+    , @OutputMessagesToDataset nvarchar(MAX) = 'N' -- Y{es} or N{o} => Output Messages Result set
+    , @Verbose nvarchar(MAX) = NULL -- Y{es} = Print all messages < 10
+AS
+BEGIN
+    BEGIN TRY 
+        SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+		SET LOCK_TIMEOUT 5000;
+        SET ARITHABORT ON;
+        SET NOCOUNT ON;
+        SET NUMERIC_ROUNDABORT OFF;
+
+        ----------------------------------------------------------------------------------------------------
+        -- Local Run Variables
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @returnValue int = 1;
+        DECLARE @triggerDate datetime;
+        DECLARE @triggerFloatingDate float(53);
+        DECLARE @floatingDay float(53) = 1;
+        DECLARE @floatingHour float(53) = @floatingDay / 24;
+        ----------------------------------------------------------------------------------------------------
+        --
+        ----------------------------------------------------------------------------------------------------
+        IF @RetentionDate IS NULL AND @RetentionDays IS NULL AND @RetentionHours IS NULL RAISERROR(N'@RetentionDate or @RetentionDays/@RetentionHours must be provided', 16, 1);
+        IF @RetentionDate IS NOT NULL AND (@RetentionDays IS NOT NULL OR @RetentionHours IS NOT NULL) RAISERROR(N'@RetentionDate AND @RetentionDays/@RetentionHours cannot be used together', 16, 1);
+        IF @RetentionDate > SYSDATETIME() RAISERROR(N'@RetentionDate must be a past date', 16, 1);
+
+        -- Use current Date if @RetentionDate is missing
+        SELECT @triggerDate = ISNULL(@RetentionDate, SYSDATETIME());
+
+        -- Remove time part (=> begining of day)
+        IF @RoundUpPreviousDay = 1 SELECT @triggerDate = CAST(@triggerDate AS DATE);
+        SELECT @triggerFloatingDate = CAST(@triggerDate AS float(53));
+        -- Remove retention Days/Hours
+        SELECT @triggerDate = CAST(@triggerFloatingDate -ISNULL(ABS(@floatingDay  * @RetentionDays), 0) -ISNULL(ABS(@floatingHour * @RetentionHours), 0) AS datetime) 
+
+        -- Add Trigger
+        EXEC [Maintenance].[AddArchiveTriggerAuditLogs] @ArchiveTriggerTime = @triggerDate, @Filters = N'ALL', @ArchiveAfterHours = 0, @DeleteDelayHours = 0, @DryRunOnly = 0;
+        -- Start Archive
+        EXEC [Maintenance].[ArchiveAuditLogs] @RowsDeletedForEachLoop = @RowsDeletedForEachLoop, @MaxConcurrentFilters = @MaxConcurrentFilters, @MaxRunMinutes = @MaxRunMinutes, @MaxBatchesLoops = @MaxBatchesLoops
+            , @SynchronousDeleteIfNoDelay = @SynchronousDeleteIfNoDelay, @IgnoreDeleteDelay = @IgnoreDeleteDelay
+            , @CreateArchiveTable = @CreateArchiveTable, @UpdateArchiveTable = @UpdateArchiveTable, @ExcludeColumns = @ExcludeColumns
+
+        SET @returnValue = 0; -- Success
+    END TRY
+    BEGIN CATCH
+        THROW;
+    END CATCH
+
+    SET @returnValue = ISNULL(@returnValue, 255);
+    --IF @runId IS NOT NULL UPDATE [Maintenance].[Runs] SET [EndDate] = SYSDATETIME(), [ErrorStatus] = @returnValue WHERE Id = @runId;
 
     ----------------------------------------------------------------------------------------------------
     -- End
