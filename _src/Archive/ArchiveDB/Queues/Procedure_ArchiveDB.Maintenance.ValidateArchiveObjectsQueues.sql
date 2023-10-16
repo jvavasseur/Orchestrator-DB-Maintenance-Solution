@@ -160,6 +160,8 @@ BEGIN
             SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@queueItemsMessages, N'$') WITH ([Procedure] nvarchar(128) N'$.Procedure', [Message] nvarchar(128) N'$.Message', [Severity] int, [State] smallint)
             UNION
             SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@QueueItemCommentsMessages, N'$') WITH ([Procedure] nvarchar(128) N'$.Procedure', [Message] nvarchar(128) N'$.Message', [Severity] int, [State] smallint)
+            UNION
+            SELECT [Procedure], [Message], [Severity], [State] FROM OPENJSON(@QueueItemEventsMessages, N'$') WITH ([Procedure] nvarchar(128) N'$.Procedure', [Message] nvarchar(128) N'$.Message', [Severity] int, [State] smallint)
         ) jsn
         FOR JSON PATH
     );

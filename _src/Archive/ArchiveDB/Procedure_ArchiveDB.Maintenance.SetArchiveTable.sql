@@ -288,7 +288,8 @@ BEGIN
 --    SELECT TOP(100) 'message'= 'output', [Message] = LEFT([message], 4000), [Severity] = [severity], [State] = 1 FROM @json_errors ORDER BY [id] ASC
     -- Check / Set @IsValid flag
     SET @IsValid = IIF(NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10) AND @ERROR_NUMBER IS NULL AND @message IS NULL, 1, 0);
-
+    INSERT INTO @json_errors([id], [severity], [message]) SELECT 100, 10, N'Archive Synonym is valid: '+ QUOTENAME(@SynonymArchiveSchema) + N'.' + QUOTENAME(@SynonymArchiveName) + ' => ' + @archiveTable2Parts WHERE @IsValid = 1;
+    
     SET @Messages = --ISNULL(
     ( 
         SELECT [Procedure] = QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')), [Message], [Severity], [State] 

@@ -36,6 +36,8 @@ ALTER PROCEDURE [Maintenance].[SetSourceTable]
     , @SourceExpectedColumns nvarchar(MAX) = NULL
     , @CreateOrUpdateSynonym bit = 0
     , @Columns nvarchar(MAX) = NULL OUTPUT
+    , @ShowMessages bit = 0
+    , @ThrowError bit = 0
     , @IsValid bit = 0 OUTPUT
     , @Messages nvarchar(MAX) OUTPUT
 AS
@@ -69,6 +71,7 @@ BEGIN
         DECLARE @tab tinyint = 0;
         DECLARE @json_errors TABLE([id] tinyint NOT NULL, [severity] int NOT NULL, [message] nvarchar(MAX) NOT NULL);
 
+        SET @Messages = NULL
         ----------------------------------------------------------------------------------------------------      
         -- Checks Synonyms and Tables
         ----------------------------------------------------------------------------------------------------
@@ -104,6 +107,13 @@ BEGIN
 
                     SELECT @Columns = (
                         SELECT col.column_id, [column] = col.name, [type] = tpe.name, col.max_length, col.precision, col.scale
+                            , [datatype] =   tpe.[name] + 
+                                CASE WHEN tpe.[name] IN (N''varchar'', N''char'', N''varbinary'', N''binary'', N''text'') THEN ''('' + CASE WHEN col.max_length = -1 THEN ''MAX'' ELSE CAST(col.max_length AS VARCHAR(5)) END + '')''
+                                WHEN tpe.[name] IN (N''nvarchar'', N''nchar'', N''ntext'') THEN ''('' + CASE WHEN col.max_length = -1 THEN ''MAX'' ELSE CAST(col.max_length / 2 AS VARCHAR(5)) END + '')''
+                                WHEN tpe.[name] IN (N''datetime2'', N''time2'', N''datetimeoffset'') THEN ''('' + CAST(col.scale AS VARCHAR(5)) + '')''
+                                WHEN tpe.[name] IN (N''decimal'', N''numeric'') THEN ''('' + CAST(col.[precision] AS VARCHAR(5)) + '','' + CAST(col.scale AS VARCHAR(5)) + '')''
+                                WHEN tpe.[name] IN (N''float'') THEN ''('' + CAST(col.[precision] AS VARCHAR(5)) + '')''
+                                ELSE '''' END
                         FROM tempdb.sys.columns AS col
                         INNER JOIN tempdb.sys.types AS tpe ON col.system_type_id = tpe.system_type_id AND tpe.system_type_id = tpe.user_type_id
                         WHERE [object_id] = OBJECT_ID(N''tempdb.dbo.#tempSourceTableCheck'') AND tpe.[name] <> N''timestamp''
@@ -116,16 +126,16 @@ BEGIN
                 ';
                 -- retrieve Source columns
                 EXEC sp_executesql @stmt = @stmtSourceTableChecks, @params = @paramsSourceTableChecks, @Message = NULL, @Columns = @sourceJsonColumns OUTPUT;
-
                 -- Set default columns if not provided
                 SELECT @expectedSourceColumns = ISNULL(LTRIM(RTRIM(@sourceExpectedColumns)), N'[{"column":"Id","type":"bigint"}]' );
+
                 -- check columns
-                WITH exp([name], [type], [max_length]) AS (
-                    SELECT [name], [type], [max_length]/*, [precision], [scale]*/ FROM OPENJSON(@expectedSourceColumns, N'$')
-                    WITH ([name] nvarchar(128) N'$.column', [type] nvarchar(128), max_length smallint/*, precision tinyint, scale tinyint*/)                
-                ), col([name], [type], [max_length]) AS(
-                    SELECT [name], [type], [max_length] FROM OPENJSON(@sourceJsonColumns, N'$')
-                    WITH ([name] nvarchar(128) N'$.column', [type] nvarchar(128), max_length smallint)
+                WITH exp([name], [datatype], [type], [max_length]) AS (
+                    SELECT [name], [datatype], [type], [max_length]/*, [precision], [scale]*/ FROM OPENJSON(@expectedSourceColumns, N'$')
+                    WITH ([name] nvarchar(128) N'$.column', [datatype] nvarchar(128), [type] nvarchar(128), max_length smallint/*, precision tinyint, scale tinyint*/)                
+                ), col([name], [datatype], [type], [max_length]) AS(
+                    SELECT [name], [datatype], [type], [max_length] FROM OPENJSON(@sourceJsonColumns, N'$')
+                    WITH ([name] nvarchar(128) N'$.column', [datatype] nvarchar(128), [type] nvarchar(128), max_length smallint)
                 )
                 INSERT INTO @json_errors([id], [severity], [message])
                 SELECT 20, 16, N'ERROR[TS1]: No column retrieved from  Source table ' + @sourceTable4Parts + N' refered by synonym ' + QUOTENAME(@synonymSchema) + N'.' + QUOTENAME(@synonymName) WHERE NOT EXISTS(SELECT 1 FROM col)
@@ -139,6 +149,7 @@ BEGIN
                 THROW;
             END CATCH
         END    
+
         ----------------------------------------------------------------------------------------------------      
         -- Create or Update Synonym(s) / Table / Columns
         ----------------------------------------------------------------------------------------------------
@@ -173,6 +184,7 @@ BEGIN
 --    SELECT TOP(100) 'message'= 'output', [Message] = LEFT([message], 4000), [Severity] = [severity], [State] = 1 FROM @json_errors ORDER BY [id] ASC
     -- Check / Set @IsValid flag
     SET @IsValid = IIF(NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10) AND @ERROR_NUMBER IS NULL AND @message IS NULL, 1, 0);
+    INSERT INTO @json_errors([id], [severity], [message]) SELECT 100, 10, N'Source Synonym is valid: '+ QUOTENAME(@synonymSchema) + N'.' + QUOTENAME(@synonymName) + ' => ' + @sourceTable4Parts WHERE @IsValid = 1;
 
     SET @Messages = --ISNULL(
     ( 
@@ -187,6 +199,9 @@ BEGIN
         FOR JSON PATH)
     --    , N'[]')
     ;
+    IF @ShowMessages = 1 OR (@IsValid = 0 AND @ThrowError = 1) SELECT [Message] = LEFT([Message], 1000), [Severity], [Error] = IIF([Severity] > 10, 1, 0) FROM OPENJSON(@Messages) WITH([Message] nvarchar(MAX), [Severity] int)
+    IF @IsValid = 0 AND @ThrowError = 1 THROW 50000, 'Error(s) occured. See output dataset', 1;
+
     RETURN 0;
 END
 GO

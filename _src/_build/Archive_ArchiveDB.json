@@ -7,11 +7,15 @@
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Queues/View_ArchiveDB.Maintenance.ArchivingListASyncOrchestratorDBTables.sql"}
 
          , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjects.sql"}
-         , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetSourceTable.sql"}
+         , { "path":"_src/Archive/Procedure_Maintenance.CreateArchivingExternalTable.sql"}
+         , { "path":"_src/Archive/Procedure_ArchiveDB.Maintenance.SetSourceTable.sql"}
          , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetArchiveTable.sql"}
          , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetSourceTableTenants.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetOrchestratorDBSourceTables.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetOrchestratorArchiveTables.sql"}
 
          , { "path":"_src/Archive/ArchiveDB/Logs/Table_ArchiveDB.Maintenance.Archive_Logs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Logs/Table_ArchiveDB.Maintenance.Sync_Logs.sql"}
@@ -98,14 +102,18 @@
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Queues/View_ArchiveDB.Maintenance.ArchivingListASyncOrchestratorDBTables.sql"}
          , { "path":"_src/Archive/ArchiveDB/Logs/Table_ArchiveDB.Maintenance.Archive_Logs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Logs/Table_ArchiveDB.Maintenance.Sync_Logs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Logs/Table_ArchiveDB.Maintenance.Filter_Logs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Logs/Table_ArchiveDB.Maintenance.Delete_Logs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjects.sql"}
-         , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetSourceTable.sql"}
+         , { "path":"_src/Archive/Procedure_Maintenance.CreateArchivingExternalTable.sql"}
+         , { "path":"_src/Archive/Procedure_ArchiveDB.Maintenance.SetSourceTable.sql"}
          , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetArchiveTable.sql"}
          , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetSourceTableTenants.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetOrchestratorDBSourceTables.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetOrchestratorArchiveTables.sql"}
          , { "path":"_src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjectsLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.SetSourceTableLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.SetSourceTableASyncStatus_Logs.sql"}
@@ -128,14 +136,18 @@
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Queues/View_ArchiveDB.Maintenance.ArchivingListASyncOrchestratorDBTables.sql"}
          , { "path":"_src/Archive/ArchiveDB/Jobs/Table_ArchiveDB.Maintenance.Archive_Jobs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Jobs/Table_ArchiveDB.Maintenance.Sync_Jobs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Jobs/Table_ArchiveDB.Maintenance.Filter_Jobs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Jobs/Table_ArchiveDB.Maintenance.Delete_Jobs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjects.sql"}
-         , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetSourceTable.sql"}
+         , { "path":"_src/Archive/Procedure_Maintenance.CreateArchivingExternalTable.sql"}
+         , { "path":"_src/Archive/Procedure_ArchiveDB.Maintenance.SetSourceTable.sql"}
          , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetArchiveTable.sql"}
          , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetSourceTableTenants.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetOrchestratorDBSourceTables.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetOrchestratorArchiveTables.sql"}
          , { "path":"_src/Archive/ArchiveDB/Jobs/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjectsJobs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Jobs/Procedure_ArchiveDB.Maintenance.SetSourceTableJobs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Jobs/Procedure_ArchiveDB.Maintenance.SetSourceTableASyncStatus_Jobs.sql"}
@@ -155,14 +167,18 @@
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Queues/View_ArchiveDB.Maintenance.ArchivingListASyncOrchestratorDBTables.sql"}
          , { "path":"_src/Archive/ArchiveDB/Queues/Table_ArchiveDB.Maintenance.Archive_Queues.sql"}
          , { "path":"_src/Archive/ArchiveDB/Queues/Table_ArchiveDB.Maintenance.Sync_Queues.sql"}
          , { "path":"_src/Archive/ArchiveDB/Queues/Table_ArchiveDB.Maintenance.Filter_Queues.sql"}
          , { "path":"_src/Archive/ArchiveDB/Queues/Table_ArchiveDB.Maintenance.Delete_Queues.sql"}
          , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjects.sql"}
-         , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetSourceTable.sql"}
+         , { "path":"_src/Archive/Procedure_Maintenance.CreateArchivingExternalTable.sql"}
+         , { "path":"_src/Archive/Procedure_ArchiveDB.Maintenance.SetSourceTable.sql"}
          , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetArchiveTable.sql"}
          , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetSourceTableTenants.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetOrchestratorDBSourceTables.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetOrchestratorArchiveTables.sql"}
          , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjectsQueues.sql"}
          , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.SetSourceTableQueueItems.sql"}
          , { "path":"_src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.SetSourceTableQueueItemComments.sql"}
@@ -186,14 +202,18 @@
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Queues/View_ArchiveDB.Maintenance.ArchivingListASyncOrchestratorDBTables.sql"}
          , { "path":"_src/Archive/ArchiveDB/AuditLogs/Table_ArchiveDB.Maintenance.Archive_AuditLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/AuditLogs/Table_ArchiveDB.Maintenance.Sync_AuditLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/AuditLogs/Table_ArchiveDB.Maintenance.Filter_AuditLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/AuditLogs/Table_ArchiveDB.Maintenance.Delete_AuditLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjects.sql"}
-         , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetSourceTable.sql"}
+         , { "path":"_src/Archive/Procedure_Maintenance.CreateArchivingExternalTable.sql"}
+         , { "path":"_src/Archive/Procedure_ArchiveDB.Maintenance.SetSourceTable.sql"}
          , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetArchiveTable.sql"}
          , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetSourceTableTenants.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetOrchestratorDBSourceTables.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetOrchestratorArchiveTables.sql"}
          , { "path":"_src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjectsAuditLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.SetSourceTableAuditLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.SetSourceTableAuditLogEntities.sql"}
@@ -215,14 +235,18 @@
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Queues/View_ArchiveDB.Maintenance.ArchivingListASyncOrchestratorDBTables.sql"}
          , { "path":"_src/Archive/ArchiveDB/RobotLicenseLogs/Table_ArchiveDB.Maintenance.Archive_RobotLicenseLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/RobotLicenseLogs/Table_ArchiveDB.Maintenance.Sync_RobotLicenseLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/RobotLicenseLogs/Table_ArchiveDB.Maintenance.Filter_RobotLicenseLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/RobotLicenseLogs/Table_ArchiveDB.Maintenance.Delete_RobotLicenseLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjects.sql"}
-         , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetSourceTable.sql"}
+         , { "path":"_src/Archive/Procedure_Maintenance.CreateArchivingExternalTable.sql"}
+         , { "path":"_src/Archive/Procedure_ArchiveDB.Maintenance.SetSourceTable.sql"}
          , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetArchiveTable.sql"}
          , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetSourceTableTenants.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetOrchestratorDBSourceTables.sql"}
+         , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetOrchestratorArchiveTables.sql"}
          , { "path":"_src/Archive/ArchiveDB/RobotLicenseLogs/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjectsRobotLicenseLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/RobotLicenseLogs/Procedure_ArchiveDB.Maintenance.SetSourceTableRobotLicenseLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/RobotLicenseLogs/Procedure_ArchiveDB.Maintenance.SetSourceTableASyncStatus_RobotLicenseLogs.sql"}
