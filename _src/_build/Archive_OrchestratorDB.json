@@ -12,7 +12,7 @@
          , { "path":"_src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjects.sql"}
          , { "path":"_src/Archive/Procedure_Maintenance.CreateArchivingExternalTable.sql"}
          , { "path":"_src/Archive/Procedure_ArchiveDB.Maintenance.SetSourceTable.sql"}
-         , { "path":"_src/Archive/Procedure_OrchestratorDB.Maintenance.SetArchiveDBSourceTables.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.SetArchiveDBSourceTables.sql"}
 
          , { "path":"_src/Archive/OrchestratorDB/Logs/Table_OrchestratorDB.Maintenance.ASyncStatus_Logs.sql"}
          , { "path":"_src/Archive/OrchestratorDB/Logs/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsLogs.sql"}
@@ -49,7 +49,7 @@
          , { "path":"_src/Archive/OrchestratorDB/Logs/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsLogs.sql"}
          , { "path":"_src/Archive/Procedure_Maintenance.CreateArchivingExternalTable.sql"}
          , { "path":"_src/Archive/Procedure_ArchiveDB.Maintenance.SetSourceTable.sql"}
-         , { "path":"_src/Archive/Procedure_OrchestratorDB.Maintenance.SetArchiveDBSourceTables.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.SetArchiveDBSourceTables.sql"}
          , { "path":"_src/Archive/OrchestratorDB/Logs/Procedure_OrchestratorDB.Maintenance.ASyncCleanupLogs.sql"}
       ]
    },
@@ -67,7 +67,7 @@
          , { "path":"_src/Archive/OrchestratorDB/Jobs/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsJobs.sql"}
          , { "path":"_src/Archive/Procedure_Maintenance.CreateArchivingExternalTable.sql"}
          , { "path":"_src/Archive/Procedure_ArchiveDB.Maintenance.SetSourceTable.sql"}
-         , { "path":"_src/Archive/Procedure_OrchestratorDB.Maintenance.SetArchiveDBSourceTables.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.SetArchiveDBSourceTables.sql"}
          , { "path":"_src/Archive/OrchestratorDB/Jobs/Procedure_OrchestratorDB.Maintenance.ASyncCleanupJobs.sql"}
       ]
    },
@@ -85,7 +85,7 @@
          , { "path":"_src/Archive/OrchestratorDB/Queues/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsQueues.sql"}
          , { "path":"_src/Archive/Procedure_Maintenance.CreateArchivingExternalTable.sql"}
          , { "path":"_src/Archive/Procedure_ArchiveDB.Maintenance.SetSourceTable.sql"}
-         , { "path":"_src/Archive/Procedure_OrchestratorDB.Maintenance.SetArchiveDBSourceTables.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.SetArchiveDBSourceTables.sql"}
          , { "path":"_src/Archive/OrchestratorDB/Queues/Procedure_OrchestratorDB.Maintenance.ASyncCleanupQueues.sql"}
       ]
    },
@@ -103,7 +103,7 @@
          , { "path":"_src/Archive/OrchestratorDB/AuditLogs/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsAuditLogs.sql"}
          , { "path":"_src/Archive/Procedure_Maintenance.CreateArchivingExternalTable.sql"}
          , { "path":"_src/Archive/Procedure_ArchiveDB.Maintenance.SetSourceTable.sql"}
-         , { "path":"_src/Archive/Procedure_OrchestratorDB.Maintenance.SetArchiveDBSourceTables.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.SetArchiveDBSourceTables.sql"}
          , { "path":"_src/Archive/OrchestratorDB/AuditLogs/Procedure_OrchestratorDB.Maintenance.ASyncCleanupAuditLogs.sql"}
       ]
    },
@@ -121,7 +121,7 @@
          , { "path":"_src/Archive/OrchestratorDB/RobotLicenseLogs/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsRobotLicenseLogs.sql"}
          , { "path":"_src/Archive/Procedure_Maintenance.CreateArchivingExternalTable.sql"}
          , { "path":"_src/Archive/Procedure_ArchiveDB.Maintenance.SetSourceTable.sql"}
-         , { "path":"_src/Archive/Procedure_OrchestratorDB.Maintenance.SetArchiveDBSourceTables.sql"}
+         , { "path":"_src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.SetArchiveDBSourceTables.sql"}
          , { "path":"_src/Archive/OrchestratorDB/RobotLicenseLogs/Procedure_OrchestratorDB.Maintenance.ASyncCleanupRobotLicenseLogs.sql"}
       ]
    }

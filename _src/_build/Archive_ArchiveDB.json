@@ -7,7 +7,7 @@
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
-         , { "path":"_src/Archive/ArchiveDB/Queues/View_ArchiveDB.Maintenance.ArchivingListASyncOrchestratorDBTables.sql"}
+         , { "path":"_src/Archive/ArchiveDB/View_ArchiveDB.Maintenance.ArchivingListASyncOrchestratorDBTables.sql"}
 
          , { "path":"_src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjects.sql"}
          , { "path":"_src/Archive/Procedure_Maintenance.CreateArchivingExternalTable.sql"}
@@ -102,7 +102,7 @@
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
-         , { "path":"_src/Archive/ArchiveDB/Queues/View_ArchiveDB.Maintenance.ArchivingListASyncOrchestratorDBTables.sql"}
+         , { "path":"_src/Archive/ArchiveDB/View_ArchiveDB.Maintenance.ArchivingListASyncOrchestratorDBTables.sql"}
          , { "path":"_src/Archive/ArchiveDB/Logs/Table_ArchiveDB.Maintenance.Archive_Logs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Logs/Table_ArchiveDB.Maintenance.Sync_Logs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Logs/Table_ArchiveDB.Maintenance.Filter_Logs.sql"}
@@ -136,7 +136,7 @@
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
-         , { "path":"_src/Archive/ArchiveDB/Queues/View_ArchiveDB.Maintenance.ArchivingListASyncOrchestratorDBTables.sql"}
+         , { "path":"_src/Archive/ArchiveDB/View_ArchiveDB.Maintenance.ArchivingListASyncOrchestratorDBTables.sql"}
          , { "path":"_src/Archive/ArchiveDB/Jobs/Table_ArchiveDB.Maintenance.Archive_Jobs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Jobs/Table_ArchiveDB.Maintenance.Sync_Jobs.sql"}
          , { "path":"_src/Archive/ArchiveDB/Jobs/Table_ArchiveDB.Maintenance.Filter_Jobs.sql"}
@@ -167,7 +167,7 @@
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
-         , { "path":"_src/Archive/ArchiveDB/Queues/View_ArchiveDB.Maintenance.ArchivingListASyncOrchestratorDBTables.sql"}
+         , { "path":"_src/Archive/ArchiveDB/View_ArchiveDB.Maintenance.ArchivingListASyncOrchestratorDBTables.sql"}
          , { "path":"_src/Archive/ArchiveDB/Queues/Table_ArchiveDB.Maintenance.Archive_Queues.sql"}
          , { "path":"_src/Archive/ArchiveDB/Queues/Table_ArchiveDB.Maintenance.Sync_Queues.sql"}
          , { "path":"_src/Archive/ArchiveDB/Queues/Table_ArchiveDB.Maintenance.Filter_Queues.sql"}
@@ -202,7 +202,7 @@
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
-         , { "path":"_src/Archive/ArchiveDB/Queues/View_ArchiveDB.Maintenance.ArchivingListASyncOrchestratorDBTables.sql"}
+         , { "path":"_src/Archive/ArchiveDB/View_ArchiveDB.Maintenance.ArchivingListASyncOrchestratorDBTables.sql"}
          , { "path":"_src/Archive/ArchiveDB/AuditLogs/Table_ArchiveDB.Maintenance.Archive_AuditLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/AuditLogs/Table_ArchiveDB.Maintenance.Sync_AuditLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/AuditLogs/Table_ArchiveDB.Maintenance.Filter_AuditLogs.sql"}
@@ -235,7 +235,7 @@
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
-         , { "path":"_src/Archive/ArchiveDB/Queues/View_ArchiveDB.Maintenance.ArchivingListASyncOrchestratorDBTables.sql"}
+         , { "path":"_src/Archive/ArchiveDB/View_ArchiveDB.Maintenance.ArchivingListASyncOrchestratorDBTables.sql"}
          , { "path":"_src/Archive/ArchiveDB/RobotLicenseLogs/Table_ArchiveDB.Maintenance.Archive_RobotLicenseLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/RobotLicenseLogs/Table_ArchiveDB.Maintenance.Sync_RobotLicenseLogs.sql"}
          , { "path":"_src/Archive/ArchiveDB/RobotLicenseLogs/Table_ArchiveDB.Maintenance.Filter_RobotLicenseLogs.sql"}
