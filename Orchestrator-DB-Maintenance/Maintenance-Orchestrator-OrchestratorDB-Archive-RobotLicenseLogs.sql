@@ -4,8 +4,10 @@ GO
 -- 1. Orchestrator Database must be selected
 -- 2. The value of @OrchestratorDatabaseName must be set to the name of the Orchestrator Database
 ----------------------------------------------------------------------------------------------------
-DECLARE @OrchestratorDatabaseName sysname = N'<orchestrator database>';
-----------------------------------------------------------------------------------------------------
+--\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/
+DECLARE @OrchestratorDatabaseName sysname = N'<orchestrator database>'; --<== UPDATE NAME
+--/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+--!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ----------------------------------------------------------------------------------------------------
 
 ----------------------------------------------------------------------------------------------------
@@ -25,19 +27,20 @@ BEGIN
     SET NOEXEC ON;
 END
 IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-select 1;
-
 GO
-select 2;
 
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
 SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: Schema [Maintenance]
--- ### [Version]: 2022-11-29T17:14:37+01:00
+-- ### [Version]: 2023-10-17T11:47:17+02:00
 -- ### [Source]: _src/Schemas/Schema_Maintenance.sql
--- ### [Hash]: b13f81b [SHA256-DDF08A6921E64960697C69ED645F0AF2E4CCE3595481E1BD606509755A18F0FE]
+-- ### [Hash]: 5d13ce3 [SHA256-8DBBEB9BEA51AD2A1ED12F90085A891C2105686DEB253181FB306F50ACEA3CB7]
 -- ### [Docs]: https://???.???
 ----------------------------------------------------------------------------------------------------
 IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'Maintenance')
