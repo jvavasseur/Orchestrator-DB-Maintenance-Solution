@@ -1867,9 +1867,9 @@ GO
 ALTER PROCEDURE [Maintenance].[SetOrchestratorDBSourceTables]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[SetOrchestratorDBSourceTables]
--- ### [Version]: 2023-10-16T18:16:29+02:00
+-- ### [Version]: 2023-10-17T10:53:15+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetOrchestratorDBSourceTables.sql
--- ### [Hash]: 085ff9b [SHA256-6CE1AA099D8462CC8091AD85FD54D4454CD381876C3CB75FF0F40AD1B751DCFD]
+-- ### [Hash]: 5ee9393 [SHA256-5E7CF3DF608A282355F2A891CA1C76C75E296918E72A6D1FE3D37B129518C921]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -2064,19 +2064,6 @@ BEGIN
 END
 GO
 
-
-EXEC [Maintenance].[SetOrchestratorDBSourceTables] @DataSource = 'ArchivingDatasourceForOrchestratorDB', @IsExternal = 1
-GO
-/*
-select * from maintenance.Synonym_ArchivingListOrchestratorDBTables
-
-SELECT * FROM sys.external_data_sources WHERE [name] = @DataSource
-SELECT * FROM sys.external_tables 
-SELECT * FROM sys.synonyms
-
-SELECT * FROM [Maintenance].[ArchivingOrchestratorDBTables]
-*/
-
 SET ANSI_NULLS ON;
 GO
 SET QUOTED_IDENTIFIER ON;
@@ -2101,9 +2088,9 @@ GO
 ALTER PROCEDURE [Maintenance].[SetOrchestratorArchiveTables]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[SetOrchestratorArchiveTables]
--- ### [Version]: 2023-10-16T18:16:29+02:00
+-- ### [Version]: 2023-10-17T10:53:15+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetOrchestratorArchiveTables.sql
--- ### [Hash]: 085ff9b [SHA256-644B0507EE88B19D57888E668568F69B932CCB15F7D7A5D885D6E3138C0603DE]
+-- ### [Hash]: 5ee9393 [SHA256-361220DF52CCDD59BE4641B6CE18C1098D9C824B55492F9170733EDA42B43655]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -2278,19 +2265,6 @@ BEGIN
     RETURN 0;
 END
 GO
-
-
-EXEC [Maintenance].[SetOrchestratorArchiveTables] @ArchiveTableNamePattern = 'archive_#name#', @ArchiveSchema = N'dbo'
-GO
-/*
-select * from maintenance.Synonym_ArchivingListOrchestratorDBTables
-
-SELECT * FROM sys.external_data_sources WHERE [name] = @DataSource
-SELECT * FROM sys.external_tables 
-SELECT * FROM sys.synonyms
-
-SELECT * FROM [Maintenance].[ArchivingOrchestratorDBTables]
-*/
 
 SET ANSI_NULLS ON;
 GO

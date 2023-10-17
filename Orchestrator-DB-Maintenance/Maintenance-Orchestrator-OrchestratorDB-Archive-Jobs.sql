@@ -1248,9 +1248,9 @@ GO
 ALTER PROCEDURE [Maintenance].[SetArchiveDBSourceTables]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[SetArchiveDBSourceTables]
--- ### [Version]: 2023-10-16T18:16:29+02:00
+-- ### [Version]: 2023-10-17T10:53:15+02:00
 -- ### [Source]: _src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.SetArchiveDBSourceTables.sql
--- ### [Hash]: 085ff9b [SHA256-4DC182A937EB0BD3AB6E999DCFC4C9108B985D310C97CF9034FA51B97A16A7CF]
+-- ### [Hash]: 5ee9393 [SHA256-0B3A14B238BC49D71524FAC536D21760F551B80CB0270A9ACED7F0061B2AC3BB]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -1446,21 +1446,6 @@ BEGIN
     RETURN 0;
 END
 GO
-
-
-EXEC [Maintenance].[SetArchiveDBSourceTables] @DataSource = 'ArchivingDatasourceForArchiveDB', @IsExternal = 1
-GO
-/*
-select * from maintenance.Synonym_ArchivingListArchiveDBTables
-
-SELECT * FROM sys.external_data_sources WHERE [name] = @DataSource
-SELECT * FROM sys.external_tables 
-SELECT 'drop synonym ' + object_schema_name(object_id) + '.' + name, * FROM sys.synonyms
-SELECT * FROM sys.synonyms where name = 'Synonym_ASyncDelete_AuditLogs'
-
-select * from [Maintenance].[Delete_RobotLicenseLogs]
-SELECT * FROM [Maintenance].[ArchivingArchiveDBTables]
-*/
 
 SET ANSI_NULLS ON;
 GO
