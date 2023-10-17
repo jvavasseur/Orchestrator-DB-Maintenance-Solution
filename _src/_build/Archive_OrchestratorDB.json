@@ -3,7 +3,8 @@
       "Name":"Orchestrator Archive ALL (Source = Orchestrator DB)",
       "file":"Orchestrator-DB-Maintenance/Maintenance-Orchestrator-OrchestratorDB-Archive_All.sql",
       "sources":[
-         { "path":"_src/Schemas/Schema_Maintenance.sql"}
+         { "path":"_src/Archive/OrchestratorDB/Check-CurrentDBvsOrchestratorDB-NOEXEC.sql"}
+         , { "path":"_src/Schemas/Schema_Maintenance.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
@@ -39,7 +40,8 @@
       "Name":"Orchestrator Archive -= Logs =- (Source = Orchestrator DB)",
       "file":"Orchestrator-DB-Maintenance/Maintenance-Orchestrator-OrchestratorDB-Archive-Logs.sql",
       "sources":[
-         { "path":"_src/Schemas/Schema_Maintenance.sql"}
+         { "path":"_src/Archive/OrchestratorDB/Check-CurrentDBvsOrchestratorDB-NOEXEC.sql"}
+         , { "path":"_src/Schemas/Schema_Maintenance.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
@@ -57,7 +59,8 @@
       "Name":"Orchestrator Archive -= Jobs =- (Source = Orchestrator DB)",
       "file":"Orchestrator-DB-Maintenance/Maintenance-Orchestrator-OrchestratorDB-Archive-Jobs.sql",
       "sources":[
-         { "path":"_src/Schemas/Schema_Maintenance.sql"}
+         { "path":"_src/Archive/OrchestratorDB/Check-CurrentDBvsOrchestratorDB-NOEXEC.sql"}
+         , { "path":"_src/Schemas/Schema_Maintenance.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
@@ -93,7 +96,8 @@
       "Name":"Orchestrator Archive -= AuditLogs =- (Source = Orchestrator DB)",
       "file":"Orchestrator-DB-Maintenance/Maintenance-Orchestrator-OrchestratorDB-Archive-AuditLogs.sql",
       "sources":[
-         { "path":"_src/Schemas/Schema_Maintenance.sql"}
+         { "path":"_src/Archive/OrchestratorDB/Check-CurrentDBvsOrchestratorDB-NOEXEC.sql"}
+         , { "path":"_src/Schemas/Schema_Maintenance.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
@@ -111,7 +115,8 @@
       "Name":"Orchestrator Archive -= RobotLicenseLogs =- (Source = Orchestrator DB)",
       "file":"Orchestrator-DB-Maintenance/Maintenance-Orchestrator-OrchestratorDB-Archive-RobotLicenseLogs.sql",
       "sources":[
-         { "path":"_src/Schemas/Schema_Maintenance.sql"}
+         { "path":"_src/Archive/OrchestratorDB/Check-CurrentDBvsOrchestratorDB-NOEXEC.sql"}
+         , { "path":"_src/Schemas/Schema_Maintenance.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}

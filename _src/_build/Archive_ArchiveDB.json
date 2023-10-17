@@ -3,7 +3,8 @@
       "Name":"Orchestrator Archive ALL (Target = Archive DB)",
       "file":"Orchestrator-DB-Maintenance/Maintenance-Orchestrator-ArchiveDB-Archive_All.sql",
       "sources":[
-         { "path":"_src/Schemas/Schema_Maintenance.sql"}
+         { "path":"_src/Archive/ArchiveDB/Check-CurrentDBvsArchiveDB-NOEXEC.sql"}
+         , { "path":"_src/Schemas/Schema_Maintenance.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
@@ -98,7 +99,8 @@
       "Name":"Orchestrator Archive -= Logs =- (Target = Archive DB)",
       "file":"Orchestrator-DB-Maintenance/Maintenance-Orchestrator-ArchiveDB-Archive-Logs.sql",
       "sources":[
-         { "path":"_src/Schemas/Schema_Maintenance.sql"}
+         { "path":"_src/Archive/ArchiveDB/Check-CurrentDBvsArchiveDB-NOEXEC.sql"}
+         , { "path":"_src/Schemas/Schema_Maintenance.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
@@ -132,7 +134,8 @@
       "Name":"Orchestrator Archive -= Jobs =- (Target = Archive DB)",
       "file":"Orchestrator-DB-Maintenance/Maintenance-Orchestrator-ArchiveDB-Archive-Jobs.sql",
       "sources":[
-         { "path":"_src/Schemas/Schema_Maintenance.sql"}
+         { "path":"_src/Archive/ArchiveDB/Check-CurrentDBvsArchiveDB-NOEXEC.sql"}
+         , { "path":"_src/Schemas/Schema_Maintenance.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
@@ -163,7 +166,8 @@
       "Name":"Orchestrator Archive -= Queues =- (Target = Archive DB)",
       "file":"Orchestrator-DB-Maintenance/Maintenance-Orchestrator-ArchiveDB-Archive-Queues.sql",
       "sources":[
-         { "path":"_src/Schemas/Schema_Maintenance.sql"}
+         { "path":"_src/Archive/ArchiveDB/Check-CurrentDBvsArchiveDB-NOEXEC.sql"}
+         , { "path":"_src/Schemas/Schema_Maintenance.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
@@ -198,7 +202,8 @@
       "Name":"Orchestrator Archive -= AuditLogs =- (Target = Archive DB)",
       "file":"Orchestrator-DB-Maintenance/Maintenance-Orchestrator-ArchiveDB-Archive-AuditLogs.sql",
       "sources":[
-         { "path":"_src/Schemas/Schema_Maintenance.sql"}
+         { "path":"_src/Archive/ArchiveDB/Check-CurrentDBvsArchiveDB-NOEXEC.sql"}
+         , { "path":"_src/Schemas/Schema_Maintenance.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
@@ -231,7 +236,8 @@
       "Name":"Orchestrator Archive -= RobotLicenseLogs =- (Target = Archive DB)",
       "file":"Orchestrator-DB-Maintenance/Maintenance-Orchestrator-ArchiveDB-Archive-RobotLicenseLogs.sql",
       "sources":[
-         { "path":"_src/Schemas/Schema_Maintenance.sql"}
+         { "path":"_src/Archive/ArchiveDB/Check-CurrentDBvsArchiveDB-NOEXEC.sql"}
+         , { "path":"_src/Schemas/Schema_Maintenance.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Runs.sql"}
          , { "path":"_src/Runs/Table_Maintenance.Messages.sql"}
          , { "path":"_src/Runs/Procedure_*.sql"}
