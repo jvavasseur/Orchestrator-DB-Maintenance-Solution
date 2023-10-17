@@ -5,7 +5,7 @@ GO
 -- 2. The value of @OrchestratorDatabaseName must be set to the name of the Orchestrator Database
 ----------------------------------------------------------------------------------------------------
 --\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/
-DECLARE @OrchestratorDatabaseName sysname = N'<orchestrator database>'; --<== UPDATE NAME
+DECLARE @OrchestratorDatabaseName sysname = N'<<-orchestrator database->>'; --<== UPDATE NAME
 --/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
 --!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ----------------------------------------------------------------------------------------------------
@@ -13,18 +13,23 @@ DECLARE @OrchestratorDatabaseName sysname = N'<orchestrator database>'; --<== UP
 ----------------------------------------------------------------------------------------------------
 -- DB Check
 ----------------------------------------------------------------------------------------------------
-SET ANSI_NULLS ON;
-SET QUOTED_IDENTIFIER ON;
-SET NOCOUNT ON;
-
-DECLARE @message nvarchar(1000) = N'The Orchestrator Database must be selected and @OrchestratorDatabaseName value must match the Orchestrator Databse Name';
-IF DB_NAME() <> @OrchestratorDatabaseName 
-BEGIN
-    RAISERROR(N'The Orchestrator Database must be selected and @OrchestratorDatabaseName value must match the Orchestrator Databse Name', 16, 1);
-    SET @message = N'Current Database ==> ''' + DB_NAME() + N''' <=='; RAISERROR(@message, 10, 1);
-    SET @message = N'@OrchestratorDatabaseName ==> ''' + @OrchestratorDatabaseName + N''' <=='; RAISERROR(@message, 10, 1);
+BEGIN TRY
+    DECLARE @message nvarchar(1000);
+    SET @OrchestratorDatabaseName = ISNULL(@OrchestratorDatabaseName, N'');
+    IF DB_NAME() <> @OrchestratorDatabaseName
+    BEGIN
+        SET @message = N'Current Database ==> ''' + DB_NAME() + N''' <=='; RAISERROR(@message, 10, 1);
+        SET @message = N'@OrchestratorDatabaseName ==> ''' + @OrchestratorDatabaseName + N''' <=='; RAISERROR(@message, 10, 1);
+        RAISERROR(N'The Orchestrator Database must be selected and @OrchestratorDatabaseName value must match the Orchestrator Database Name', 16, 1);
+        SET NOEXEC ON;
+    END
+END TRY
+BEGIN CATCH
+    SET @message = ERROR_MESSAGE();
+    RAISERROR(@message, 16, 1)
+    PRINT N''
     RAISERROR(N'Script execution canceled', 16, 1);
     SET NOEXEC ON;
-END
+END CATCH;
 IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
 GO

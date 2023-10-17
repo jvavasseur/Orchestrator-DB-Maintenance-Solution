@@ -5,7 +5,7 @@ GO
 -- 2. The value of @ArchiveDatabaseName must be set to the name of the Archive Database
 ----------------------------------------------------------------------------------------------------
 --\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/
-DECLARE @ArchiveDatabaseName sysname = N'<archive database>'; --<== UPDATE NAME
+DECLARE @ArchiveDatabaseName sysname = N'<<-archive database->>'; --<== UPDATE NAME
 --/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
 --!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ----------------------------------------------------------------------------------------------------
@@ -13,18 +13,23 @@ DECLARE @ArchiveDatabaseName sysname = N'<archive database>'; --<== UPDATE NAME
 ----------------------------------------------------------------------------------------------------
 -- DB Check
 ----------------------------------------------------------------------------------------------------
-SET ANSI_NULLS ON;
-SET QUOTED_IDENTIFIER ON;
-SET NOCOUNT ON;
-
-DECLARE @message nvarchar(1000) = N'The Archive Database must be selected and @ArchiveDatabaseName value must match the Archive Databse Name';
-IF DB_NAME() <> @ArchiveDatabaseName 
-BEGIN
-    RAISERROR(N'The Archive Database must be selected and @ArchiveDatabaseName value must match the Archive Databse Name', 16, 1);
-    SET @message = N'Current Database ==> ''' + DB_NAME() + N''' <=='; RAISERROR(@message, 10, 1);
-    SET @message = N'@ArchiveDatabaseName ==> ''' + @ArchiveDatabaseName + N''' <=='; RAISERROR(@message, 10, 1);
+BEGIN TRY
+    DECLARE @message nvarchar(1000);
+    SET @ArchiveDatabaseName = ISNULL(@ArchiveDatabaseName, N'');
+    IF DB_NAME() <> @ArchiveDatabaseName
+    BEGIN
+        SET @message = N'Current Database ==> ''' + DB_NAME() + N''' <=='; RAISERROR(@message, 10, 1);
+        SET @message = N'@ArchiveDatabaseName ==> ''' + @ArchiveDatabaseName + N''' <=='; RAISERROR(@message, 10, 1);
+        RAISERROR(N'The Archive Database must be selected and @ArchiveDatabaseName value must match the Archive Database Name', 16, 1);
+        SET NOEXEC ON;
+    END
+END TRY
+BEGIN CATCH
+    SET @message = ERROR_MESSAGE();
+    RAISERROR(@message, 16, 1)
+    PRINT N''
     RAISERROR(N'Script execution canceled', 16, 1);
     SET NOEXEC ON;
-END
+END CATCH;
 IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
 GO
