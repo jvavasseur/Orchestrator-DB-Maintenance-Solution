@@ -3393,9 +3393,9 @@ GO
 ALTER PROCEDURE [Maintenance].[AddArchiveTriggerLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[AddArchiveTriggerLogs]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-17T13:22:17+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.AddArchiveTriggerLogs.sql
--- ### [Hash]: dc39c27 [SHA256-4B22B7B78C9918A2355E9FF079D16CB052943958002D85B682336491A89D24F3]
+-- ### [Hash]: db87142 [SHA256-472CC3C3EE046E332C03F8EDA157FF3D1AB35DF88C03E27AFC129DD6B1858D52]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -3596,7 +3596,7 @@ BEGIN
 
         INSERT INTO @messages([Message], Severity, [State])
         -- Check min required version
-        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion
+        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion AND ServerProperty('EngineEdition') NOT IN (5, 8, 9)
         -- Check Database Compatibility Level
         UNION ALL SELECT 'ERROR: Database ' + QUOTENAME(DB_NAME(DB_ID())) + ' Compatibility Level is set to '+ CAST([compatibility_level] AS nvarchar(MAX)) + '. Compatibility level 130 or higher is requiered.', 16, 1 FROM sys.databases WHERE database_id = DB_ID() AND [compatibility_level] < @minCompatibilityLevel
         -- Check opened transation(s)
@@ -3984,9 +3984,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ArchiveLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ArchiveLogs]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-17T13:22:17+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.ArchiveLogs.sql
--- ### [Hash]: dc39c27 [SHA256-9291AFA80AC4261D5921B2B0D7CF4688E425669D45C9D49B7AEE3E63339A3862]
+-- ### [Hash]: db87142 [SHA256-EECD15ADD889B8ABEFA69FF1DA12E80D607AB7F250DA0C6ADD194D34878398ED]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -4249,7 +4249,7 @@ BEGIN
 
         INSERT INTO @messages([Message], Severity, [State])
         -- Check min required version
-        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion
+        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion AND ServerProperty('EngineEdition') NOT IN (5, 8, 9)
         -- Check Database Compatibility Level
         UNION ALL SELECT 'ERROR: Database ' + QUOTENAME(DB_NAME(DB_ID())) + ' Compatibility Level is set to '+ CAST([compatibility_level] AS nvarchar(MAX)) + '. Compatibility level 130 or higher is requiered.', 16, 1 FROM sys.databases WHERE database_id = DB_ID() AND [compatibility_level] < @minCompatibilityLevel
         -- Check opened transation(s)
@@ -4664,7 +4664,7 @@ BEGIN
                 SELECT @countFilterIds = ISNULL(COUNT(*), 0), @countArchiveIds = ISNULL(COUNT(DISTINCT ArchiveId), 0) FROM #tempListFilters;
                 SELECT @targetTimestamp = MAX(TargetTimeStamp) FROM #tempListFilters WHERE TargetTimeStamp IS NOT NULL;
 
-                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_Logs] WITH(INDEX([IX_Machine])) WHERE TimeStamp <= @targetTimestamp;
+                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_Logs];-- WITH(INDEX([IX_Machine])) WHERE TimeStamp <= @targetTimestamp;
                 DECLARE @maxTargetId bigint;
 
                 SELECT @maxTargetId = MAX(ISNULL(TargetId, 0)) FROM #tempListFilters;
@@ -5262,9 +5262,9 @@ GO
 ALTER PROCEDURE [Maintenance].[CleanupSyncedLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[CleanupSyncedLogs]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-17T13:22:17+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.CleanupSyncedLogs.sql
--- ### [Hash]: dc39c27 [SHA256-C3303860B14BD78B7ADCF3CC0A5DC3D0E948CEE966CB52131620807747F68D62]
+-- ### [Hash]: db87142 [SHA256-2607435CDAA68096280B73F259553789F3C35D4A8E81B16803167FF693821EF8]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -5462,7 +5462,7 @@ BEGIN
 
         INSERT INTO @messages([Message], Severity, [State])
         -- Check min required version
-        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion
+        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion AND ServerProperty('EngineEdition') NOT IN (5, 8, 9)
         -- Check Database Compatibility Level
         UNION ALL SELECT 'ERROR: Database ' + QUOTENAME(DB_NAME(DB_ID())) + ' Compatibility Level is set to '+ CAST([compatibility_level] AS nvarchar(MAX)) + '. Compatibility level 130 or higher is requiered.', 16, 1 FROM sys.databases WHERE database_id = DB_ID() AND [compatibility_level] < @minCompatibilityLevel
         -- Check opened transation(s)
@@ -7220,9 +7220,9 @@ GO
 ALTER PROCEDURE [Maintenance].[AddArchiveTriggerJobs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[AddArchiveTriggerJobs]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-17T13:22:17+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Jobs/Procedure_ArchiveDB.Maintenance.AddArchiveTriggerJobs.sql
--- ### [Hash]: dc39c27 [SHA256-7E5BED7DE8165123D9B26ECC97E29AC2B3641DC81CBCE0C1EDF68595F44FE265]
+-- ### [Hash]: db87142 [SHA256-1113AEAAF6CDB5C0E33EA13D520597F456395C216FBD4F0AF38CB33F255F7535]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -7423,7 +7423,7 @@ BEGIN
 
         INSERT INTO @messages([Message], Severity, [State])
         -- Check min required version
-        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion
+        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion AND ServerProperty('EngineEdition') NOT IN (5, 8, 9)
         -- Check Database Compatibility Level
         UNION ALL SELECT 'ERROR: Database ' + QUOTENAME(DB_NAME(DB_ID())) + ' Compatibility Level is set to '+ CAST([compatibility_level] AS nvarchar(MAX)) + '. Compatibility level 130 or higher is requiered.', 16, 1 FROM sys.databases WHERE database_id = DB_ID() AND [compatibility_level] < @minCompatibilityLevel
         -- Check opened transation(s)
@@ -7811,9 +7811,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ArchiveJobs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ArchiveJobs]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-17T13:22:17+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Jobs/Procedure_ArchiveDB.Maintenance.ArchiveJobs.sql
--- ### [Hash]: dc39c27 [SHA256-A8BF9496471A9F0DF3B822E5B5013EB0AE409BCCD11BCF9DD23EC06CBC3A5378]
+-- ### [Hash]: db87142 [SHA256-DE10BE09B9C27DF681FE05DB6D6195660FAB081D71DD54021FDE5FA77708E6DF]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -8076,7 +8076,7 @@ BEGIN
 
         INSERT INTO @messages([Message], Severity, [State])
         -- Check min required version
-        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion
+        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion AND ServerProperty('EngineEdition') NOT IN (5, 8, 9)
         -- Check Database Compatibility Level
         UNION ALL SELECT 'ERROR: Database ' + QUOTENAME(DB_NAME(DB_ID())) + ' Compatibility Level is set to '+ CAST([compatibility_level] AS nvarchar(MAX)) + '. Compatibility level 130 or higher is requiered.', 16, 1 FROM sys.databases WHERE database_id = DB_ID() AND [compatibility_level] < @minCompatibilityLevel
         -- Check opened transation(s)
@@ -8489,7 +8489,7 @@ BEGIN
                 SELECT @countFilterIds = ISNULL(COUNT(*), 0), @countArchiveIds = ISNULL(COUNT(DISTINCT ArchiveId), 0) FROM #tempListFilters;
                 SELECT @targetTimestamp = MAX(TargetTimeStamp) FROM #tempListFilters WHERE TargetTimeStamp IS NOT NULL;
 
-                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_Jobs] WITH(INDEX([IX_TenantId_OU_ProcessType_CreationTime])) WHERE CreationTime <= @targetTimestamp;
+                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_Jobs];-- WITH(INDEX([IX_TenantId_OU_ProcessType_CreationTime])) WHERE CreationTime <= @targetTimestamp;
                 DECLARE @maxTargetId bigint;
 
                 SELECT @maxTargetId = MAX(ISNULL(TargetId, 0)) FROM #tempListFilters;
@@ -9086,9 +9086,9 @@ GO
 ALTER PROCEDURE [Maintenance].[CleanupSyncedJobs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[CleanupSyncedJobs]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-17T13:22:17+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Jobs/Procedure_ArchiveDB.Maintenance.CleanupSyncedJobs.sql
--- ### [Hash]: dc39c27 [SHA256-B334A5C0F3695C11FF128CCCE76399658BE53E846EC9EEE828BFD1EDBD01BC2E]
+-- ### [Hash]: db87142 [SHA256-9CB88FB836538627F339C668DF1267D8FF1CE643B8223D3FE84B8B77C7328F69]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -9286,7 +9286,7 @@ BEGIN
 
         INSERT INTO @messages([Message], Severity, [State])
         -- Check min required version
-        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion
+        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion AND ServerProperty('EngineEdition') NOT IN (5, 8, 9)
         -- Check Database Compatibility Level
         UNION ALL SELECT 'ERROR: Database ' + QUOTENAME(DB_NAME(DB_ID())) + ' Compatibility Level is set to '+ CAST([compatibility_level] AS nvarchar(MAX)) + '. Compatibility level 130 or higher is requiered.', 16, 1 FROM sys.databases WHERE database_id = DB_ID() AND [compatibility_level] < @minCompatibilityLevel
         -- Check opened transation(s)
@@ -11510,9 +11510,9 @@ GO
 ALTER PROCEDURE [Maintenance].[AddArchiveTriggerQueues]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[AddArchiveTriggerQueues]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-17T13:22:17+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.AddArchiveTriggerQueues.sql
--- ### [Hash]: dc39c27 [SHA256-D5C074D0FA9BD2E07FED828ABB974C40A7536C7E8075BB21D460219156FA0236]
+-- ### [Hash]: db87142 [SHA256-3B7DD6AE9B36F68F91F626C826A0FFC12FAA381120B2A497E801D489D09B20EF]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -11713,7 +11713,7 @@ BEGIN
 
         INSERT INTO @messages([Message], Severity, [State])
         -- Check min required version
-        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion
+        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion AND ServerProperty('EngineEdition') NOT IN (5, 8, 9) 
         -- Check Database Compatibility Level
         UNION ALL SELECT 'ERROR: Database ' + QUOTENAME(DB_NAME(DB_ID())) + ' Compatibility Level is set to '+ CAST([compatibility_level] AS nvarchar(MAX)) + '. Compatibility level 130 or higher is requiered.', 16, 1 FROM sys.databases WHERE database_id = DB_ID() AND [compatibility_level] < @minCompatibilityLevel
         -- Check opened transation(s)
@@ -12100,9 +12100,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ArchiveQueues]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ArchiveQueues]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-17T13:22:17+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.ArchiveQueues.sql
--- ### [Hash]: dc39c27 [SHA256-FB1F85509F1ED17815800BA6E9486521B5E55658F13007B33967668AE31BC9E8]
+-- ### [Hash]: db87142 [SHA256-D90D77F1A34A843C2B44F8F1A9AC8D364819801F00F76311B5754E3D330F5B23]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -12375,7 +12375,7 @@ BEGIN
 
         INSERT INTO @messages([Message], Severity, [State])
         -- Check min required version
-        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion
+        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion AND ServerProperty('EngineEdition') NOT IN (5, 8, 9) 
         -- Check Database Compatibility Level
         UNION ALL SELECT 'ERROR: Database ' + QUOTENAME(DB_NAME(DB_ID())) + ' Compatibility Level is set to '+ CAST([compatibility_level] AS nvarchar(MAX)) + '. Compatibility level 130 or higher is requiered.', 16, 1 FROM sys.databases WHERE database_id = DB_ID() AND [compatibility_level] < @minCompatibilityLevel
         -- Check opened transation(s)
@@ -12858,7 +12858,7 @@ BEGIN
                 SELECT @countFilterIds = ISNULL(COUNT(*), 0), @countArchiveIds = ISNULL(COUNT(DISTINCT ArchiveId), 0) FROM #tempListFilters;
                 SELECT @targetTimestamp = MAX(TargetTimeStamp) FROM #tempListFilters WHERE TargetTimeStamp IS NOT NULL;
 
-                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_QueueItems] --WITH(INDEX([IX_TenantId_IsGlobal_ExecutionTime])) WHERE ExecutionTime <= @targetTimestamp;
+                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_QueueItems]; --WITH(INDEX([IX_TenantId_IsGlobal_ExecutionTime])) WHERE ExecutionTime <= @targetTimestamp;
                 DECLARE @maxTargetId bigint;
 
                 SELECT @maxTargetId = MAX(ISNULL(TargetId, 0)) FROM #tempListFilters;
@@ -13460,9 +13460,9 @@ GO
 ALTER PROCEDURE [Maintenance].[CleanupSyncedQueues]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[CleanupSyncedQueues]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-17T13:22:17+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.CleanupSyncedQueues.sql
--- ### [Hash]: dc39c27 [SHA256-C8B5B262130144A8E4393A1E451C79B554FF6E10D740A8B0065895E44E798166]
+-- ### [Hash]: db87142 [SHA256-CE73B2A78877266891FF4897E748F72469E71151D8683EC39FBD5BDDA0412CE1]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -13660,7 +13660,7 @@ BEGIN
 
         INSERT INTO @messages([Message], Severity, [State])
         -- Check min required version
-        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion
+        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion AND ServerProperty('EngineEdition') NOT IN (5, 8, 9) 
         -- Check Database Compatibility Level
         UNION ALL SELECT 'ERROR: Database ' + QUOTENAME(DB_NAME(DB_ID())) + ' Compatibility Level is set to '+ CAST([compatibility_level] AS nvarchar(MAX)) + '. Compatibility level 130 or higher is requiered.', 16, 1 FROM sys.databases WHERE database_id = DB_ID() AND [compatibility_level] < @minCompatibilityLevel
         -- Check opened transation(s)
@@ -15466,9 +15466,9 @@ GO
 ALTER PROCEDURE [Maintenance].[AddArchiveTriggerAuditLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[AddArchiveTriggerAuditLogs]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-17T13:22:17+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.AddArchiveTriggerAuditLogs.sql
--- ### [Hash]: dc39c27 [SHA256-F97AD1136AC7F2283A2BBF6761661D3C01CADB44234C94C673F4C6A5F27961B9]
+-- ### [Hash]: db87142 [SHA256-B17E4851C9C06FB01EF5583C36296E27823BA677A6237B12E616AE6AE86B5759]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -15668,7 +15668,7 @@ BEGIN
 
         INSERT INTO @messages([Message], Severity, [State])
         -- Check min required version
-        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion
+        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion AND ServerProperty('EngineEdition') NOT IN (5, 8, 9) 
         -- Check Database Compatibility Level
         UNION ALL SELECT 'ERROR: Database ' + QUOTENAME(DB_NAME(DB_ID())) + ' Compatibility Level is set to '+ CAST([compatibility_level] AS nvarchar(MAX)) + '. Compatibility level 130 or higher is requiered.', 16, 1 FROM sys.databases WHERE database_id = DB_ID() AND [compatibility_level] < @minCompatibilityLevel
         -- Check opened transation(s)
@@ -16054,9 +16054,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ArchiveAuditLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ArchiveAuditLogs]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-17T13:22:17+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.ArchiveAuditLogs.sql
--- ### [Hash]: dc39c27 [SHA256-4A6F0AC6A36157DAF96EA91B800FDE9A6A8006281CE980EAA77F6B96C266A4AF]
+-- ### [Hash]: db87142 [SHA256-7F4163FAACB8376B256326244CFBA4E905FEE5B4643304A36FE9659E8153BDBD]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -16324,7 +16324,7 @@ BEGIN
 
         INSERT INTO @messages([Message], Severity, [State])
         -- Check min required version
-        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion
+        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion AND ServerProperty('EngineEdition') NOT IN (5, 8, 9)
         -- Check Database Compatibility Level
         UNION ALL SELECT 'ERROR: Database ' + QUOTENAME(DB_NAME(DB_ID())) + ' Compatibility Level is set to '+ CAST([compatibility_level] AS nvarchar(MAX)) + '. Compatibility level 130 or higher is requiered.', 16, 1 FROM sys.databases WHERE database_id = DB_ID() AND [compatibility_level] < @minCompatibilityLevel
         -- Check opened transation(s)
@@ -16777,7 +16777,7 @@ BEGIN
                 SELECT @countFilterIds = ISNULL(COUNT(*), 0), @countArchiveIds = ISNULL(COUNT(DISTINCT ArchiveId), 0) FROM #tempListFilters;
                 SELECT @targetTimestamp = MAX(TargetTimeStamp) FROM #tempListFilters WHERE TargetTimeStamp IS NOT NULL;
 
-                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_AuditLogs] WITH(INDEX([IX_TenantId_IsGlobal_ExecutionTime])) WHERE ExecutionTime <= @targetTimestamp;
+                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_AuditLogs];-- WITH(INDEX([IX_TenantId_IsGlobal_ExecutionTime])) WHERE ExecutionTime <= @targetTimestamp;
                 DECLARE @maxTargetId bigint;
 
                 SELECT @maxTargetId = MAX(ISNULL(TargetId, 0)) FROM #tempListFilters;
@@ -17376,9 +17376,9 @@ GO
 ALTER PROCEDURE [Maintenance].[CleanupSyncedAuditLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[CleanupSyncedAuditLogs]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-17T13:22:17+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.CleanupSyncedAuditLogs.sql
--- ### [Hash]: dc39c27 [SHA256-CE783396C91E59F51BD4110DD2A3805ABA450478657367597973A7F17DB1DBB9]
+-- ### [Hash]: db87142 [SHA256-8334BA22C9E2DF4D8A020A3A3E0A6A3752B9AB4D427CDF054DF463C0559AD586]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -17576,7 +17576,7 @@ BEGIN
 
         INSERT INTO @messages([Message], Severity, [State])
         -- Check min required version
-        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion
+        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion AND ServerProperty('EngineEdition') NOT IN (5, 8, 9)
         -- Check Database Compatibility Level
         UNION ALL SELECT 'ERROR: Database ' + QUOTENAME(DB_NAME(DB_ID())) + ' Compatibility Level is set to '+ CAST([compatibility_level] AS nvarchar(MAX)) + '. Compatibility level 130 or higher is requiered.', 16, 1 FROM sys.databases WHERE database_id = DB_ID() AND [compatibility_level] < @minCompatibilityLevel
         -- Check opened transation(s)
@@ -19145,9 +19145,9 @@ GO
 ALTER PROCEDURE [Maintenance].[AddArchiveTriggerRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[AddArchiveTriggerRobotLicenseLogs]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-17T13:22:17+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/RobotLicenseLogs/Procedure_ArchiveDB.Maintenance.AddArchiveTriggerRobotLicenseLogs.sql
--- ### [Hash]: dc39c27 [SHA256-BB293A22AC398AD345528534E98AC89710BF39F16FEF49B9D840DA1F7D812C67]
+-- ### [Hash]: db87142 [SHA256-718ECD109A89309BA96BC6EAD978CC33D39D192162F478A71814D277F9D08CC9]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -19347,7 +19347,7 @@ BEGIN
 
         INSERT INTO @messages([Message], Severity, [State])
         -- Check min required version
-        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion
+        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion AND ServerProperty('EngineEdition') NOT IN (5, 8, 9)
         -- Check Database Compatibility Level
         UNION ALL SELECT 'ERROR: Database ' + QUOTENAME(DB_NAME(DB_ID())) + ' Compatibility Level is set to '+ CAST([compatibility_level] AS nvarchar(MAX)) + '. Compatibility level 130 or higher is requiered.', 16, 1 FROM sys.databases WHERE database_id = DB_ID() AND [compatibility_level] < @minCompatibilityLevel
         -- Check opened transation(s)
@@ -19735,9 +19735,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ArchiveRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ArchiveRobotLicenseLogs]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-17T13:22:17+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/RobotLicenseLogs/Procedure_ArchiveDB.Maintenance.ArchiveRobotLicenseLogs.sql
--- ### [Hash]: dc39c27 [SHA256-FAAAA167679F8A106AE41DCA9AB411063A5D994712D80DB198491E9E02CE8EC9]
+-- ### [Hash]: db87142 [SHA256-A3B9A67D56A996A850C240876785935C8BA3AAF670A880AF29421C41FE8C39E0]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -20000,7 +20000,7 @@ BEGIN
 
         INSERT INTO @messages([Message], Severity, [State])
         -- Check min required version
-        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion
+        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion AND ServerProperty('EngineEdition') NOT IN (5, 8, 9)
         -- Check Database Compatibility Level
         UNION ALL SELECT 'ERROR: Database ' + QUOTENAME(DB_NAME(DB_ID())) + ' Compatibility Level is set to '+ CAST([compatibility_level] AS nvarchar(MAX)) + '. Compatibility level 130 or higher is requiered.', 16, 1 FROM sys.databases WHERE database_id = DB_ID() AND [compatibility_level] < @minCompatibilityLevel
         -- Check opened transation(s)
@@ -20414,7 +20414,7 @@ BEGIN
                 SELECT @countFilterIds = ISNULL(COUNT(*), 0), @countArchiveIds = ISNULL(COUNT(DISTINCT ArchiveId), 0) FROM #tempListFilters;
                 SELECT @targetTimestamp = MAX(TargetTimeStamp) FROM #tempListFilters WHERE TargetTimeStamp IS NOT NULL;
 
-                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_RobotLicenseLogs] /*WITH(INDEX([IX_Machine]))*/ WHERE EndDate <= @targetTimestamp;
+                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_RobotLicenseLogs];-- /*WITH(INDEX([IX_Machine]))*/ WHERE EndDate <= @targetTimestamp;
                 DECLARE @maxTargetId bigint;
 
                 SELECT @maxTargetId = MAX(ISNULL(TargetId, 0)) FROM #tempListFilters;
@@ -21012,9 +21012,9 @@ GO
 ALTER PROCEDURE [Maintenance].[CleanupSyncedRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[CleanupSyncedRobotLicenseLogs]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-17T13:22:17+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/RobotLicenseLogs/Procedure_ArchiveDB.Maintenance.CleanupSyncedRobotLicenseLogs.sql
--- ### [Hash]: dc39c27 [SHA256-A785BE42BD048ED426C2AB0042F897DB3E369FF0DA09794B3043B609081ED155]
+-- ### [Hash]: db87142 [SHA256-83E95229629B06A1FC9BF492FDF35C2550B301D4BB8248DCAA0223C505EF9721]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -21212,7 +21212,7 @@ BEGIN
 
         INSERT INTO @messages([Message], Severity, [State])
         -- Check min required version
-        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion
+        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion AND ServerProperty('EngineEdition') NOT IN (5, 8, 9)
         -- Check Database Compatibility Level
         UNION ALL SELECT 'ERROR: Database ' + QUOTENAME(DB_NAME(DB_ID())) + ' Compatibility Level is set to '+ CAST([compatibility_level] AS nvarchar(MAX)) + '. Compatibility level 130 or higher is requiered.', 16, 1 FROM sys.databases WHERE database_id = DB_ID() AND [compatibility_level] < @minCompatibilityLevel
         -- Check opened transation(s)

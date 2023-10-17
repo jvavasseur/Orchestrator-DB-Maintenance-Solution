@@ -1512,9 +1512,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ASyncCleanupLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ASyncCleanupLogs]
--- ### [Version]: 2023-09-07T18:14:12+02:00
+-- ### [Version]: 2023-10-17T13:22:17+02:00
 -- ### [Source]: _src/Archive/OrchestratorDB/Logs/Procedure_OrchestratorDB.Maintenance.ASyncCleanupLogs.sql
--- ### [Hash]: 914e4af [SHA256-A4A8749B99622BD610B69227364C43A3E0952C8B275E46CE89A50736F829F903]
+-- ### [Hash]: db87142 [SHA256-7DD1F6AF9F9F3482B8C9DA29E75999F96B9BDC4A11D20B69C06F4A93CDDEC8F0]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -1717,7 +1717,7 @@ BEGIN
 
         INSERT INTO @messages([Message], Severity, [State])
         -- Check min required version
-        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion
+        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion AND ServerProperty('EngineEdition') NOT IN (5, 8, 9)
         -- Check Database Compatibility Level
         UNION ALL SELECT 'ERROR: Database ' + QUOTENAME(DB_NAME(DB_ID())) + ' Compatibility Level is set to '+ CAST([compatibility_level] AS nvarchar(MAX)) + '. Compatibility level 130 or higher is requiered.', 16, 1 FROM sys.databases WHERE database_id = DB_ID() AND [compatibility_level] < @minCompatibilityLevel
         -- Check opened transation(s)

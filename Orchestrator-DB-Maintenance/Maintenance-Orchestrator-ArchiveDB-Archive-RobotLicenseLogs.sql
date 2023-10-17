@@ -3170,9 +3170,9 @@ GO
 ALTER PROCEDURE [Maintenance].[AddArchiveTriggerRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[AddArchiveTriggerRobotLicenseLogs]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-17T13:22:17+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/RobotLicenseLogs/Procedure_ArchiveDB.Maintenance.AddArchiveTriggerRobotLicenseLogs.sql
--- ### [Hash]: dc39c27 [SHA256-BB293A22AC398AD345528534E98AC89710BF39F16FEF49B9D840DA1F7D812C67]
+-- ### [Hash]: db87142 [SHA256-718ECD109A89309BA96BC6EAD978CC33D39D192162F478A71814D277F9D08CC9]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -3372,7 +3372,7 @@ BEGIN
 
         INSERT INTO @messages([Message], Severity, [State])
         -- Check min required version
-        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion
+        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion AND ServerProperty('EngineEdition') NOT IN (5, 8, 9)
         -- Check Database Compatibility Level
         UNION ALL SELECT 'ERROR: Database ' + QUOTENAME(DB_NAME(DB_ID())) + ' Compatibility Level is set to '+ CAST([compatibility_level] AS nvarchar(MAX)) + '. Compatibility level 130 or higher is requiered.', 16, 1 FROM sys.databases WHERE database_id = DB_ID() AND [compatibility_level] < @minCompatibilityLevel
         -- Check opened transation(s)
@@ -3760,9 +3760,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ArchiveRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ArchiveRobotLicenseLogs]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-17T13:22:17+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/RobotLicenseLogs/Procedure_ArchiveDB.Maintenance.ArchiveRobotLicenseLogs.sql
--- ### [Hash]: dc39c27 [SHA256-FAAAA167679F8A106AE41DCA9AB411063A5D994712D80DB198491E9E02CE8EC9]
+-- ### [Hash]: db87142 [SHA256-A3B9A67D56A996A850C240876785935C8BA3AAF670A880AF29421C41FE8C39E0]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -4025,7 +4025,7 @@ BEGIN
 
         INSERT INTO @messages([Message], Severity, [State])
         -- Check min required version
-        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion
+        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion AND ServerProperty('EngineEdition') NOT IN (5, 8, 9)
         -- Check Database Compatibility Level
         UNION ALL SELECT 'ERROR: Database ' + QUOTENAME(DB_NAME(DB_ID())) + ' Compatibility Level is set to '+ CAST([compatibility_level] AS nvarchar(MAX)) + '. Compatibility level 130 or higher is requiered.', 16, 1 FROM sys.databases WHERE database_id = DB_ID() AND [compatibility_level] < @minCompatibilityLevel
         -- Check opened transation(s)
@@ -4439,7 +4439,7 @@ BEGIN
                 SELECT @countFilterIds = ISNULL(COUNT(*), 0), @countArchiveIds = ISNULL(COUNT(DISTINCT ArchiveId), 0) FROM #tempListFilters;
                 SELECT @targetTimestamp = MAX(TargetTimeStamp) FROM #tempListFilters WHERE TargetTimeStamp IS NOT NULL;
 
-                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_RobotLicenseLogs] /*WITH(INDEX([IX_Machine]))*/ WHERE EndDate <= @targetTimestamp;
+                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_RobotLicenseLogs];-- /*WITH(INDEX([IX_Machine]))*/ WHERE EndDate <= @targetTimestamp;
                 DECLARE @maxTargetId bigint;
 
                 SELECT @maxTargetId = MAX(ISNULL(TargetId, 0)) FROM #tempListFilters;
@@ -5037,9 +5037,9 @@ GO
 ALTER PROCEDURE [Maintenance].[CleanupSyncedRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[CleanupSyncedRobotLicenseLogs]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-17T13:22:17+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/RobotLicenseLogs/Procedure_ArchiveDB.Maintenance.CleanupSyncedRobotLicenseLogs.sql
--- ### [Hash]: dc39c27 [SHA256-A785BE42BD048ED426C2AB0042F897DB3E369FF0DA09794B3043B609081ED155]
+-- ### [Hash]: db87142 [SHA256-83E95229629B06A1FC9BF492FDF35C2550B301D4BB8248DCAA0223C505EF9721]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -5237,7 +5237,7 @@ BEGIN
 
         INSERT INTO @messages([Message], Severity, [State])
         -- Check min required version
-        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion
+        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion AND ServerProperty('EngineEdition') NOT IN (5, 8, 9)
         -- Check Database Compatibility Level
         UNION ALL SELECT 'ERROR: Database ' + QUOTENAME(DB_NAME(DB_ID())) + ' Compatibility Level is set to '+ CAST([compatibility_level] AS nvarchar(MAX)) + '. Compatibility level 130 or higher is requiered.', 16, 1 FROM sys.databases WHERE database_id = DB_ID() AND [compatibility_level] < @minCompatibilityLevel
         -- Check opened transation(s)

@@ -3407,9 +3407,9 @@ GO
 ALTER PROCEDURE [Maintenance].[AddArchiveTriggerAuditLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[AddArchiveTriggerAuditLogs]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-17T13:22:17+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.AddArchiveTriggerAuditLogs.sql
--- ### [Hash]: dc39c27 [SHA256-F97AD1136AC7F2283A2BBF6761661D3C01CADB44234C94C673F4C6A5F27961B9]
+-- ### [Hash]: db87142 [SHA256-B17E4851C9C06FB01EF5583C36296E27823BA677A6237B12E616AE6AE86B5759]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -3609,7 +3609,7 @@ BEGIN
 
         INSERT INTO @messages([Message], Severity, [State])
         -- Check min required version
-        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion
+        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion AND ServerProperty('EngineEdition') NOT IN (5, 8, 9) 
         -- Check Database Compatibility Level
         UNION ALL SELECT 'ERROR: Database ' + QUOTENAME(DB_NAME(DB_ID())) + ' Compatibility Level is set to '+ CAST([compatibility_level] AS nvarchar(MAX)) + '. Compatibility level 130 or higher is requiered.', 16, 1 FROM sys.databases WHERE database_id = DB_ID() AND [compatibility_level] < @minCompatibilityLevel
         -- Check opened transation(s)
@@ -3995,9 +3995,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ArchiveAuditLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ArchiveAuditLogs]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-17T13:22:17+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.ArchiveAuditLogs.sql
--- ### [Hash]: dc39c27 [SHA256-4A6F0AC6A36157DAF96EA91B800FDE9A6A8006281CE980EAA77F6B96C266A4AF]
+-- ### [Hash]: db87142 [SHA256-7F4163FAACB8376B256326244CFBA4E905FEE5B4643304A36FE9659E8153BDBD]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -4265,7 +4265,7 @@ BEGIN
 
         INSERT INTO @messages([Message], Severity, [State])
         -- Check min required version
-        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion
+        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion AND ServerProperty('EngineEdition') NOT IN (5, 8, 9)
         -- Check Database Compatibility Level
         UNION ALL SELECT 'ERROR: Database ' + QUOTENAME(DB_NAME(DB_ID())) + ' Compatibility Level is set to '+ CAST([compatibility_level] AS nvarchar(MAX)) + '. Compatibility level 130 or higher is requiered.', 16, 1 FROM sys.databases WHERE database_id = DB_ID() AND [compatibility_level] < @minCompatibilityLevel
         -- Check opened transation(s)
@@ -4718,7 +4718,7 @@ BEGIN
                 SELECT @countFilterIds = ISNULL(COUNT(*), 0), @countArchiveIds = ISNULL(COUNT(DISTINCT ArchiveId), 0) FROM #tempListFilters;
                 SELECT @targetTimestamp = MAX(TargetTimeStamp) FROM #tempListFilters WHERE TargetTimeStamp IS NOT NULL;
 
-                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_AuditLogs] WITH(INDEX([IX_TenantId_IsGlobal_ExecutionTime])) WHERE ExecutionTime <= @targetTimestamp;
+                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_AuditLogs];-- WITH(INDEX([IX_TenantId_IsGlobal_ExecutionTime])) WHERE ExecutionTime <= @targetTimestamp;
                 DECLARE @maxTargetId bigint;
 
                 SELECT @maxTargetId = MAX(ISNULL(TargetId, 0)) FROM #tempListFilters;
@@ -5317,9 +5317,9 @@ GO
 ALTER PROCEDURE [Maintenance].[CleanupSyncedAuditLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[CleanupSyncedAuditLogs]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-17T13:22:17+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.CleanupSyncedAuditLogs.sql
--- ### [Hash]: dc39c27 [SHA256-CE783396C91E59F51BD4110DD2A3805ABA450478657367597973A7F17DB1DBB9]
+-- ### [Hash]: db87142 [SHA256-8334BA22C9E2DF4D8A020A3A3E0A6A3752B9AB4D427CDF054DF463C0559AD586]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -5517,7 +5517,7 @@ BEGIN
 
         INSERT INTO @messages([Message], Severity, [State])
         -- Check min required version
-        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion
+        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion AND ServerProperty('EngineEdition') NOT IN (5, 8, 9)
         -- Check Database Compatibility Level
         UNION ALL SELECT 'ERROR: Database ' + QUOTENAME(DB_NAME(DB_ID())) + ' Compatibility Level is set to '+ CAST([compatibility_level] AS nvarchar(MAX)) + '. Compatibility level 130 or higher is requiered.', 16, 1 FROM sys.databases WHERE database_id = DB_ID() AND [compatibility_level] < @minCompatibilityLevel
         -- Check opened transation(s)

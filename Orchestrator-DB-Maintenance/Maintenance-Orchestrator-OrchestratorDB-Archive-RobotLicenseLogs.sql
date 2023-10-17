@@ -1495,7 +1495,7 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
--- DROP PROCEDURE [Maintenance].[ASyncCleanupRobotLicenseLogs]
+-- DROP exec [Maintenance].[ASyncCleanupRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[ASyncCleanupRobotLicenseLogs]') AND type in (N'P'))
@@ -1512,9 +1512,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ASyncCleanupRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ASyncCleanupRobotLicenseLogs]
--- ### [Version]: 2023-09-07T18:44:11+02:00
+-- ### [Version]: 2023-10-17T13:22:17+02:00
 -- ### [Source]: _src/Archive/OrchestratorDB/RobotLicenseLogs/Procedure_OrchestratorDB.Maintenance.ASyncCleanupRobotLicenseLogs.sql
--- ### [Hash]: 3470ab5 [SHA256-967CA3A94AB5D66ECB10ADF7F79062C04FE3E3059F9AAE8EA80F961C893AD50A]
+-- ### [Hash]: db87142 [SHA256-ED5A5687AC523164E7E0137B66FE9EC0D62820506B04C449764BF9DE02BA991F]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -1717,7 +1717,7 @@ BEGIN
 
         INSERT INTO @messages([Message], Severity, [State])
         -- Check min required version
-        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion
+        SELECT N'ERROR: Current SQL Server version is ' + @productVersion + N'. Only version ' + @minProductVersion + + N' or higher is supported.', 16, 1 WHERE @version < @minVersion AND ServerProperty('EngineEdition') NOT IN (5, 8, 9)
         -- Check Database Compatibility Level
         UNION ALL SELECT 'ERROR: Database ' + QUOTENAME(DB_NAME(DB_ID())) + ' Compatibility Level is set to '+ CAST([compatibility_level] AS nvarchar(MAX)) + '. Compatibility level 130 or higher is requiered.', 16, 1 FROM sys.databases WHERE database_id = DB_ID() AND [compatibility_level] < @minCompatibilityLevel
         -- Check opened transation(s)
