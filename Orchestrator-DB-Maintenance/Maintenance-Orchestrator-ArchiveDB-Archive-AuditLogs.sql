@@ -329,6 +329,65 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
+-- DROP VIEW [Maintenance].[ArchivingListASyncOrchestratorDBTables]
+----------------------------------------------------------------------------------------------------
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[ArchivingListASyncOrchestratorDBTables]') AND type in (N'V'))
+BEGIN
+    PRINT '  + CREATE VIEW: [Maintenance].[ArchivingListASyncOrchestratorDBTables]';
+END
+ELSE PRINT '  ~ ALTER VIEW: [Maintenance].[ArchivingListASyncOrchestratorDBTables]'
+GO
+
+CREATE OR ALTER VIEW [Maintenance].[ArchivingListASyncOrchestratorDBTables]
+AS
+    WITH list([schema], [table], [group], [IsArchived]) AS (
+        SELECT CAST(LTRIM(RTRIM([schema])) AS nvarchar(128)), CAST(LTRIM(RTRIM([table])) AS nvarchar(128)), CAST(NULLIF(LTRIM(RTRIM([group])), '') AS nvarchar(128)), CAST([IsArchived] AS bit)
+        FROM (VALUES
+            ('Maintenance', 'Sync_AuditLogs', 'AuditLogs', 0)
+            , ('Maintenance', 'Delete_AuditLogs', 'AuditLogs', 0)
+            , ('Maintenance', 'Sync_Jobs', 'Jobs', 0)
+            , ('Maintenance', 'Delete_Jobs', 'Jobs', 0)
+            , ('Maintenance', 'Sync_Logs', 'Logs', 0)
+            , ('Maintenance', 'Delete_Logs', 'Logs', 0)
+            , ('Maintenance', 'Sync_RobotLicenseLogs', 'RobotLicenseLogs', 0)
+            , ('Maintenance', 'Delete_RobotLicenseLogs', 'RobotLicenseLogs', 0)
+            , ('Maintenance', 'Sync_Queues', 'Queues', 0)
+            , ('Maintenance', 'Delete_Queues', 'Queues', 0)
+        ) list([schema], [table], [group], [IsArchived]) 
+    ), tables([schema], [table], [group], [object_id], [IsArchived]) AS (
+        SELECT lst.[schema], lst.[table], lst.[group], tbl.object_id, lst.[IsArchived]
+        FROM [list] lst
+        LEFT JOIN sys.tables tbl ON tbl.[name] = lst.[table]
+        LEFT JOIN sys.schemas sch ON tbl.schema_id = sch.schema_id AND sch.[name] = lst.[schema] 
+    )
+    SELECT tbl.[group], tbl.[schema], tbl.[table], [IsArchived]--, lst.object_id
+        , [exists] = CAST(IIF(tbl.object_id IS NULL, 0, 1) AS bit)
+        , [isvalid] = CAST(IIF(NOT EXISTS(SELECT 1 FROM list WHERE ([group] = tbl.[group] OR [group] IS NULL) AND object_id IS NULL), 1, 0) AS bit)
+        , columns = (
+            SELECT TOP(1000) [column] = col.[name], [id] = col.column_id
+                , [datatype] =   tpe.[name] + 
+                    CASE WHEN tpe.[name] IN (N'varchar', N'char', N'varbinary', N'binary', N'text') THEN '(' + CASE WHEN col.max_length = -1 THEN 'MAX' ELSE CAST(col.max_length AS VARCHAR(5)) END + ')'
+                    WHEN tpe.[name] IN (N'nvarchar', N'nchar', N'ntext') THEN '(' + CASE WHEN col.max_length = -1 THEN 'MAX' ELSE CAST(col.max_length / 2 AS VARCHAR(5)) END + ')'
+                    WHEN tpe.[name] IN (N'datetime2', N'time2', N'datetimeoffset') THEN '(' + CAST(col.scale AS VARCHAR(5)) + ')'
+                    WHEN tpe.[name] IN (N'decimal', N'numeric') THEN '(' + CAST(col.[precision] AS VARCHAR(5)) + ',' + CAST(col.scale AS VARCHAR(5)) + ')'
+                    WHEN tpe.[name] IN (N'float') THEN '(' + CAST(col.[precision] AS VARCHAR(5)) + ')'
+                    ELSE '' END
+            FROM sys.columns AS col
+            INNER JOIN sys.types AS tpe ON col.system_type_id = tpe.system_type_id AND tpe.system_type_id = tpe.user_type_id
+            WHERE col.object_id = tbl.object_id AND tpe.[name] <> N'timestamp' AND NOT EXISTS(SELECT 1 FROM tables WHERE ([group] = tbl.[group] OR [group] IS NULL) AND object_id IS NULL)
+            FOR JSON PATH 
+        )
+    FROM tables tbl
+GO
+
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+SET NOCOUNT ON;
+GO
+
+----------------------------------------------------------------------------------------------------
 -- ### [Object]: TABLE [Maintenance].[Archive_AuditLogs]
 -- ### [Version]: 2023-09-08T11:08:50+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Table_ArchiveDB.Maintenance.Archive_AuditLogs.sql
@@ -956,6 +1015,232 @@ SET NOCOUNT ON;
 GO
 
 ----------------------------------------------------------------------------------------------------
+-- DROP PROCEDURE [Maintenance].[CreateArchivingExternalTable]
+----------------------------------------------------------------------------------------------------
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[CreateArchivingExternalTable]') AND type in (N'P'))
+BEGIN
+    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[CreateArchivingExternalTable] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[CreateArchivingExternalTable]';
+END
+ELSE PRINT '  = PROCEDURE [Maintenance].[CreateArchivingExternalTable] already exists' 
+GO
+
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[CreateArchivingExternalTable]'
+GO
+
+ALTER PROCEDURE [Maintenance].[CreateArchivingExternalTable]
+----------------------------------------------------------------------------------------------------
+-- ### [Object]: PROCEDURE [Maintenance].[CreateArchivingExternalTable]
+-- ### [Version]: 2023-10-16T18:16:29+02:00
+-- ### [Source]: _src/Archive/Procedure_Maintenance.CreateArchivingExternalTable.sql
+-- ### [Hash]: 085ff9b [SHA256-833D83081AF8B257DB988014284AAE0FDB68525C72089E8311234E42654C3417]
+-- ### [Docs]: https://???.???
+-- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
+-- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
+-- !!! ~~~~~~~~~ SQL Server >= 2016 SP1
+----------------------------------------------------------------------------------------------------
+    @ExternalDataSource nvarchar(128)
+    , @ExternalName nvarchar(128)
+    , @ExternalSchema nvarchar(128)
+    , @Columns nvarchar(MAX)
+    , @ShowMessages bit = 1
+    , @ThrowError bit = 1
+--    , @Columns nvarchar(MAX) = NULL OUTPUT
+    , @IsValid bit = 0 OUTPUT
+    , @Messages nvarchar(MAX) = NULL OUTPUT
+AS
+BEGIN
+    BEGIN TRY 
+        SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+		SET LOCK_TIMEOUT 5000;
+        SET ARITHABORT ON;
+        SET NOCOUNT ON;
+        SET NUMERIC_ROUNDABORT OFF;
+
+        ----------------------------------------------------------------------------------------------------
+        -- Table Variables
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @datasourceId int;
+        DECLARE @tableId int
+        DECLARE @replaceTable bit = 0;
+        DECLARE @listExisting TABLE([column] nvarchar(128), [datatype] nvarchar(128))
+        DECLARE @listColumns TABLE([id] int IDENTITY(0, 1), [column] nvarchar(128), [datatype] nvarchar(128))
+        ----------------------------------------------------------------------------------------------------
+        -- Misc      
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @sql nvarchar(max);
+        DECLARE @sqlVars nvarchar(MAX);
+        DECLARE @sqlValues nvarchar(MAX);
+        DECLARE @sqlCols nvarchar(MAX);
+        ----------------------------------------------------------------------------------------------------      
+        -- Message / Error Handling
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @message nvarchar(MAX);
+        DECLARE @ERROR_NUMBER INT, @ERROR_SEVERITY INT, @ERROR_STATE INT, @ERROR_PROCEDURE NVARCHAR(126), @ERROR_LINE INT, @ERROR_MESSAGE NVARCHAR(2048);
+        DECLARE @space tinyint = 2;
+        DECLARE @tab tinyint = 0;
+        DECLARE @json_errors TABLE([id] tinyint NOT NULL, [severity] int NOT NULL, [message] nvarchar(MAX) NOT NULL);
+
+        ----------------------------------------------------------------------------------------------------      
+        -- Checks Data Source and External Table
+        ----------------------------------------------------------------------------------------------------
+        SELECT @datasourceId = data_source_id FROM sys.external_data_sources WHERE [name] = @ExternalDataSource;
+        SELECT @tableId = object_id, @replaceTable = @replaceTable | IIF([data_source_id] <> @datasourceId, 1, 0) FROM sys.external_tables WHERE [name] = @ExternalName AND [schema_id] = SCHEMA_ID(@ExternalSchema);
+
+        INSERT INTO @listExisting([column], [datatype])
+        SELECT TOP(1000) col.[name] 
+            , [datatype] =   tpe.[name] + 
+                CASE WHEN tpe.[name] IN (N'varchar', N'char', N'varbinary', N'binary', N'text') THEN '(' + CASE WHEN col.max_length = -1 THEN 'MAX' ELSE CAST(col.max_length AS VARCHAR(5)) END + ')'
+                WHEN tpe.[name] IN (N'nvarchar', N'nchar', N'ntext') THEN '(' + CASE WHEN col.max_length = -1 THEN 'MAX' ELSE CAST(col.max_length / 2 AS VARCHAR(5)) END + ')'
+                WHEN tpe.[name] IN (N'datetime2', N'time2', N'datetimeoffset') THEN '(' + CAST(col.scale AS VARCHAR(5)) + ')'
+                WHEN tpe.[name] IN (N'decimal', N'numeric') THEN '(' + CAST(col.[precision] AS VARCHAR(5)) + ',' + CAST(col.scale AS VARCHAR(5)) + ')'
+                WHEN tpe.[name] IN (N'float') THEN '(' + CAST(col.[precision] AS VARCHAR(5)) + ')'
+                ELSE '' END
+        FROM sys.columns AS col
+        INNER JOIN sys.types AS tpe ON col.system_type_id = tpe.system_type_id AND tpe.system_type_id = tpe.user_type_id
+        WHERE col.object_id = @tableId AND tpe.[name] <> N'timestamp'
+
+        IF ISJSON(@Columns) = 1
+        BEGIN
+            INSERT INTO @listColumns([column], [datatype])
+            SELECT[column], [datatype]
+            FROM OPENJSON(@Columns) WITH([column] nvarchar(128), [datatype] nvarchar(128))
+            WHERE [column] IS NOT NULL AND [datatype] IS NOT NULL;
+        END
+
+        SELECT @replaceTable = 1 WHERE EXISTS(SELECT [column], [datatype] FROM @listExisting EXCEPT SELECT [column], [datatype] FROM @listColumns);
+        SELECT @replaceTable = 1 WHERE EXISTS(SELECT [column], [datatype] FROM @listColumns EXCEPT SELECT [column], [datatype] FROM @listExisting);
+
+        INSERT INTO @json_errors([id], [severity], [message]) 
+        SELECT 0, 16, N'Data Source does not exists: ' + @ExternalDataSource WHERE @datasourceId IS NULL
+        UNION ALL SELECT 0, 1, N'Data Source exists: ' + @ExternalDataSource WHERE @datasourceId IS NOT NULL
+        UNION ALL SELECT 1, 16, N'@Columns is not a valid JSON string' WHERE ISJSON(@Columns) = 0
+        UNION ALL SELECT 1, 16, N'No column name found in @Columns' WHERE NOT EXISTS(SELECT 1 FROM @listColumns)
+        UNION ALL SELECT 2, 16, N'External table not found but an object with this name already exists and must be replaced: ' +  QUOTENAME(@ExternalSchema) + N'.' + QUOTENAME(@ExternalName) FROM sys.objects WHERE [name] = @ExternalName AND [schema_id] = SCHEMA_ID(@ExternalSchema) AND @tableId IS NULL
+        UNION ALL SELECT 2, 1, N'External table already exists: ' +  QUOTENAME(@ExternalSchema) + N'.' + QUOTENAME(@ExternalName) WHERE @tableId IS NOT NULL AND @replaceTable = 0
+        ;
+
+        SELECT @message = N'ERROR[PR0]: error(s) occured while checking parameters' WHERE EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10);
+        
+        IF NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10) AND @replaceTable = 1 AND @tableId IS NOT NULL
+        BEGIN
+            BEGIN TRY
+                INSERT INTO @json_errors([id], [severity], [message]) SELECT 10, 10, N'Drop external table: ' +  QUOTENAME(@ExternalSchema) + N'.' + QUOTENAME(@ExternalName)
+                UNION ALL SELECT 2, 10, N'External Table exists but will be replaced: ' + QUOTENAME(@ExternalSchema) + N'.' + QUOTENAME(@ExternalName) WHERE @datasourceId IS NOT NULL AND @tableId IS NOT NULL AND @replaceTable = 1;
+                SELECT @sql = N'DROP EXTERNAL TABLE '+ QUOTENAME(@ExternalSchema) + N'.' + QUOTENAME(@ExternalName) + N';';
+                EXEC sp_executesql @stmt = @sql;
+            END TRY
+            BEGIN CATCH
+                SET @message = N'ERROR[DT0]: error(s) occured while removing external table';
+                THROW;
+            END CATCH
+        END
+
+        -- Prepare columns Name/Type string
+        SELECT @sqlVars = NULL;
+        SELECT @sqlVars = COALESCE(@sqlVars + N', @c' + CAST([id] AS nvarchar(10)) + N' ' + [datatype], N'DECLARE @c' + CAST([id] AS nvarchar(10)) + N' ' + [datatype]) 
+            , @sqlValues = COALESCE(@sqlValues + N', @c' + CAST([id] AS nvarchar(10)) + N' = ' + QUOTENAME([column]), N'@c' + CAST([id] AS nvarchar(10)) + N' = ' + QUOTENAME([column])) 
+            , @sqlCols = COALESCE(@sqlCols + N', ' + QUOTENAME([column]) + N' ' + [datatype], N'' + QUOTENAME([column])  + N' ' + [datatype]) 
+        FROM @listColumns;
+
+        -- Create External Table
+        IF NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10) AND (@tableId IS NULL OR @replaceTable = 1)
+        BEGIN
+            BEGIN TRY
+                INSERT INTO @json_errors([id], [severity], [message]) SELECT 11, 10, N'Create external table: ' +  QUOTENAME(@ExternalSchema) + N'.' + QUOTENAME(@ExternalName)
+                SELECT @sql = N'CREATE EXTERNAL TABLE '+ QUOTENAME(@ExternalSchema) + N'.' + QUOTENAME(@ExternalName) + N'(' + @sqlCols + N') WITH ( DATA_SOURCE = ' + QUOTENAME(@ExternalDataSource) + N');';
+
+                EXEC sp_executesql @stmt = @sql;
+            END TRY
+            BEGIN CATCH
+                SET @message = N'ERROR[XT0]: error(s) occured while creating external table';
+                THROW;
+            END CATCH
+        END
+
+        -- Test External Table
+        IF NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10)
+        BEGIN
+            BEGIN TRY
+--                INSERT INTO @json_errors([id], [severity], [message]) SELECT 21, 10, N'Test external table: ' +  QUOTENAME(@ExternalSchema) + N'.' + QUOTENAME(@ExternalName)
+                SELECT @sql = N'
+                    BEGIN TRY
+                        ' + @sqlVars + N';
+                        SELECT TOP(1) ' + @sqlValues + N' FROM ' + QUOTENAME(@ExternalSchema) + N'.' + QUOTENAME(@ExternalName) + N';
+                        SELECT @error_message = NULL
+                    END TRY
+                    BEGIN CATCH
+                        SELECT @error_message = ERROR_MESSAGE();
+                        THROW;
+                    END CATCH
+                ';
+                -- Test external table
+                EXEC sp_executesql @stmt = @sql, @params = N'@error_message nvarchar(2048) OUTPUT', @error_message = @ERROR_MESSAGE OUTPUT;
+                INSERT INTO @json_errors([id], [severity], [message]) SELECT 22, 10, N'External table is valid: ' +  QUOTENAME(@ExternalSchema) + N'.' + QUOTENAME(@ExternalName) WHERE @ERROR_MESSAGE IS NULL
+                INSERT INTO @json_errors([id], [severity], [message]) SELECT 20, 16, 'y'+ @ERROR_MESSAGE WHERE @ERROR_MESSAGE IS NOT NULL;
+            END TRY
+            BEGIN CATCH
+                SET @message = N'ERROR[TS0]: error(s) occured while testing external table';
+                THROW;
+            END CATCH
+        END
+    END TRY
+    BEGIN CATCH
+        SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();
+        IF @@TRANCOUNT > 0 ROLLBACK;
+    END CATCH
+
+--    SELECT TOP(100) 'message'= 'output', [Message] = LEFT([message], 4000), [Severity] = [severity], [State] = 1 FROM @json_errors ORDER BY [id] ASC
+    -- Check / Set @IsValid flag
+    SET @IsValid = IIF(NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10) AND @ERROR_NUMBER IS NULL AND @message IS NULL, 1, 0);
+
+    SET @Messages = --ISNULL(
+    ( 
+        SELECT [Procedure] = QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')), [Message], [Severity], [State] 
+        FROM (
+            SELECT [Message], [Severity], [State] FROM (
+                SELECT TOP(100) [Message] = LEFT([message], 4000), [Severity] = [severity], [State] = 1 FROM @json_errors WHERE [severity] >= 10 OR @IsValid = 0 OR @ShowMessages = 1 ORDER BY [id] ASC
+            ) err
+            UNION ALL SELECT N'ERROR: ' + @ERROR_MESSAGE, 16, 1 WHERE @ERROR_MESSAGE IS NOT NULL
+            UNION ALL SELECT @message, 16, 1 WHERE @message IS NOT NULL
+        ) jsn
+        FOR JSON PATH)
+    --    , N'[]')
+    ;
+    IF @ShowMessages = 1 OR (@IsValid = 0 AND @ThrowError = 1) SELECT [Message] = LEFT([Message], 1000), [Severity], [Error] = IIF([Severity] > 10, 1, 0) FROM OPENJSON(@Messages) WITH([Message] nvarchar(MAX), [Severity] int)
+    IF @IsValid = 0 AND @ThrowError = 1 THROW 50000, 'Error(s) occured. See output dataset', 1;
+    RETURN 0;
+END
+GO
+
+/*
+EXEC [Maintenance].[CreateArchivingExternalTable] @ExternalDataSource = 'ArchivingDatasourceForOrchestratorDB', @ExternalName = N'ArchivingListOrchestratorDBTables', @ExternalSchema = N'Maintenance'
+, @Columns = N'[{"column":"group","datatype":"nvarchar(128)"},{"column":"schema","datatype":"nvarchar(128)"},{"column":"table","datatype":"nvarchar(128)"},{"column":"exists","datatype":"bit"},{"column":"isvalid","datatype":"bit"},{"column":"columns","datatype":"nvarchar(MAX)"}]'
+, @ShowMessages = 1
+, @ThrowError = 0;
+GO
+*/
+
+/*
+drop external data source [ArchivingDatasourceForOrchestratorDB]
+drop external table [Maintenance].[ArchivingListOrchestratorDBTables]
+
+SELECT * FROM sys.external_data_sources WHERE [name] = @ExternalDataSource
+SELECT * FROM sys.external_tables 
+SELECT 'drop external table ' +  quotename(OBJECT_SCHEMA_NAME(object_id)) + '.'+ quotename(name), * FROM sys.external_tables 
+
+SELECT * FROM [Maintenance].[ArchivingOrchestratorDBTables]
+SELECT * FROM [Maintenance].[ArchivingOrchestratorDBTablesx]
+*/
+
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+SET NOCOUNT ON;
+GO
+
+----------------------------------------------------------------------------------------------------
 -- DROP PROCEDURE [Maintenance].[SetSourceTable]
 ----------------------------------------------------------------------------------------------------
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[SetSourceTable]') AND type in (N'P'))
@@ -972,9 +1257,9 @@ GO
 ALTER PROCEDURE [Maintenance].[SetSourceTable]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[SetSourceTable]
--- ### [Version]: 2023-10-06T11:29:36+02:00
--- ### [Source]: _src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetSourceTable.sql
--- ### [Hash]: dc39c27 [SHA256-45AC573DF06F2BF3CECAB5846176D1BE55C217062136931AF84831AA441EE4EF]
+-- ### [Version]: 2023-10-16T18:16:29+02:00
+-- ### [Source]: _src/Archive/Procedure_ArchiveDB.Maintenance.SetSourceTable.sql
+-- ### [Hash]: 085ff9b [SHA256-6BDE73946CA205EBF1DEFDC7BDEE6D45725C697B0EC16C8A411647CD5315DDEA]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -986,6 +1271,8 @@ ALTER PROCEDURE [Maintenance].[SetSourceTable]
     , @SourceExpectedColumns nvarchar(MAX) = NULL
     , @CreateOrUpdateSynonym bit = 0
     , @Columns nvarchar(MAX) = NULL OUTPUT
+    , @ShowMessages bit = 0
+    , @ThrowError bit = 0
     , @IsValid bit = 0 OUTPUT
     , @Messages nvarchar(MAX) OUTPUT
 AS
@@ -1019,6 +1306,7 @@ BEGIN
         DECLARE @tab tinyint = 0;
         DECLARE @json_errors TABLE([id] tinyint NOT NULL, [severity] int NOT NULL, [message] nvarchar(MAX) NOT NULL);
 
+        SET @Messages = NULL
         ----------------------------------------------------------------------------------------------------      
         -- Checks Synonyms and Tables
         ----------------------------------------------------------------------------------------------------
@@ -1054,6 +1342,13 @@ BEGIN
 
                     SELECT @Columns = (
                         SELECT col.column_id, [column] = col.name, [type] = tpe.name, col.max_length, col.precision, col.scale
+                            , [datatype] =   tpe.[name] + 
+                                CASE WHEN tpe.[name] IN (N''varchar'', N''char'', N''varbinary'', N''binary'', N''text'') THEN ''('' + CASE WHEN col.max_length = -1 THEN ''MAX'' ELSE CAST(col.max_length AS VARCHAR(5)) END + '')''
+                                WHEN tpe.[name] IN (N''nvarchar'', N''nchar'', N''ntext'') THEN ''('' + CASE WHEN col.max_length = -1 THEN ''MAX'' ELSE CAST(col.max_length / 2 AS VARCHAR(5)) END + '')''
+                                WHEN tpe.[name] IN (N''datetime2'', N''time2'', N''datetimeoffset'') THEN ''('' + CAST(col.scale AS VARCHAR(5)) + '')''
+                                WHEN tpe.[name] IN (N''decimal'', N''numeric'') THEN ''('' + CAST(col.[precision] AS VARCHAR(5)) + '','' + CAST(col.scale AS VARCHAR(5)) + '')''
+                                WHEN tpe.[name] IN (N''float'') THEN ''('' + CAST(col.[precision] AS VARCHAR(5)) + '')''
+                                ELSE '''' END
                         FROM tempdb.sys.columns AS col
                         INNER JOIN tempdb.sys.types AS tpe ON col.system_type_id = tpe.system_type_id AND tpe.system_type_id = tpe.user_type_id
                         WHERE [object_id] = OBJECT_ID(N''tempdb.dbo.#tempSourceTableCheck'') AND tpe.[name] <> N''timestamp''
@@ -1066,16 +1361,16 @@ BEGIN
                 ';
                 -- retrieve Source columns
                 EXEC sp_executesql @stmt = @stmtSourceTableChecks, @params = @paramsSourceTableChecks, @Message = NULL, @Columns = @sourceJsonColumns OUTPUT;
-
                 -- Set default columns if not provided
                 SELECT @expectedSourceColumns = ISNULL(LTRIM(RTRIM(@sourceExpectedColumns)), N'[{"column":"Id","type":"bigint"}]' );
+
                 -- check columns
-                WITH exp([name], [type], [max_length]) AS (
-                    SELECT [name], [type], [max_length]/*, [precision], [scale]*/ FROM OPENJSON(@expectedSourceColumns, N'$')
-                    WITH ([name] nvarchar(128) N'$.column', [type] nvarchar(128), max_length smallint/*, precision tinyint, scale tinyint*/)                
-                ), col([name], [type], [max_length]) AS(
-                    SELECT [name], [type], [max_length] FROM OPENJSON(@sourceJsonColumns, N'$')
-                    WITH ([name] nvarchar(128) N'$.column', [type] nvarchar(128), max_length smallint)
+                WITH exp([name], [datatype], [type], [max_length]) AS (
+                    SELECT [name], [datatype], [type], [max_length]/*, [precision], [scale]*/ FROM OPENJSON(@expectedSourceColumns, N'$')
+                    WITH ([name] nvarchar(128) N'$.column', [datatype] nvarchar(128), [type] nvarchar(128), max_length smallint/*, precision tinyint, scale tinyint*/)                
+                ), col([name], [datatype], [type], [max_length]) AS(
+                    SELECT [name], [datatype], [type], [max_length] FROM OPENJSON(@sourceJsonColumns, N'$')
+                    WITH ([name] nvarchar(128) N'$.column', [datatype] nvarchar(128), [type] nvarchar(128), max_length smallint)
                 )
                 INSERT INTO @json_errors([id], [severity], [message])
                 SELECT 20, 16, N'ERROR[TS1]: No column retrieved from  Source table ' + @sourceTable4Parts + N' refered by synonym ' + QUOTENAME(@synonymSchema) + N'.' + QUOTENAME(@synonymName) WHERE NOT EXISTS(SELECT 1 FROM col)
@@ -1089,6 +1384,7 @@ BEGIN
                 THROW;
             END CATCH
         END    
+
         ----------------------------------------------------------------------------------------------------      
         -- Create or Update Synonym(s) / Table / Columns
         ----------------------------------------------------------------------------------------------------
@@ -1123,6 +1419,7 @@ BEGIN
 --    SELECT TOP(100) 'message'= 'output', [Message] = LEFT([message], 4000), [Severity] = [severity], [State] = 1 FROM @json_errors ORDER BY [id] ASC
     -- Check / Set @IsValid flag
     SET @IsValid = IIF(NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10) AND @ERROR_NUMBER IS NULL AND @message IS NULL, 1, 0);
+    INSERT INTO @json_errors([id], [severity], [message]) SELECT 100, 10, N'Source Synonym is valid: '+ QUOTENAME(@synonymSchema) + N'.' + QUOTENAME(@synonymName) + ' => ' + @sourceTable4Parts WHERE @IsValid = 1;
 
     SET @Messages = --ISNULL(
     ( 
@@ -1137,6 +1434,9 @@ BEGIN
         FOR JSON PATH)
     --    , N'[]')
     ;
+    IF @ShowMessages = 1 OR (@IsValid = 0 AND @ThrowError = 1) SELECT [Message] = LEFT([Message], 1000), [Severity], [Error] = IIF([Severity] > 10, 1, 0) FROM OPENJSON(@Messages) WITH([Message] nvarchar(MAX), [Severity] int)
+    IF @IsValid = 0 AND @ThrowError = 1 THROW 50000, 'Error(s) occured. See output dataset', 1;
+
     RETURN 0;
 END
 GO
@@ -1165,9 +1465,9 @@ GO
 ALTER PROCEDURE [Maintenance].[SetArchiveTable]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[SetArchiveTable]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-16T18:16:29+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetArchiveTable.sql
--- ### [Hash]: dc39c27 [SHA256-7BFFFCA6A305C98C99E2A8F1D371B2496F4FAB7F3D574F786FE123DA3F9D744E]
+-- ### [Hash]: 085ff9b [SHA256-08DAF5D5CE6041B1FAD9E973CAE00F6716DDD4FC4AEC497E0A7745B34D6F50AC]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -1431,7 +1731,8 @@ BEGIN
 --    SELECT TOP(100) 'message'= 'output', [Message] = LEFT([message], 4000), [Severity] = [severity], [State] = 1 FROM @json_errors ORDER BY [id] ASC
     -- Check / Set @IsValid flag
     SET @IsValid = IIF(NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10) AND @ERROR_NUMBER IS NULL AND @message IS NULL, 1, 0);
-
+    INSERT INTO @json_errors([id], [severity], [message]) SELECT 100, 10, N'Archive Synonym is valid: '+ QUOTENAME(@SynonymArchiveSchema) + N'.' + QUOTENAME(@SynonymArchiveName) + ' => ' + @archiveTable2Parts WHERE @IsValid = 1;
+    
     SET @Messages = --ISNULL(
     ( 
         SELECT [Procedure] = QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')), [Message], [Severity], [State] 
@@ -1538,6 +1839,455 @@ BEGIN
     RETURN 0;
 END
 GO
+
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+SET NOCOUNT ON;
+GO
+
+----------------------------------------------------------------------------------------------------
+-- DROP PROCEDURE [Maintenance].[SetOrchestratorDBSourceTables]
+----------------------------------------------------------------------------------------------------
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[SetOrchestratorDBSourceTables]') AND type in (N'P'))
+BEGIN
+    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[SetOrchestratorDBSourceTables] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[SetOrchestratorDBSourceTables]';
+END
+ELSE PRINT '  = PROCEDURE [Maintenance].[SetOrchestratorDBSourceTables] already exists' 
+GO
+
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[SetOrchestratorDBSourceTables]'
+GO
+
+ALTER PROCEDURE [Maintenance].[SetOrchestratorDBSourceTables]
+----------------------------------------------------------------------------------------------------
+-- ### [Object]: PROCEDURE [Maintenance].[SetOrchestratorDBSourceTables]
+-- ### [Version]: 2023-10-16T18:16:29+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetOrchestratorDBSourceTables.sql
+-- ### [Hash]: 085ff9b [SHA256-6CE1AA099D8462CC8091AD85FD54D4454CD381876C3CB75FF0F40AD1B751DCFD]
+-- ### [Docs]: https://???.???
+-- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
+-- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
+-- !!! ~~~~~~~~~ SQL Server >= 2016 SP1
+----------------------------------------------------------------------------------------------------
+    @DataSource nvarchar(128)
+    , @IsExternal bit = 0
+    , @ShowMessages bit = 1
+    , @ThrowError bit = 1
+    , @IsValid bit = 0 OUTPUT
+    , @Messages nvarchar(MAX) = NULL OUTPUT
+AS
+BEGIN
+    BEGIN TRY 
+        SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+		SET LOCK_TIMEOUT 5000;
+        SET ARITHABORT ON;
+        SET NOCOUNT ON;
+        SET NUMERIC_ROUNDABORT OFF;
+
+        ----------------------------------------------------------------------------------------------------
+        -- 
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @externalListName nvarchar(128) = N'ArchivingListOrchestratorDBTables';
+        DECLARE @externalListSchema nvarchar(128) = N'Maintenance';
+        DECLARE @listTableColuns nvarchar(MAX);
+        ----------------------------------------------------------------------------------------------------
+        -- Local 
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @outputIsValid bit;
+        DECLARE @outputMessages nvarchar(MAX);
+        ----------------------------------------------------------------------------------------------------
+        -- Misc      
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @sql nvarchar(max);
+        ----------------------------------------------------------------------------------------------------
+        -- Cursor
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @cursorGroup nvarchar(128);
+        DECLARE @cursorSchema nvarchar(128);
+        DECLARE @cursorTable nvarchar(128);
+        DECLARE @cursorExists bit;
+        DECLARE @cursorIsValid bit;
+        DECLARE @cursorColumns nvarchar(MAX);
+        DECLARE @synonymName nvarchar(128);
+        DECLARE @sourceTableFullParts nvarchar(128);
+        ----------------------------------------------------------------------------------------------------      
+        -- Message / Error Handling
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @message nvarchar(MAX);
+        DECLARE @ERROR_NUMBER INT, @ERROR_SEVERITY INT, @ERROR_STATE INT, @ERROR_PROCEDURE NVARCHAR(126), @ERROR_LINE INT, @ERROR_MESSAGE NVARCHAR(2048);
+        DECLARE @space tinyint = 2;
+        DECLARE @tab tinyint = 0;
+        DECLARE @json_errors TABLE([id] tinyint IDENTITY(0, 1), [procedure] nvarchar(128), [severity] int NOT NULL, [message] nvarchar(MAX) NOT NULL);
+
+        ----------------------------------------------------------------------------------------------------      
+        -- Checks Synonyms and Tables
+        ----------------------------------------------------------------------------------------------------
+        SELECT @listTableColuns = N'[{"column":"group","datatype":"nvarchar(128)"},{"column":"schema","datatype":"nvarchar(128)"},{"column":"table","datatype":"nvarchar(128)"},{"column":"cluster","datatype":"nvarchar(128)"},{"column":"isarchived","datatype":"bit"},{"column":"exists","datatype":"bit"},{"column":"isvalid","datatype":"bit"},{"column":"columns","datatype":"nvarchar(MAX)"}]';
+        -- Add (IF External) Table ArchivingListOrchestratorDBTables
+        IF @IsExternal = 1
+        BEGIN
+            BEGIN TRY
+                EXEC [Maintenance].[CreateArchivingExternalTable] @ExternalDataSource = @DataSource, @ExternalName = @externalListName, @ExternalSchema = @externalListSchema, @Columns = @listTableColuns
+                    , @ShowMessages = 0, @ThrowError = 0, @Messages = @outputMessages OUTPUT , @IsValid = @outputIsValid OUTPUT;
+            END TRY
+            BEGIN CATCH
+                SET @message = N'ERROR[TS0]: error(s) occured while checking ' + QUOTENAME(@externalListName) + N' table';
+                THROW;
+            END CATCH
+            INSERT INTO @json_errors([procedure], [severity], [message]) SELECT N'[Maintenance].[CreateArchivingExternalTable]', [severity], [message] FROM OPENJSON(@outputMessages) WITH([Message] nvarchar(MAX), [Severity] int)
+            SELECT @sourceTableFullParts = QUOTENAME(@externalListSchema) + N'.' + QUOTENAME(@externalListName);
+        END
+        ELSE SELECT @sourceTableFullParts = ISNULL(@DataSource + N'.', '') + QUOTENAME(@externalListSchema) + N'.' + QUOTENAME(@externalListName);;
+        
+        IF NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10)
+        BEGIN
+            BEGIN TRY
+                SELECT @SynonymName = N'Synonym_' + @externalListName;
+                EXEC [Maintenance].[SetSourceTable]
+                    @SynonymName = @SynonymName, @SynonymSchema = N'Maintenance'
+                    , @SourceTableFullParts = @sourceTableFullParts
+                    , @SourceExpectedColumns = @listTableColuns
+                    , @CreateOrUpdateSynonym = 1    
+                    , @ShowMessages = 0, @IsValid = @outputIsValid OUTPUT, @Messages = @outputMessages OUTPUT
+                ;
+            END TRY
+            BEGIN CATCH
+                SET @message = N'ERROR[TS0]: error(s) occured while checking ' + QUOTENAME(@externalListName) + N' Synonym';
+                THROW;
+            END CATCH
+        END
+        INSERT INTO @json_errors([procedure], [severity], [message]) SELECT N'[Maintenance].[SetSourceTable]', [severity], [message] FROM OPENJSON(@outputMessages) WITH([Message] nvarchar(MAX), [Severity] int)
+
+        IF NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10) AND @outputIsValid = 1
+        BEGIN
+            BEGIN TRY
+                DECLARE CursorTables CURSOR FAST_FORWARD LOCAL FOR SELECT [group], [schema], [table], [exists], [isvalid], [columns] FROM [Maintenance].[Synonym_ArchivingListOrchestratorDBTables];
+                OPEN CursorTables;
+                FETCH CursorTables INTO @cursorGroup, @cursorSchema, @cursorTable, @cursorExists, @cursorIsValid, @cursorColumns;
+
+                IF CURSOR_STATUS('local', 'CursorTables') = 1
+                BEGIN
+                    WHILE @@FETCH_STATUS = 0
+                    BEGIN;
+                        IF @cursorIsValid = 0 
+                        BEGIN
+                            INSERT INTO @json_errors([severity], [message]) SELECT 10, N'Missing or invalid source table: Group = ' + ISNULL(@cursorGroup, '-') + N', Table = ' + @cursorSchema + N'.' + @cursorTable + N' ';
+                            --CONTINUE;
+                        END
+                        ELSE
+                        BEGIN
+                            --INSERT INTO @json_errors([severity], [message]) SELECT 10, N'Add table: Group = ' + ISNULL(@cursorGroup, '-') + N', Table = ' + @cursorSchema + N'.' + @cursorTable + N' ';
+                            IF @IsExternal = 1
+                            BEGIN
+                                BEGIN TRY
+                                    EXEC [Maintenance].[CreateArchivingExternalTable] @ExternalDataSource = @DataSource, @ExternalName = @cursorTable, @ExternalSchema = @cursorSchema, @Columns = @cursorColumns
+                                        , @ShowMessages = 0, @ThrowError = 0, @Messages = @outputMessages OUTPUT , @IsValid = @outputIsValid OUTPUT;
+                                END TRY
+                                BEGIN CATCH
+                                    INSERT INTO @json_errors([severity], [message]) SELECT 16, ERROR_MESSAGE()
+                                    INSERT INTO @json_errors([severity], [message]) SELECT 16, N'ERROR[XT]: error(s) occured while checking external table' + QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable);
+                                    --THROW;
+                                END CATCH
+                                INSERT INTO @json_errors([procedure], [severity], [message]) SELECT N'[Maintenance].[CreateArchivingExternalTable]', [severity], [message] FROM OPENJSON(@outputMessages) WITH([Message] nvarchar(MAX), [Severity] int)
+                            END                            
+                            IF NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10)
+                            BEGIN
+                                BEGIN TRY
+                                    SELECT @synonymName = N'Synonym_Source_' + @cursorTable, @sourceTableFullParts =  QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable)
+
+                                    EXEC [Maintenance].[SetSourceTable]
+                                        @SynonymName = @synonymName
+                                        , @SynonymSchema = N'Maintenance'
+                                        , @SourceTableFullParts =  @sourceTableFullParts
+                                        , @SourceExpectedColumns = @cursorColumns
+                                        , @CreateOrUpdateSynonym = 1
+                                        , @ShowMessages = 0, @IsValid = @outputIsValid OUTPUT, @Messages = @outputMessages OUTPUT
+                                    ;
+                                END TRY
+                                BEGIN CATCH
+                                    INSERT INTO @json_errors([severity], [message]) SELECT 16, ERROR_MESSAGE()
+                                    INSERT INTO @json_errors([severity], [message]) SELECT 16, N'ERROR[SY0]: error(s) occured while checking synonym for table: ' + QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable);
+                    --                THROW;
+                                END CATCH
+                            END
+                            INSERT INTO @json_errors([procedure], [severity], [message]) SELECT N'[Maintenance].[SetSourceTable]', [severity], [message] FROM OPENJSON(@outputMessages) WITH([Message] nvarchar(MAX), [Severity] int)
+                        END
+                        FETCH CursorTables INTO @cursorGroup, @cursorSchema, @cursorTable, @cursorExists, @cursorIsValid, @cursorColumns;
+                    END
+                END
+                ELSE 
+                BEGIN
+                    SET @message = 'Execution has been canceled: Error Opening Table list Cursor';
+
+                    INSERT INTO @json_errors([severity], [message]) VALUES (16, @message);
+                    RAISERROR(@message, 16, 1);
+                END 
+                IF CURSOR_STATUS('local', 'CursorTables') >= 0 CLOSE CursorTables;
+                IF CURSOR_STATUS('local', 'CursorTables') >= -1 DEALLOCATE CursorTables;
+            END TRY
+            BEGIN CATCH
+                SET @message = N'ERROR[XT0]: error(s) occured while processing tables from ' + QUOTENAME(@externalListName);
+                THROW;
+            END CATCH
+        END
+    END TRY
+    BEGIN CATCH
+        SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();
+        IF @@TRANCOUNT > 0 ROLLBACK;
+    END CATCH
+
+    -- Check / Set @IsValid flag
+    SET @IsValid = IIF(NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10) AND @ERROR_NUMBER IS NULL AND @message IS NULL, 1, 0);
+
+    SET @Messages = --ISNULL(
+    ( 
+        SELECT [Procedure] = QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')), [Message], [Severity], [State] 
+        FROM (
+            SELECT [Message], [Severity], [State] FROM (
+                SELECT TOP(100) [Message] = LEFT([message], 4000), [Severity] = [severity], [State] = 1 FROM @json_errors ORDER BY [id] ASC
+            ) err
+            UNION ALL SELECT N'ERROR: ' + @ERROR_MESSAGE, 16, 1 WHERE @ERROR_MESSAGE IS NOT NULL
+            UNION ALL SELECT @message, 16, 1 WHERE @message IS NOT NULL
+        ) jsn
+        FOR JSON PATH)
+    --    , N'[]')
+    ;
+    IF @ShowMessages = 1 OR (@IsValid = 0 AND @ThrowError = 1) SELECT [Message] = LEFT([Message], 1000), [Severity], [Error] = IIF([Severity] > 10, 1, 0) FROM OPENJSON(@Messages) WITH([Message] nvarchar(MAX), [Severity] int)
+    IF @IsValid = 0 AND @ThrowError = 1 THROW 50000, 'Error(s) occured. See output dataset', 1;
+    RETURN 0;
+END
+GO
+
+
+EXEC [Maintenance].[SetOrchestratorDBSourceTables] @DataSource = 'ArchivingDatasourceForOrchestratorDB', @IsExternal = 1
+GO
+/*
+select * from maintenance.Synonym_ArchivingListOrchestratorDBTables
+
+SELECT * FROM sys.external_data_sources WHERE [name] = @DataSource
+SELECT * FROM sys.external_tables 
+SELECT * FROM sys.synonyms
+
+SELECT * FROM [Maintenance].[ArchivingOrchestratorDBTables]
+*/
+
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+SET NOCOUNT ON;
+GO
+
+----------------------------------------------------------------------------------------------------
+-- DROP PROCEDURE [Maintenance].[SetOrchestratorArchiveTables]
+----------------------------------------------------------------------------------------------------
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Maintenance].[SetOrchestratorArchiveTables]') AND type in (N'P'))
+BEGIN
+    EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [Maintenance].[SetOrchestratorArchiveTables] AS'
+    PRINT '  + CREATE PROCEDURE: [Maintenance].[SetOrchestratorArchiveTables]';
+END
+ELSE PRINT '  = PROCEDURE [Maintenance].[SetOrchestratorArchiveTables] already exists' 
+GO
+
+PRINT '  ~ UPDATE PROCEDURE: [Maintenance].[SetOrchestratorArchiveTables]'
+GO
+
+ALTER PROCEDURE [Maintenance].[SetOrchestratorArchiveTables]
+----------------------------------------------------------------------------------------------------
+-- ### [Object]: PROCEDURE [Maintenance].[SetOrchestratorArchiveTables]
+-- ### [Version]: 2023-10-16T18:16:29+02:00
+-- ### [Source]: _src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetOrchestratorArchiveTables.sql
+-- ### [Hash]: 085ff9b [SHA256-644B0507EE88B19D57888E668568F69B932CCB15F7D7A5D885D6E3138C0603DE]
+-- ### [Docs]: https://???.???
+-- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
+-- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
+-- !!! ~~~~~~~~~ SQL Server >= 2016 SP1
+----------------------------------------------------------------------------------------------------
+    @ArchiveTableNamePattern nvarchar(128)
+    , @ArchiveSchema nvarchar(128)
+    , @CreateTable bit = 1
+    , @UpdateTable bit = 1
+    , @RemoveIdentity bit = 0
+    , @ShowMessages bit = 1
+    , @ThrowError bit = 1
+    , @IsValid bit = 0 OUTPUT
+    , @Messages nvarchar(MAX) = NULL OUTPUT
+AS
+BEGIN
+    BEGIN TRY 
+        SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+		SET LOCK_TIMEOUT 5000;
+        SET ARITHABORT ON;
+        SET NOCOUNT ON;
+        SET NUMERIC_ROUNDABORT OFF;
+
+        ----------------------------------------------------------------------------------------------------
+        -- 
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @externalListName nvarchar(128) = N'ArchivingListOrchestratorDBTables';
+        --DECLARE @externalListSchema nvarchar(128) = N'Maintenance';
+        --DECLARE @listTableColuns nvarchar(MAX);
+        DECLARE @synonymSourceName nvarchar(256);
+        DECLARE @synonymSourceSchema nvarchar(256) = N'Maintenance';
+        DECLARE @synonymArchiveName nvarchar(256);
+        DECLARE @synonymArchiveSchema nvarchar(256) = N'Maintenance';
+        DECLARE @clusteredName nvarchar(128) = N'Id';
+        DECLARE @archiveTableName nvarchar(128)
+        ----------------------------------------------------------------------------------------------------
+        -- Local 
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @outputIsValid bit;
+        DECLARE @outputMessages nvarchar(MAX);
+        ----------------------------------------------------------------------------------------------------
+        -- Misc      
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @sql nvarchar(max);
+        ----------------------------------------------------------------------------------------------------
+        -- Cursor
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @cursorGroup nvarchar(128);
+        DECLARE @cursorSchema nvarchar(128);
+        DECLARE @cursorTable nvarchar(128);
+        DECLARE @cursorCluster nvarchar(128);
+        DECLARE @cursorExists bit;
+        DECLARE @cursorIsValid bit;
+        DECLARE @cursorColumns nvarchar(MAX);
+        DECLARE @synonymName nvarchar(128);
+        DECLARE @sourceTableFullParts nvarchar(128);
+        ----------------------------------------------------------------------------------------------------      
+        -- Message / Error Handling
+        ----------------------------------------------------------------------------------------------------
+        DECLARE @message nvarchar(MAX);
+        DECLARE @ERROR_NUMBER INT, @ERROR_SEVERITY INT, @ERROR_STATE INT, @ERROR_PROCEDURE NVARCHAR(126), @ERROR_LINE INT, @ERROR_MESSAGE NVARCHAR(2048);
+        DECLARE @space tinyint = 2;
+        DECLARE @tab tinyint = 0;
+        DECLARE @json_errors TABLE([id] tinyint IDENTITY(0, 1), [procedure] nvarchar(128), [severity] int NOT NULL, [message] nvarchar(MAX) NOT NULL);
+
+        ----------------------------------------------------------------------------------------------------      
+        -- Checks Synonyms and Tables
+        ----------------------------------------------------------------------------------------------------
+        SELECT @ArchiveTableNamePattern = ISNULL(LTRIM(RTRIM(@ArchiveTableNamePattern)), N'');
+        INSERT INTO @json_errors([severity], [message]) SELECT 16, N'@ArchiveTableNamePattern is missing' WHERE @ArchiveTableNamePattern = N''
+        UNION ALL SELECT 16, N'Table name expression #NAME# not found in @ArchiveTableNamePattern: ' + @ArchiveTableNamePattern WHERE CHARINDEX(N'#name#', @ArchiveTableNamePattern) = 0
+
+        IF NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10)
+        BEGIN
+            BEGIN TRY
+                DECLARE CursorTables CURSOR FAST_FORWARD LOCAL FOR SELECT [group], [schema], [table], [cluster], [exists], [isvalid], [columns] FROM [Maintenance].[Synonym_ArchivingListOrchestratorDBTables] WHERE [isarchived] >= 1;
+                OPEN CursorTables;
+                FETCH CursorTables INTO @cursorGroup, @cursorSchema, @cursorTable, @cursorCluster, @cursorExists, @cursorIsValid, @cursorColumns;
+
+                IF CURSOR_STATUS('local', 'CursorTables') = 1
+                BEGIN
+                    WHILE @@FETCH_STATUS = 0
+                    BEGIN;
+                        IF @cursorIsValid = 0 
+                        BEGIN
+                            INSERT INTO @json_errors([severity], [message]) SELECT 10, N'Missing or invalid source table: Group = ' + ISNULL(@cursorGroup, '-') + N', Table = ' + @cursorSchema + N'.' + @cursorTable + N' ';
+                            INSERT INTO @json_errors([severity], [message]) SELECT 10,  @cursorCluster;
+                            --CONTINUE;
+                        END
+                        ELSE
+                        BEGIN 
+                            IF NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10)
+                            BEGIN
+                                BEGIN TRY
+                                    SELECT @synonymName = N'Synonym_Source_' + @cursorTable, @sourceTableFullParts =  QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable)
+
+                                    SELECT @archiveTableName = REPLACE(@ArchiveTableNamePattern, N'#NAME#', @cursorTable)
+                                    SELECT @synonymSourceName = N'Synonym_Source_' + @cursorTable, @synonymArchiveName = N'Synonym_Archive_' + @cursorTable;
+                                    IF @archiveTableName = @cursorTable AND @ArchiveSchema = @cursorSchema
+                                    BEGIN
+                                        INSERT INTO @json_errors([severity], [message]) SELECT 16, N'Archive Table name cannot be an existing Orchestrator table name: ' + @ArchiveTableNamePattern + N' =>  ' + QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable);
+                                        CONTINUE;
+                                    END
+                                    ELSE
+                                    BEGIN
+                                        EXEC [Maintenance].[SetArchiveTable]
+                                            @SynonymSourceName = @synonymSourceName, @SynonymSourceSchema = @synonymSourceSchema
+                                            , @SynonymArchiveName = @synonymArchiveName, @SynonymArchiveSchema = @synonymArchiveSchema
+                                            , @ArchiveTableName = @archiveTableName, @ArchiveTableSchema = @ArchiveSchema
+                                            , @ClusteredName = @cursorCluster
+                                            --, @ExcludeColumns = @ExcludeColumns
+                                            --, @IgnoreMissingColumns = @IgnoreMissingColumns
+                                            , @CreateOrUpdateSynonym = 1
+                                            , @CreateTable = @CreateTable
+                                            , @UpdateTable = @UpdateTable
+                                            , @RemoveIdentity = @RemoveIdentity
+                                            , @SourceColumns = NULL--@SourceColumns OUTPUT
+                                            , @IsValid = @outputIsValid OUTPUT
+                                            , @Messages = @outputMessages OUTPUT
+                                        ;
+                                    END
+                                END TRY
+                                BEGIN CATCH
+                                    INSERT INTO @json_errors([severity], [message]) SELECT 16, ERROR_MESSAGE()
+                                    INSERT INTO @json_errors([severity], [message]) SELECT 16, N'ERROR[SY0]: error(s) occured while checking synonym for table: ' + QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable);
+                                END CATCH
+                            END
+                            INSERT INTO @json_errors([procedure], [severity], [message]) SELECT N'[Maintenance].[SetArchiveTable]', [severity], [message] FROM OPENJSON(@outputMessages) WITH([Message] nvarchar(MAX), [Severity] int)
+                        END
+                        FETCH CursorTables INTO @cursorGroup, @cursorSchema, @cursorTable, @cursorCluster, @cursorExists, @cursorIsValid, @cursorColumns;
+                    END
+                END
+                ELSE 
+                BEGIN
+                    SET @message = 'Execution has been canceled: Error Opening Table list Cursor';
+
+                    INSERT INTO @json_errors([severity], [message]) VALUES (16, @message);
+                    RAISERROR(@message, 16, 1);
+                END 
+                IF CURSOR_STATUS('local', 'CursorTables') >= 0 CLOSE CursorTables;
+                IF CURSOR_STATUS('local', 'CursorTables') >= -1 DEALLOCATE CursorTables;
+            END TRY
+            BEGIN CATCH
+                SET @message = N'ERROR[XT0]: error(s) occured while processing tables from ' + QUOTENAME(@externalListName);
+                THROW;
+            END CATCH
+        END
+    END TRY
+    BEGIN CATCH
+        SELECT @ERROR_NUMBER = ERROR_NUMBER(), @ERROR_SEVERITY = ERROR_SEVERITY(), @ERROR_STATE = ERROR_STATE(), @ERROR_PROCEDURE = ERROR_PROCEDURE(), @ERROR_LINE = ERROR_LINE(), @ERROR_MESSAGE = ERROR_MESSAGE();
+        IF @@TRANCOUNT > 0 ROLLBACK;
+    END CATCH
+
+    -- Check / Set @IsValid flag
+    SET @IsValid = IIF(NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10) AND @ERROR_NUMBER IS NULL AND @message IS NULL, 1, 0);
+
+    SET @Messages = --ISNULL(
+    ( 
+        SELECT [Procedure] = QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')), [Message], [Severity], [State] 
+        FROM (
+            SELECT [Message], [Severity], [State] FROM (
+                SELECT TOP(100) [Message] = LEFT([message], 4000), [Severity] = [severity], [State] = 1 FROM @json_errors ORDER BY [id] ASC
+            ) err
+            UNION ALL SELECT N'ERROR: ' + @ERROR_MESSAGE, 16, 1 WHERE @ERROR_MESSAGE IS NOT NULL
+            UNION ALL SELECT @message, 16, 1 WHERE @message IS NOT NULL
+        ) jsn
+        FOR JSON PATH)
+    --    , N'[]')
+    ;
+    IF @ShowMessages = 1 OR (@IsValid = 0 AND @ThrowError = 1) SELECT [Message] = LEFT([Message], 1000), [Severity], [Error] = IIF([Severity] > 10, 1, 0) FROM OPENJSON(@Messages) WITH([Message] nvarchar(MAX), [Severity] int)
+    IF @IsValid = 0 AND @ThrowError = 1 THROW 50000, 'Error(s) occured. See output dataset', 1;
+    RETURN 0;
+END
+GO
+
+
+EXEC [Maintenance].[SetOrchestratorArchiveTables] @ArchiveTableNamePattern = 'archive_#name#', @ArchiveSchema = N'dbo'
+GO
+/*
+select * from maintenance.Synonym_ArchivingListOrchestratorDBTables
+
+SELECT * FROM sys.external_data_sources WHERE [name] = @DataSource
+SELECT * FROM sys.external_tables 
+SELECT * FROM sys.synonyms
+
+SELECT * FROM [Maintenance].[ArchivingOrchestratorDBTables]
+*/
 
 SET ANSI_NULLS ON;
 GO
