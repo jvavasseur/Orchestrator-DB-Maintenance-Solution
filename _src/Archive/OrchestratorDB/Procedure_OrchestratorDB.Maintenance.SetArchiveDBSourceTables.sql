@@ -220,18 +220,3 @@ BEGIN
     RETURN 0;
 END
 GO
-
-
-EXEC [Maintenance].[SetArchiveDBSourceTables] @DataSource = 'ArchivingDatasourceForArchiveDB', @IsExternal = 1
-GO
-/*
-select * from maintenance.Synonym_ArchivingListArchiveDBTables
-
-SELECT * FROM sys.external_data_sources WHERE [name] = @DataSource
-SELECT * FROM sys.external_tables 
-SELECT 'drop synonym ' + object_schema_name(object_id) + '.' + name, * FROM sys.synonyms
-SELECT * FROM sys.synonyms where name = 'Synonym_ASyncDelete_AuditLogs'
-
-select * from [Maintenance].[Delete_RobotLicenseLogs]
-SELECT * FROM [Maintenance].[ArchivingArchiveDBTables]
-*/

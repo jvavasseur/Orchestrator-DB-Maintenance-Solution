@@ -199,16 +199,3 @@ BEGIN
     RETURN 0;
 END
 GO
-
-
-EXEC [Maintenance].[SetOrchestratorArchiveTables] @ArchiveTableNamePattern = 'archive_#name#', @ArchiveSchema = N'dbo'
-GO
-/*
-select * from maintenance.Synonym_ArchivingListOrchestratorDBTables
-
-SELECT * FROM sys.external_data_sources WHERE [name] = @DataSource
-SELECT * FROM sys.external_tables 
-SELECT * FROM sys.synonyms
-
-SELECT * FROM [Maintenance].[ArchivingOrchestratorDBTables]
-*/
