@@ -2330,9 +2330,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ValidateArchiveObjectsLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ValidateArchiveObjectsLogs]
--- ### [Version]: 2023-09-07T15:05:21+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjectsLogs.sql
--- ### [Hash]: 30c2b77 [SHA256-3A489989B10F4FA875DB0C188820D6103FAF22CE9C8B0A3F8801FC994AF28373]
+-- ### [Hash]: 3311d03 [SHA256-DBECB8B0546B63787CDF35B3A9BA98F508D3CAD90CDF92EB0F6CCAA578214FA2]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -2365,7 +2365,7 @@ BEGIN
         DECLARE @synonymSourceSchema nvarchar(256) = N'Maintenance';
         DECLARE @synonymArchiveName nvarchar(256) = N'Synonym_Archive_Logs';
         DECLARE @synonymArchiveSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_Logs';
+        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_Source_ASyncStatus_Logs';
         DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
         DECLARE @clusteredName nvarchar(128) = N'Id';
         ----------------------------------------------------------------------------------------------------      
@@ -3984,9 +3984,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ArchiveLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ArchiveLogs]
--- ### [Version]: 2023-10-17T13:22:17+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.ArchiveLogs.sql
--- ### [Hash]: db87142 [SHA256-EECD15ADD889B8ABEFA69FF1DA12E80D607AB7F250DA0C6ADD194D34878398ED]
+-- ### [Hash]: 3311d03 [SHA256-A2BACA312F6DF8B9DDDAA0C9291ECFB88EF2073B67FFD3BF026B599BC1668A5A]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -4032,6 +4032,7 @@ BEGIN
         DECLARE @runId int;  
         DECLARE @dryRun bit;
         DECLARE @isTimeOut bit = 0;
+        DECLARE @isExternal bit = 0;
 
         DECLARE @startTime datetime = SYSDATETIME();
         DECLARE @startTimeFloat float(53);
@@ -4061,6 +4062,7 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         DECLARE @minId bigint = 0;
         DECLARE @maxId bigint;
+        DECLARE @maxTargetId bigint;
         DECLARE @currentId bigint
         DECLARE @currentLoopId bigint;
         DECLARE @maxLoopDeleteRows int;
@@ -4299,16 +4301,28 @@ BEGIN
         -- Check @MaxBatchesLoops
         SET @maxBatches = NULLIF(@MaxBatchesLoops, 0);
 
-        -- Check @SynchronousDeleteIfNoDelay
-        SELECT @deleteIfNoDelay = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@SynchronousDeleteIfNoDelay));
-        INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay is NULL or empty. Default value will be used (No)', 10, 1 WHERE @deleteIfNoDelay IS NULL;
-        SET @deleteIfNoDelay = ISNULL(@deleteIfNoDelay, 0);
+        IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE [name] = N'logs' AND SCHEMA_NAME(schema_id) = N'dbo' AND is_external = 1)
+        BEGIN
+            SET @isExternal = 0;
+            -- Check @SynchronousDeleteIfNoDelay
+            SELECT @deleteIfNoDelay = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@SynchronousDeleteIfNoDelay));
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay is NULL or empty. Default value will be used (No)', 10, 1 WHERE @deleteIfNoDelay IS NULL;
+            SET @deleteIfNoDelay = ISNULL(@deleteIfNoDelay, 0);
 
-        -- Check @IgnoreDeleteDelay
-        SELECT @ignoreDelay = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@IgnoreDeleteDelay));
-        INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@IgnoreDeleteDelay is NULL or empty. Default value will be used (No).', 10, 1 WHERE @ignoreDelay IS NULL;
-        INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay must be set if @IgnoreDeleteDelay is set', 16, 1 WHERE @ignoreDelay = 1 AND @deleteIfNoDelay <> 1;
-        SET @ignoreDelay = ISNULL(@ignoreDelay, 0);
+            -- Check @IgnoreDeleteDelay
+            SELECT @ignoreDelay = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@IgnoreDeleteDelay));
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@IgnoreDeleteDelay is NULL or empty. Default value will be used (No).', 10, 1 WHERE @ignoreDelay IS NULL;
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay must be set if @IgnoreDeleteDelay is set', 16, 1 WHERE @ignoreDelay = 1 AND @deleteIfNoDelay <> 1;
+            SET @ignoreDelay = ISNULL(@ignoreDelay, 0);
+        END
+        ELSE
+        BEGIN
+            SET @isExternal = 1;
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay automatically set to 0 (No) when using Extenal Table', 10, 1;
+            SET @deleteIfNoDelay = 0;
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@IgnoreDeleteDelay automatically set to 0 (No) when using Extenal Table', 10, 1;
+            SET @ignoreDelay = 0;
+        END
 
         -- Check Create Archive Table
         SELECT @synonymCreateTable = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@CreateArchiveTable));
@@ -4664,8 +4678,14 @@ BEGIN
                 SELECT @countFilterIds = ISNULL(COUNT(*), 0), @countArchiveIds = ISNULL(COUNT(DISTINCT ArchiveId), 0) FROM #tempListFilters;
                 SELECT @targetTimestamp = MAX(TargetTimeStamp) FROM #tempListFilters WHERE TargetTimeStamp IS NOT NULL;
 
-                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_Logs];-- WITH(INDEX([IX_Machine])) WHERE TimeStamp <= @targetTimestamp;
-                DECLARE @maxTargetId bigint;
+                IF @isExternal = 0
+                BEGIN
+                    EXEC sp_executesql @stmt = N'SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_Logs] WITH(INDEX([IX_Machine])) WHERE TimeStamp <= @targetTimestamp;', @params = N'@maxId bigint OUTPUT', @maxId = @maxId
+                END
+                ELSE
+                BEGIN
+                    SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_Logs];
+                END
 
                 SELECT @maxTargetId = MAX(ISNULL(TargetId, 0)) FROM #tempListFilters;
                 IF @maxId < @maxTargetId SET @maxId = @maxTargetId;
@@ -4888,13 +4908,14 @@ BEGIN
                         -----------------------------------------------------------------------------------------------------------------------+
                         BEGIN TRAN                                                                                                           --|
                         EXEC sp_executesql @stmt = @sqlArchive;                                                                              --|
+
                                                                                                                                              --|
                         -- Add Delete info                                                                                                   --|
                         INSERT INTO [Maintenance].[Delete_Logs](SyncId, Id)                                                                  --|
                         SELECT tempSyncId, tempId FROM #tempListIds ids                                                                      --|
                         WHERE NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_Logs] WHERE Id = ids.tempId) AND tempNoDelay = 0;               --|
                                                                                                                                              --|
-                        DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_Logs] src ON src.Id = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
+                        IF @isExternal = 0 DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_Logs] src ON src.Id = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
                                                                                                                                              --|
                         -- Update current Id(s)                                                                                              --|
                         UPDATE flt SET CurrentId = @currentLoopId                                                                            --|
@@ -5262,9 +5283,9 @@ GO
 ALTER PROCEDURE [Maintenance].[CleanupSyncedLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[CleanupSyncedLogs]
--- ### [Version]: 2023-10-17T13:22:17+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.CleanupSyncedLogs.sql
--- ### [Hash]: db87142 [SHA256-2607435CDAA68096280B73F259553789F3C35D4A8E81B16803167FF693821EF8]
+-- ### [Hash]: 3311d03 [SHA256-49138FAB3EFBAED92BBE02F4C683CF77F5CAA583AFE281849BA4F25B1B647CBD]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -5777,7 +5798,7 @@ BEGIN
         BEGIN TRY
             INSERT INTO @tempListSync([Id], [DeleteOnDate])
             SELECT sts.SyncId, sts.DeletedOnDate
-            FROM [Maintenance].[Synonym_ASyncStatus_Logs] sts
+            FROM [Maintenance].[Synonym_Source_ASyncStatus_Logs] sts
             INNER JOIN [Maintenance].[Sync_Logs] syn ON syn.Id = sts.SyncId
             WHERE sts.IsDeleted = 1 AND syn.IsSynced <> 1;
 
@@ -6191,9 +6212,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ValidateArchiveObjectsJobs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ValidateArchiveObjectsJobs]
--- ### [Version]: 2023-09-08T11:12:50+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Jobs/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjectsJobs.sql
--- ### [Hash]: 0859ec6 [SHA256-23D39A88A3A267F79EA3E3BE75F0F4FCA27A594A2AC99CFA59B3363E95651FC0]
+-- ### [Hash]: 3311d03 [SHA256-94726FF0E7887908672F78093F4C79E4C977DDF9328D2AAF066BDF091500E514]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -6226,7 +6247,7 @@ BEGIN
         DECLARE @synonymSourceSchema nvarchar(256) = N'Maintenance';
         DECLARE @synonymArchiveName nvarchar(256) = N'Synonym_Archive_Jobs';
         DECLARE @synonymArchiveSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_Jobs';
+        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_Source_ASyncStatus_Jobs';
         DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
         DECLARE @clusteredName nvarchar(128) = N'Id';
         ----------------------------------------------------------------------------------------------------      
@@ -7811,9 +7832,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ArchiveJobs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ArchiveJobs]
--- ### [Version]: 2023-10-17T13:22:17+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Jobs/Procedure_ArchiveDB.Maintenance.ArchiveJobs.sql
--- ### [Hash]: db87142 [SHA256-DE10BE09B9C27DF681FE05DB6D6195660FAB081D71DD54021FDE5FA77708E6DF]
+-- ### [Hash]: 3311d03 [SHA256-42677632A90D1DD5F943E2ACF56BE382B5E2568963C2A3B85411C01D9B913A6D]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -7859,6 +7880,7 @@ BEGIN
         DECLARE @runId int;  
         DECLARE @dryRun bit;
         DECLARE @isTimeOut bit = 0;
+        DECLARE @isExternal bit = 0;
 
         DECLARE @startTime datetime = SYSDATETIME();
         DECLARE @startTimeFloat float(53);
@@ -7888,6 +7910,7 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         DECLARE @minId bigint = 0;
         DECLARE @maxId bigint;
+        DECLARE @maxTargetId bigint;
         DECLARE @currentId bigint
         DECLARE @currentLoopId bigint;
         DECLARE @maxLoopDeleteRows int;
@@ -8126,16 +8149,28 @@ BEGIN
         -- Check @MaxBatchesLoops
         SET @maxBatches = NULLIF(@MaxBatchesLoops, 0);
 
-        -- Check @SynchronousDeleteIfNoDelay
-        SELECT @deleteIfNoDelay = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@SynchronousDeleteIfNoDelay));
-        INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay is NULL or empty. Default value will be used (No)', 10, 1 WHERE @deleteIfNoDelay IS NULL;
-        SET @deleteIfNoDelay = ISNULL(@deleteIfNoDelay, 0);
+        IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE [name] = N'Jobs' AND SCHEMA_NAME(schema_id) = N'dbo' AND is_external = 1)
+        BEGIN
+            SET @isExternal = 0;
+            -- Check @SynchronousDeleteIfNoDelay
+            SELECT @deleteIfNoDelay = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@SynchronousDeleteIfNoDelay));
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay is NULL or empty. Default value will be used (No)', 10, 1 WHERE @deleteIfNoDelay IS NULL;
+            SET @deleteIfNoDelay = ISNULL(@deleteIfNoDelay, 0);
 
-        -- Check @IgnoreDeleteDelay
-        SELECT @ignoreDelay = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@IgnoreDeleteDelay));
-        INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@IgnoreDeleteDelay is NULL or empty. Default value will be used (No).', 10, 1 WHERE @ignoreDelay IS NULL;
-        INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay must be set if @IgnoreDeleteDelay is set', 16, 1 WHERE @ignoreDelay = 1 AND @deleteIfNoDelay <> 1;
-        SET @ignoreDelay = ISNULL(@ignoreDelay, 0);
+            -- Check @IgnoreDeleteDelay
+            SELECT @ignoreDelay = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@IgnoreDeleteDelay));
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@IgnoreDeleteDelay is NULL or empty. Default value will be used (No).', 10, 1 WHERE @ignoreDelay IS NULL;
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay must be set if @IgnoreDeleteDelay is set', 16, 1 WHERE @ignoreDelay = 1 AND @deleteIfNoDelay <> 1;
+            SET @ignoreDelay = ISNULL(@ignoreDelay, 0);
+        END
+        ELSE
+        BEGIN
+            SET @isExternal = 1;
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay automatically set to 0 (No) when using Extenal Table', 10, 1;
+            SET @deleteIfNoDelay = 0;
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@IgnoreDeleteDelay automatically set to 0 (No) when using Extenal Table', 10, 1;
+            SET @ignoreDelay = 0;
+        END
 
         -- Check Create Archive Table
         SELECT @synonymCreateTable = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@CreateArchiveTable));
@@ -8489,8 +8524,14 @@ BEGIN
                 SELECT @countFilterIds = ISNULL(COUNT(*), 0), @countArchiveIds = ISNULL(COUNT(DISTINCT ArchiveId), 0) FROM #tempListFilters;
                 SELECT @targetTimestamp = MAX(TargetTimeStamp) FROM #tempListFilters WHERE TargetTimeStamp IS NOT NULL;
 
-                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_Jobs];-- WITH(INDEX([IX_TenantId_OU_ProcessType_CreationTime])) WHERE CreationTime <= @targetTimestamp;
-                DECLARE @maxTargetId bigint;
+                IF @isExternal = 0
+                BEGIN
+                    EXEC sp_executesql @stmt = N'SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_Jobs] WITH(INDEX([IX_TenantId_OU_ProcessType_CreationTime])) WHERE CreationTime <= @targetTimestamp', @params = N'@maxId bigint OUTPUT', @maxId = @maxId
+                END
+                ELSE
+                BEGIN
+                    SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_Jobs];
+                END
 
                 SELECT @maxTargetId = MAX(ISNULL(TargetId, 0)) FROM #tempListFilters;
                 IF @maxId < @maxTargetId SET @maxId = @maxTargetId;
@@ -8718,7 +8759,7 @@ BEGIN
                         SELECT tempSyncId, tempId FROM #tempListIds ids                                                                      --|
                         WHERE NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_Jobs] WHERE Id = ids.tempId) AND tempNoDelay = 0;               --|
                                                                                                                                              --|
-                        DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_Jobs] src ON src.Id = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
+                        IF @isExternal = 0 DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_Jobs] src ON src.Id = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
                                                                                                                                              --|
                         -- Update current Id(s)                                                                                              --|
                         UPDATE flt SET CurrentId = @currentLoopId                                                                            --|
@@ -9086,9 +9127,9 @@ GO
 ALTER PROCEDURE [Maintenance].[CleanupSyncedJobs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[CleanupSyncedJobs]
--- ### [Version]: 2023-10-17T13:22:17+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Jobs/Procedure_ArchiveDB.Maintenance.CleanupSyncedJobs.sql
--- ### [Hash]: db87142 [SHA256-9CB88FB836538627F339C668DF1267D8FF1CE643B8223D3FE84B8B77C7328F69]
+-- ### [Hash]: 3311d03 [SHA256-87C0B510E4155C4B28D4DF862E60F742B75C54DC8F1CDE6B86ABA32B7F4EA6C5]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -9601,7 +9642,7 @@ BEGIN
         BEGIN TRY
             INSERT INTO @tempListSync([Id], [DeleteOnDate])
             SELECT sts.SyncId, sts.DeletedOnDate
-            FROM [Maintenance].[Synonym_ASyncStatus_Jobs] sts
+            FROM [Maintenance].[Synonym_Source_ASyncStatus_Jobs] sts
             INNER JOIN [Maintenance].[Sync_Jobs] syn ON syn.Id = sts.SyncId
             WHERE sts.IsDeleted = 1 AND syn.IsSynced <> 1;
 
@@ -10015,9 +10056,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ValidateArchiveObjectsQueues]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ValidateArchiveObjectsQueues]
--- ### [Version]: 2023-10-16T18:16:29+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjectsQueues.sql
--- ### [Hash]: 085ff9b [SHA256-B792C467E028C84DB1C30F6FDEE005B45ED1C630C534DEFDE33EA622DEF02964]
+-- ### [Hash]: 3311d03 [SHA256-0A35E6AD163637FF24DF379A8AC2327C2CCAA0070125C8469F20EF096BFC9A30]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -10065,7 +10106,7 @@ BEGIN
         DECLARE @synonymSourceItemEventsSchema nvarchar(256) = N'Maintenance';
         DECLARE @synonymArchiveItemEventsName nvarchar(256) = N'Synonym_Archive_QueueItemEvents';
         DECLARE @synonymArchiveItemEventsSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_Queues';
+        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_Source_ASyncStatus_Queues';
         DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
         DECLARE @clusteredName nvarchar(128) = N'Id';
         DECLARE @queueItemsValid bit = 0;
@@ -12100,9 +12141,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ArchiveQueues]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ArchiveQueues]
--- ### [Version]: 2023-10-17T13:22:17+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.ArchiveQueues.sql
--- ### [Hash]: db87142 [SHA256-D90D77F1A34A843C2B44F8F1A9AC8D364819801F00F76311B5754E3D330F5B23]
+-- ### [Hash]: 3311d03 [SHA256-6360546726545BE7CE9470D6D6CCC4FC37FAD9205F9F1FB60655C925911D9D78]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -12150,6 +12191,7 @@ BEGIN
         DECLARE @runId int;  
         DECLARE @dryRun bit;
         DECLARE @isTimeOut bit = 0;
+        DECLARE @isExternal bit = 0;
 
         DECLARE @startTime datetime = SYSDATETIME();
         DECLARE @startTimeFloat float(53);
@@ -12179,6 +12221,7 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         DECLARE @minId bigint = 0;
         DECLARE @maxId bigint;
+        DECLARE @maxTargetId bigint;
         DECLARE @currentId bigint
         DECLARE @currentLoopId bigint;
         DECLARE @maxLoopDeleteRows int;
@@ -12425,16 +12468,28 @@ BEGIN
         -- Check @MaxBatchesLoops
         SET @maxBatches = NULLIF(@MaxBatchesLoops, 0);
 
-        -- Check @SynchronousDeleteIfNoDelay
-        SELECT @deleteIfNoDelay = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@SynchronousDeleteIfNoDelay));
-        INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay is NULL or empty. Default value will be used (No)', 10, 1 WHERE @deleteIfNoDelay IS NULL;
-        SET @deleteIfNoDelay = ISNULL(@deleteIfNoDelay, 0);
+        IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE [name] = N'QueueItems' AND SCHEMA_NAME(schema_id) = N'dbo' AND is_external = 1)
+        BEGIN
+            SET @isExternal = 0;
+            -- Check @SynchronousDeleteIfNoDelay
+            SELECT @deleteIfNoDelay = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@SynchronousDeleteIfNoDelay));
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay is NULL or empty. Default value will be used (No)', 10, 1 WHERE @deleteIfNoDelay IS NULL;
+            SET @deleteIfNoDelay = ISNULL(@deleteIfNoDelay, 0);
 
-        -- Check @IgnoreDeleteDelay
-        SELECT @ignoreDelay = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@IgnoreDeleteDelay));
-        INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@IgnoreDeleteDelay is NULL or empty. Default value will be used (No).', 10, 1 WHERE @ignoreDelay IS NULL;
-        INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay must be set if @IgnoreDeleteDelay is set', 16, 1 WHERE @ignoreDelay = 1 AND @deleteIfNoDelay <> 1;
-        SET @ignoreDelay = ISNULL(@ignoreDelay, 0);
+            -- Check @IgnoreDeleteDelay
+            SELECT @ignoreDelay = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@IgnoreDeleteDelay));
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@IgnoreDeleteDelay is NULL or empty. Default value will be used (No).', 10, 1 WHERE @ignoreDelay IS NULL;
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay must be set if @IgnoreDeleteDelay is set', 16, 1 WHERE @ignoreDelay = 1 AND @deleteIfNoDelay <> 1;
+            SET @ignoreDelay = ISNULL(@ignoreDelay, 0);
+        END
+        ELSE
+        BEGIN
+            SET @isExternal = 1;
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay automatically set to 0 (No) when using Extenal Table', 10, 1;
+            SET @deleteIfNoDelay = 0;
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@IgnoreDeleteDelay automatically set to 0 (No) when using Extenal Table', 10, 1;
+            SET @ignoreDelay = 0;
+        END
 
         -- Check Create Archive Table
         SELECT @synonymCreateTable = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@CreateArchiveTable));
@@ -12858,8 +12913,14 @@ BEGIN
                 SELECT @countFilterIds = ISNULL(COUNT(*), 0), @countArchiveIds = ISNULL(COUNT(DISTINCT ArchiveId), 0) FROM #tempListFilters;
                 SELECT @targetTimestamp = MAX(TargetTimeStamp) FROM #tempListFilters WHERE TargetTimeStamp IS NOT NULL;
 
-                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_QueueItems]; --WITH(INDEX([IX_TenantId_IsGlobal_ExecutionTime])) WHERE ExecutionTime <= @targetTimestamp;
-                DECLARE @maxTargetId bigint;
+                IF @isExternal = 0
+                BEGIN
+                    EXEC sp_executesql @stmt = N'SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_QueueItems] WITH(INDEX([IX_TenantId_IsGlobal_ExecutionTime])) WHERE ExecutionTime <= @targetTimestamp;', @params = N'@maxId bigint OUTPUT', @maxId = @maxId
+                END
+                ELSE
+                BEGIN
+                    SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_QueueItems];
+                END
 
                 SELECT @maxTargetId = MAX(ISNULL(TargetId, 0)) FROM #tempListFilters;
                 IF @maxId < @maxTargetId SET @maxId = @maxTargetId;
@@ -13090,9 +13151,9 @@ BEGIN
                         SELECT tempSyncId, tempId FROM #tempListIds ids                                                                      --|
                         WHERE NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_Queues] WHERE Id = ids.tempId) AND tempNoDelay = 0;             --|
                                                                                                                                              --|
-                        DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_QueueItemComments] src ON src.QueueItemId = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
-                        DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_QueueItemEvents] src ON src.QueueItemId = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
-                        DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_QueueItems] src ON src.Id = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
+                        IF @isExternal = 0 DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_QueueItemComments] src ON src.QueueItemId = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
+                        IF @isExternal = 0 DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_QueueItemEvents] src ON src.QueueItemId = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
+                        IF @isExternal = 0 DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_QueueItems] src ON src.Id = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
                                                                                                                                              --|
                         -- Update current Id(s)                                                                                              --|
                         UPDATE flt SET CurrentId = @currentLoopId                                                                            --|
@@ -13460,9 +13521,9 @@ GO
 ALTER PROCEDURE [Maintenance].[CleanupSyncedQueues]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[CleanupSyncedQueues]
--- ### [Version]: 2023-10-17T13:22:17+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/Queues/Procedure_ArchiveDB.Maintenance.CleanupSyncedQueues.sql
--- ### [Hash]: db87142 [SHA256-CE73B2A78877266891FF4897E748F72469E71151D8683EC39FBD5BDDA0412CE1]
+-- ### [Hash]: 3311d03 [SHA256-37EB7AEE757E731B1281371CB03A120431FFA59899C920B7F7E707D805D29BD8]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -13975,7 +14036,7 @@ BEGIN
         BEGIN TRY
             INSERT INTO @tempListSync([Id], [DeleteOnDate])
             SELECT sts.SyncId, sts.DeletedOnDate
-            FROM [Maintenance].[Synonym_ASyncStatus_Queues] sts
+            FROM [Maintenance].[Synonym_Source_ASyncStatus_Queues] sts
             INNER JOIN [Maintenance].[Sync_Queues] syn ON syn.Id = sts.SyncId
             WHERE sts.IsDeleted = 1 AND syn.IsSynced <> 1;
 
@@ -14386,9 +14447,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ValidateArchiveObjectsAuditLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ValidateArchiveObjectsAuditLogs]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjectsAuditLogs.sql
--- ### [Hash]: dc39c27 [SHA256-08555A44AB9FED0F9A2A01B1C92231515054A9392AD83DF44CFBCD68ACA57787]
+-- ### [Hash]: 3311d03 [SHA256-9DC64B63353C9A1E348630C955A8E589F011AA7FBB514CDB1162FBF1FA6910EF]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -14428,7 +14489,7 @@ BEGIN
         DECLARE @synonymSourceEntitiesSchema nvarchar(256) = N'Maintenance';
         DECLARE @synonymArchiveEntitiesName nvarchar(256) = N'Synonym_Archive_AuditLogsEntities';
         DECLARE @synonymArchiveEntitiesSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_AuditLogs';
+        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_Source_ASyncStatus_AuditLogs';
         DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
         DECLARE @clusteredName nvarchar(128) = N'Id';
         DECLARE @auditLogsValid bit = 0;
@@ -16054,9 +16115,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ArchiveAuditLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ArchiveAuditLogs]
--- ### [Version]: 2023-10-17T13:22:17+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.ArchiveAuditLogs.sql
--- ### [Hash]: db87142 [SHA256-7F4163FAACB8376B256326244CFBA4E905FEE5B4643304A36FE9659E8153BDBD]
+-- ### [Hash]: 3311d03 [SHA256-35A061F4F33F48C985F10CF347FEA222A75D183F26CF10B6E699802A7D1EB451]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -16103,6 +16164,7 @@ BEGIN
         DECLARE @runId int;  
         DECLARE @dryRun bit;
         DECLARE @isTimeOut bit = 0;
+        DECLARE @isExternal bit = 0;
 
         DECLARE @startTime datetime = SYSDATETIME();
         DECLARE @startTimeFloat float(53);
@@ -16132,6 +16194,7 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         DECLARE @minId bigint = 0;
         DECLARE @maxId bigint;
+        DECLARE @maxTargetId bigint;
         DECLARE @currentId bigint
         DECLARE @currentLoopId bigint;
         DECLARE @maxLoopDeleteRows int;
@@ -16374,16 +16437,28 @@ BEGIN
         -- Check @MaxBatchesLoops
         SET @maxBatches = NULLIF(@MaxBatchesLoops, 0);
 
-        -- Check @SynchronousDeleteIfNoDelay
-        SELECT @deleteIfNoDelay = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@SynchronousDeleteIfNoDelay));
-        INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay is NULL or empty. Default value will be used (No)', 10, 1 WHERE @deleteIfNoDelay IS NULL;
-        SET @deleteIfNoDelay = ISNULL(@deleteIfNoDelay, 0);
+        IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE [name] = N'AuditLogs' AND SCHEMA_NAME(schema_id) = N'dbo' AND is_external = 1)
+        BEGIN
+            SET @isExternal = 0;
+            -- Check @SynchronousDeleteIfNoDelay
+            SELECT @deleteIfNoDelay = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@SynchronousDeleteIfNoDelay));
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay is NULL or empty. Default value will be used (No)', 10, 1 WHERE @deleteIfNoDelay IS NULL;
+            SET @deleteIfNoDelay = ISNULL(@deleteIfNoDelay, 0);
 
-        -- Check @IgnoreDeleteDelay
-        SELECT @ignoreDelay = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@IgnoreDeleteDelay));
-        INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@IgnoreDeleteDelay is NULL or empty. Default value will be used (No).', 10, 1 WHERE @ignoreDelay IS NULL;
-        INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay must be set if @IgnoreDeleteDelay is set', 16, 1 WHERE @ignoreDelay = 1 AND @deleteIfNoDelay <> 1;
-        SET @ignoreDelay = ISNULL(@ignoreDelay, 0);
+            -- Check @IgnoreDeleteDelay
+            SELECT @ignoreDelay = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@IgnoreDeleteDelay));
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@IgnoreDeleteDelay is NULL or empty. Default value will be used (No).', 10, 1 WHERE @ignoreDelay IS NULL;
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay must be set if @IgnoreDeleteDelay is set', 16, 1 WHERE @ignoreDelay = 1 AND @deleteIfNoDelay <> 1;
+            SET @ignoreDelay = ISNULL(@ignoreDelay, 0);
+        END
+        ELSE
+        BEGIN
+            SET @isExternal = 1;
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay automatically set to 0 (No) when using Extenal Table', 10, 1;
+            SET @deleteIfNoDelay = 0;
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@IgnoreDeleteDelay automatically set to 0 (No) when using Extenal Table', 10, 1;
+            SET @ignoreDelay = 0;
+        END
 
         -- Check Create Archive Table
         SELECT @synonymCreateTable = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@CreateArchiveTable));
@@ -16777,8 +16852,14 @@ BEGIN
                 SELECT @countFilterIds = ISNULL(COUNT(*), 0), @countArchiveIds = ISNULL(COUNT(DISTINCT ArchiveId), 0) FROM #tempListFilters;
                 SELECT @targetTimestamp = MAX(TargetTimeStamp) FROM #tempListFilters WHERE TargetTimeStamp IS NOT NULL;
 
-                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_AuditLogs];-- WITH(INDEX([IX_TenantId_IsGlobal_ExecutionTime])) WHERE ExecutionTime <= @targetTimestamp;
-                DECLARE @maxTargetId bigint;
+                IF @isExternal = 0
+                BEGIN
+                    EXEC sp_executesql @stmt = N'SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_AuditLogs] WITH(INDEX([IX_TenantId_IsGlobal_ExecutionTime])) WHERE ExecutionTime <= @targetTimestamp;', @params = N'@maxId bigint OUTPUT', @maxId = @maxId
+                END
+                ELSE
+                BEGIN
+                    SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_AuditLogs];
+                END
 
                 SELECT @maxTargetId = MAX(ISNULL(TargetId, 0)) FROM #tempListFilters;
                 IF @maxId < @maxTargetId SET @maxId = @maxTargetId;
@@ -17007,8 +17088,8 @@ BEGIN
                         SELECT tempSyncId, tempId FROM #tempListIds ids                                                                      --|
                         WHERE NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_AuditLogs] WHERE Id = ids.tempId) AND tempNoDelay = 0;          --|
                                                                                                                                              --|
-                        DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_AuditLogsEntities] src ON src.AuditLogsId = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
-                        DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_AuditLogs] src ON src.Id = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
+                        IF @isExternal = 0 DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_AuditLogsEntities] src ON src.AuditLogsId = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
+                        IF @isExternal = 0 DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_AuditLogs] src ON src.Id = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
                                                                                                                                              --|
                         -- Update current Id(s)                                                                                              --|
                         UPDATE flt SET CurrentId = @currentLoopId                                                                            --|
@@ -17376,9 +17457,9 @@ GO
 ALTER PROCEDURE [Maintenance].[CleanupSyncedAuditLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[CleanupSyncedAuditLogs]
--- ### [Version]: 2023-10-17T13:22:17+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/AuditLogs/Procedure_ArchiveDB.Maintenance.CleanupSyncedAuditLogs.sql
--- ### [Hash]: db87142 [SHA256-8334BA22C9E2DF4D8A020A3A3E0A6A3752B9AB4D427CDF054DF463C0559AD586]
+-- ### [Hash]: 3311d03 [SHA256-AA91AA582FA22AA6EFF0A3DF65E006CD496F971ED31E1FF4C7E10E595E8A95E9]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -17891,7 +17972,7 @@ BEGIN
         BEGIN TRY
             INSERT INTO @tempListSync([Id], [DeleteOnDate])
             SELECT sts.SyncId, sts.DeletedOnDate
-            FROM [Maintenance].[Synonym_ASyncStatus_AuditLogs] sts
+            FROM [Maintenance].[Synonym_Source_ASyncStatus_AuditLogs] sts
             INNER JOIN [Maintenance].[Sync_AuditLogs] syn ON syn.Id = sts.SyncId
             WHERE sts.IsDeleted = 1 AND syn.IsSynced <> 1;
 
@@ -18304,9 +18385,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ValidateArchiveObjectsRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ValidateArchiveObjectsRobotLicenseLogs]
--- ### [Version]: 2023-09-07T18:38:18+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/RobotLicenseLogs/Procedure_ArchiveDB.Maintenance.ValidateArchiveObjectsRobotLicenseLogs.sql
--- ### [Hash]: b0839d6 [SHA256-FB3F9BEADD6511BAF11596359827BDCA23F3B6D43C9D869CCC0D7ECA0140D186]
+-- ### [Hash]: 3311d03 [SHA256-1CB5F7E99F6F16ABCC7393BBBE88AE5BD40AA01E112988FC76CBC14573C736E0]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -18338,7 +18419,7 @@ BEGIN
         DECLARE @synonymSourceSchema nvarchar(256) = N'Maintenance';
         DECLARE @synonymArchiveName nvarchar(256) = N'Synonym_Archive_RobotLicenseLogs';
         DECLARE @synonymArchiveSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_RobotLicenseLogs';
+        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_Source_ASyncStatus_RobotLicenseLogs';
         DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
         DECLARE @clusteredName nvarchar(128) = N'Id';
         ----------------------------------------------------------------------------------------------------      
@@ -19735,9 +19816,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ArchiveRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ArchiveRobotLicenseLogs]
--- ### [Version]: 2023-10-17T13:22:17+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/RobotLicenseLogs/Procedure_ArchiveDB.Maintenance.ArchiveRobotLicenseLogs.sql
--- ### [Hash]: db87142 [SHA256-A3B9A67D56A996A850C240876785935C8BA3AAF670A880AF29421C41FE8C39E0]
+-- ### [Hash]: 3311d03 [SHA256-7DABEAE5805C4C84E94A67812CB04C54C6986F73CBE3FF405AC0E1EC7A8F6D21]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -19783,6 +19864,7 @@ BEGIN
         DECLARE @runId int;  
         DECLARE @dryRun bit;
         DECLARE @isTimeOut bit = 0;
+        DECLARE @isExternal bit = 0;
 
         DECLARE @startTime datetime = SYSDATETIME();
         DECLARE @startTimeFloat float(53);
@@ -19812,6 +19894,7 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         DECLARE @minId bigint = 0;
         DECLARE @maxId bigint;
+        DECLARE @maxTargetId bigint;
         DECLARE @currentId bigint
         DECLARE @currentLoopId bigint;
         DECLARE @maxLoopDeleteRows int;
@@ -20050,16 +20133,28 @@ BEGIN
         -- Check @MaxBatchesLoops
         SET @maxBatches = NULLIF(@MaxBatchesLoops, 0);
 
-        -- Check @SynchronousDeleteIfNoDelay
-        SELECT @deleteIfNoDelay = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@SynchronousDeleteIfNoDelay));
-        INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay is NULL or empty. Default value will be used (No)', 10, 1 WHERE @deleteIfNoDelay IS NULL;
-        SET @deleteIfNoDelay = ISNULL(@deleteIfNoDelay, 0);
+        IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE [name] = N'RobotLicenseLogs' AND SCHEMA_NAME(schema_id) = N'dbo' AND is_external = 1)
+        BEGIN
+            SET @isExternal = 0;
+            -- Check @SynchronousDeleteIfNoDelay
+            SELECT @deleteIfNoDelay = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@SynchronousDeleteIfNoDelay));
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay is NULL or empty. Default value will be used (No)', 10, 1 WHERE @deleteIfNoDelay IS NULL;
+            SET @deleteIfNoDelay = ISNULL(@deleteIfNoDelay, 0);
 
-        -- Check @IgnoreDeleteDelay
-        SELECT @ignoreDelay = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@IgnoreDeleteDelay));
-        INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@IgnoreDeleteDelay is NULL or empty. Default value will be used (No).', 10, 1 WHERE @ignoreDelay IS NULL;
-        INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay must be set if @IgnoreDeleteDelay is set', 16, 1 WHERE @ignoreDelay = 1 AND @deleteIfNoDelay <> 1;
-        SET @ignoreDelay = ISNULL(@ignoreDelay, 0);
+            -- Check @IgnoreDeleteDelay
+            SELECT @ignoreDelay = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@IgnoreDeleteDelay));
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@IgnoreDeleteDelay is NULL or empty. Default value will be used (No).', 10, 1 WHERE @ignoreDelay IS NULL;
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay must be set if @IgnoreDeleteDelay is set', 16, 1 WHERE @ignoreDelay = 1 AND @deleteIfNoDelay <> 1;
+            SET @ignoreDelay = ISNULL(@ignoreDelay, 0);
+        END
+        ELSE
+        BEGIN
+            SET @isExternal = 1;
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay automatically set to 0 (No) when using Extenal Table', 10, 1;
+            SET @deleteIfNoDelay = 0;
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@IgnoreDeleteDelay automatically set to 0 (No) when using Extenal Table', 10, 1;
+            SET @ignoreDelay = 0;
+        END
 
         -- Check Create Archive Table
         SELECT @synonymCreateTable = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@CreateArchiveTable));
@@ -20414,8 +20509,14 @@ BEGIN
                 SELECT @countFilterIds = ISNULL(COUNT(*), 0), @countArchiveIds = ISNULL(COUNT(DISTINCT ArchiveId), 0) FROM #tempListFilters;
                 SELECT @targetTimestamp = MAX(TargetTimeStamp) FROM #tempListFilters WHERE TargetTimeStamp IS NOT NULL;
 
-                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_RobotLicenseLogs];-- /*WITH(INDEX([IX_Machine]))*/ WHERE EndDate <= @targetTimestamp;
-                DECLARE @maxTargetId bigint;
+                IF @isExternal = 0
+                BEGIN
+                    EXEC sp_executesql @stmt = N'SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_RobotLicenseLogs] /*WITH(INDEX([IX_Machine]))*/ WHERE EndDate <= @targetTimestamp;', @params = N'@maxId bigint OUTPUT', @maxId = @maxId
+                END
+                ELSE
+                BEGIN
+                    SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_RobotLicenseLogs];
+                END
 
                 SELECT @maxTargetId = MAX(ISNULL(TargetId, 0)) FROM #tempListFilters;
                 IF @maxId < @maxTargetId SET @maxId = @maxTargetId;
@@ -20644,7 +20745,7 @@ BEGIN
                         SELECT tempSyncId, tempId FROM #tempListIds ids                                                                      --|
                         WHERE NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_RobotLicenseLogs] WHERE Id = ids.tempId) AND tempNoDelay = 0;   --|
                                                                                                                                              --|
-                        DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_RobotLicenseLogs] src ON src.Id = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
+                        IF @isExternal = 0 DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_RobotLicenseLogs] src ON src.Id = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
                                                                                                                                              --|
                         -- Update current Id(s)                                                                                              --|
                         UPDATE flt SET CurrentId = @currentLoopId                                                                            --|
@@ -21012,9 +21113,9 @@ GO
 ALTER PROCEDURE [Maintenance].[CleanupSyncedRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[CleanupSyncedRobotLicenseLogs]
--- ### [Version]: 2023-10-17T13:22:17+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/ArchiveDB/RobotLicenseLogs/Procedure_ArchiveDB.Maintenance.CleanupSyncedRobotLicenseLogs.sql
--- ### [Hash]: db87142 [SHA256-83E95229629B06A1FC9BF492FDF35C2550B301D4BB8248DCAA0223C505EF9721]
+-- ### [Hash]: 3311d03 [SHA256-32A8B08F2B0BEAA693D8C044EEBC7C3918244AE7547DDEF971B3ECB7107A2801]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -21527,7 +21628,7 @@ BEGIN
         BEGIN TRY
             INSERT INTO @tempListSync([Id], [DeleteOnDate])
             SELECT sts.SyncId, sts.DeletedOnDate
-            FROM [Maintenance].[Synonym_ASyncStatus_RobotLicenseLogs] sts
+            FROM [Maintenance].[Synonym_Source_ASyncStatus_RobotLicenseLogs] sts
             INNER JOIN [Maintenance].[Sync_RobotLicenseLogs] syn ON syn.Id = sts.SyncId
             WHERE sts.IsDeleted = 1 AND syn.IsSynced <> 1;
 

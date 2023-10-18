@@ -759,9 +759,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ValidateASyncArchiveObjectsRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ValidateASyncArchiveObjectsRobotLicenseLogs]
--- ### [Version]: 2023-09-07T18:44:11+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/OrchestratorDB/RobotLicenseLogs/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsRobotLicenseLogs.sql
--- ### [Hash]: 3470ab5 [SHA256-70B3E123364A2EAF1FDA4C2DF2CE528BCE9C6B9BE7AFA623AA2860F81BE31AA6]
+-- ### [Hash]: 3311d03 [SHA256-8F05EAAE62F408C3CD465B79F874A5A45756F98F2D45EA2DEF1D761D9E28228F]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -784,12 +784,12 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         -- Settings
         ----------------------------------------------------------------------------------------------------
-        DECLARE @synonymASyncDeleteName nvarchar(256) = N'Synonym_ASyncDelete_RobotLicenseLogs';
+        DECLARE @synonymASyncDeleteName nvarchar(256) = N'Synonym_Archive_Delete_RobotLicenseLogs';
         DECLARE @synonymASyncDeleteSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymArchiveSyncName nvarchar(256) = N'Synonym_ArchiveSync_RobotLicenseLogs';
+        DECLARE @synonymArchiveSyncName nvarchar(256) = N'Synonym_Archive_Sync_RobotLicenseLogs';
         DECLARE @synonymArchiveSyncSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_RobotLicenseLogs';
-        DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
+--        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_RobotLicenseLogs';
+--        DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
         DECLARE @clusteredName nvarchar(128) = N'Id';
         ----------------------------------------------------------------------------------------------------      
         -- Message / Error Handling
@@ -1288,9 +1288,9 @@ GO
 ALTER PROCEDURE [Maintenance].[SetArchiveDBSourceTables]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[SetArchiveDBSourceTables]
--- ### [Version]: 2023-10-17T10:53:15+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.SetArchiveDBSourceTables.sql
--- ### [Hash]: 5ee9393 [SHA256-0B3A14B238BC49D71524FAC536D21760F551B80CB0270A9ACED7F0061B2AC3BB]
+-- ### [Hash]: 3311d03 [SHA256-59242A2F00BA7E302D34845312DA7C2201322791BE1FF16F3722ADB775AC97EA]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -1422,7 +1422,7 @@ BEGIN
                         IF NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10)
                         BEGIN
                             BEGIN TRY
-                                SELECT @synonymName = N'Synonym_ASync' + @cursorTable, @sourceTableFullParts =  QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable)
+                                SELECT @synonymName = N'Synonym_Archive_' + @cursorTable, @sourceTableFullParts =  QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable)
 
                                 EXEC [Maintenance].[SetSourceTable]
                                     @SynonymName = @synonymName
@@ -1512,9 +1512,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ASyncCleanupRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ASyncCleanupRobotLicenseLogs]
--- ### [Version]: 2023-10-17T13:22:17+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/OrchestratorDB/RobotLicenseLogs/Procedure_OrchestratorDB.Maintenance.ASyncCleanupRobotLicenseLogs.sql
--- ### [Hash]: db87142 [SHA256-ED5A5687AC523164E7E0137B66FE9EC0D62820506B04C449764BF9DE02BA991F]
+-- ### [Hash]: 3311d03 [SHA256-E6A1FF5F42861F41BF0546FA70E8C83AE728D3B6704F1A1F9854D4C22E405785]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -2032,12 +2032,12 @@ BEGIN
         BEGIN TRY
             INSERT INTO @tempListSync([Id], [DeleteAfterDatetime], [FirstASyncId], [LastAsyncId], [CountASyncIds], [IsDeleted], [IsSynced])
             SELECT Id, DeleteAfterDatetime, FirstASyncId, LastASyncId, CountASyncIds, IsDeleted, IsSynced
-            FROM [Maintenance].[Synonym_ArchiveSync_RobotLicenseLogs] 
+            FROM [Maintenance].[Synonym_Archive_Sync_RobotLicenseLogs] 
             WHERE ( CountASyncIds > 0 AND IsArchived = 1 AND IsDeleted <> 1 AND DeleteAfterDatetime < @startTime )
             UNION
             SELECT syn.Id, syn.DeleteAfterDatetime, syn.FirstASyncId, syn.LastASyncId, syn.CountASyncIds, syn.IsDeleted, syn.IsSynced
             FROM [Maintenance].[ASyncStatus_RobotLicenseLogs] sts 
-            INNER JOIN [Maintenance].[Synonym_ArchiveSync_RobotLicenseLogs] syn ON syn.Id = sts.SyncId
+            INNER JOIN [Maintenance].[Synonym_Archive_Sync_RobotLicenseLogs] syn ON syn.Id = sts.SyncId
            WHERE sts.IsDeleted = 1;
 
             IF @@ROWCOUNT = 0
@@ -2094,7 +2094,7 @@ BEGIN
                 WHILE 0 >= 0
                 BEGIN
                     INSERT INTO #tempIds(Id)
-                    SELECT TOP(@maxLoopDeleteRows) Id FROM [Maintenance].[Synonym_ASyncDelete_RobotLicenseLogs] WHERE [SyncId] = @cursorSyncId AND Id >= @firstId ORDER BY Id ASC;
+                    SELECT TOP(@maxLoopDeleteRows) Id FROM [Maintenance].[Synonym_Archive_Delete_RobotLicenseLogs] WHERE [SyncId] = @cursorSyncId AND Id >= @firstId ORDER BY Id ASC;
                     IF @@ROWCOUNT = 0
                     BEGIN
                         SET @message = SPACE(@tab * 1) + 'Cleanup finished (total = ' + CAST(@totalIds AS nvarchar(100)) + N')';

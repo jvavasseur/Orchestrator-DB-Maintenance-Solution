@@ -759,9 +759,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ValidateASyncArchiveObjectsJobs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ValidateASyncArchiveObjectsJobs]
--- ### [Version]: 2023-09-08T11:12:50+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/OrchestratorDB/Jobs/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsJobs.sql
--- ### [Hash]: 0859ec6 [SHA256-5B95D015117EBAF0AD203669804DBE50B9297D52B54B3C06F12AF16D9D4945C3]
+-- ### [Hash]: 3311d03 [SHA256-5980BBA6B5685335E14BDB90209ACF83EE2720A229C6A9974A9A943A42207D7D]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -784,12 +784,12 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         -- Settings
         ----------------------------------------------------------------------------------------------------
-        DECLARE @synonymASyncDeleteName nvarchar(256) = N'Synonym_ASyncDelete_Jobs';
+        DECLARE @synonymASyncDeleteName nvarchar(256) = N'Synonym_Archive_Delete_Jobs';
         DECLARE @synonymASyncDeleteSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymArchiveSyncName nvarchar(256) = N'Synonym_ArchiveSync_Jobs';
+        DECLARE @synonymArchiveSyncName nvarchar(256) = N'Synonym_Archive_Sync_Jobs';
         DECLARE @synonymArchiveSyncSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_Jobs';
-        DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
+--        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_Jobs';
+--        DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
         DECLARE @clusteredName nvarchar(128) = N'Id';
         ----------------------------------------------------------------------------------------------------      
         -- Message / Error Handling
@@ -1288,9 +1288,9 @@ GO
 ALTER PROCEDURE [Maintenance].[SetArchiveDBSourceTables]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[SetArchiveDBSourceTables]
--- ### [Version]: 2023-10-17T10:53:15+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.SetArchiveDBSourceTables.sql
--- ### [Hash]: 5ee9393 [SHA256-0B3A14B238BC49D71524FAC536D21760F551B80CB0270A9ACED7F0061B2AC3BB]
+-- ### [Hash]: 3311d03 [SHA256-59242A2F00BA7E302D34845312DA7C2201322791BE1FF16F3722ADB775AC97EA]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -1422,7 +1422,7 @@ BEGIN
                         IF NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10)
                         BEGIN
                             BEGIN TRY
-                                SELECT @synonymName = N'Synonym_ASync' + @cursorTable, @sourceTableFullParts =  QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable)
+                                SELECT @synonymName = N'Synonym_Archive_' + @cursorTable, @sourceTableFullParts =  QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable)
 
                                 EXEC [Maintenance].[SetSourceTable]
                                     @SynonymName = @synonymName
@@ -1512,9 +1512,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ASyncCleanupJobs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ASyncCleanupJobs]
--- ### [Version]: 2023-10-17T13:22:17+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/OrchestratorDB/Jobs/Procedure_OrchestratorDB.Maintenance.ASyncCleanupJobs.sql
--- ### [Hash]: db87142 [SHA256-186B5DEB7BED419A3A25EDC2E221314D8B7ABFB9CBBD861B520A247AAD9FFBC2]
+-- ### [Hash]: 3311d03 [SHA256-6ED42780549B4D49D32300F31D9F9A752DD641C91BCDADA4332BBF275421575B]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -2032,12 +2032,12 @@ BEGIN
         BEGIN TRY
             INSERT INTO @tempListSync([Id], [DeleteAfterDatetime], [FirstASyncId], [LastAsyncId], [CountASyncIds], [IsDeleted], [IsSynced])
             SELECT Id, DeleteAfterDatetime, FirstASyncId, LastASyncId, CountASyncIds, IsDeleted, IsSynced
-            FROM [Maintenance].[Synonym_ArchiveSync_Jobs] 
+            FROM [Maintenance].[Synonym_Archive_Sync_Jobs] 
             WHERE ( CountASyncIds > 0 AND IsArchived = 1 AND IsDeleted <> 1 AND DeleteAfterDatetime < @startTime )
             UNION
             SELECT syn.Id, syn.DeleteAfterDatetime, syn.FirstASyncId, syn.LastASyncId, syn.CountASyncIds, syn.IsDeleted, syn.IsSynced
             FROM [Maintenance].[ASyncStatus_Jobs] sts 
-            INNER JOIN [Maintenance].[Synonym_ArchiveSync_Jobs] syn ON syn.Id = sts.SyncId
+            INNER JOIN [Maintenance].[Synonym_Archive_Sync_Jobs] syn ON syn.Id = sts.SyncId
            WHERE sts.IsDeleted = 1;
 
             IF @@ROWCOUNT = 0
@@ -2094,7 +2094,7 @@ BEGIN
                 WHILE 0 >= 0
                 BEGIN
                     INSERT INTO #tempIds(Id)
-                    SELECT TOP(@maxLoopDeleteRows) Id FROM [Maintenance].[Synonym_ASyncDelete_Jobs] WHERE [SyncId] = @cursorSyncId AND Id >= @firstId ORDER BY Id ASC;
+                    SELECT TOP(@maxLoopDeleteRows) Id FROM [Maintenance].[Synonym_Archive_Delete_Jobs] WHERE [SyncId] = @cursorSyncId AND Id >= @firstId ORDER BY Id ASC;
                     IF @@ROWCOUNT = 0
                     BEGIN
                         SET @message = SPACE(@tab * 1) + 'Cleanup finished (total = ' + CAST(@totalIds AS nvarchar(100)) + N')';

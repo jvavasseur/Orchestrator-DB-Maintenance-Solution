@@ -1161,9 +1161,9 @@ GO
 ALTER PROCEDURE [Maintenance].[SetArchiveDBSourceTables]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[SetArchiveDBSourceTables]
--- ### [Version]: 2023-10-17T10:53:15+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.SetArchiveDBSourceTables.sql
--- ### [Hash]: 5ee9393 [SHA256-0B3A14B238BC49D71524FAC536D21760F551B80CB0270A9ACED7F0061B2AC3BB]
+-- ### [Hash]: 3311d03 [SHA256-59242A2F00BA7E302D34845312DA7C2201322791BE1FF16F3722ADB775AC97EA]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -1295,7 +1295,7 @@ BEGIN
                         IF NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10)
                         BEGIN
                             BEGIN TRY
-                                SELECT @synonymName = N'Synonym_ASync' + @cursorTable, @sourceTableFullParts =  QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable)
+                                SELECT @synonymName = N'Synonym_Archive_' + @cursorTable, @sourceTableFullParts =  QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable)
 
                                 EXEC [Maintenance].[SetSourceTable]
                                     @SynonymName = @synonymName
@@ -1416,9 +1416,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ValidateASyncArchiveObjectsLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ValidateASyncArchiveObjectsLogs]
--- ### [Version]: 2023-09-07T18:14:12+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/OrchestratorDB/Logs/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsLogs.sql
--- ### [Hash]: 914e4af [SHA256-350CD80EFFE665FF803C89B2D061C745C91124F4FA40556B66597D9F058645A6]
+-- ### [Hash]: 3311d03 [SHA256-6D7AF63ACC27CA5E74293E98BEA430B3518AC8245ABB0905B3A8A1C83A8FF9A2]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -1441,12 +1441,12 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         -- Settings
         ----------------------------------------------------------------------------------------------------
-        DECLARE @synonymASyncDeleteName nvarchar(256) = N'Synonym_ASyncDelete_Logs';
+        DECLARE @synonymASyncDeleteName nvarchar(256) = N'Synonym_Archive_Delete_Logs';
         DECLARE @synonymASyncDeleteSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymArchiveSyncName nvarchar(256) = N'Synonym_ArchiveSync_Logs';
+        DECLARE @synonymArchiveSyncName nvarchar(256) = N'Synonym_Archive_Sync_Logs';
         DECLARE @synonymArchiveSyncSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_Logs';
-        DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
+--        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_Archive_Status_Logs';
+--        DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
         DECLARE @clusteredName nvarchar(128) = N'Id';
         ----------------------------------------------------------------------------------------------------      
         -- Message / Error Handling
@@ -1512,9 +1512,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ASyncCleanupLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ASyncCleanupLogs]
--- ### [Version]: 2023-10-17T13:22:17+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/OrchestratorDB/Logs/Procedure_OrchestratorDB.Maintenance.ASyncCleanupLogs.sql
--- ### [Hash]: db87142 [SHA256-7DD1F6AF9F9F3482B8C9DA29E75999F96B9BDC4A11D20B69C06F4A93CDDEC8F0]
+-- ### [Hash]: 3311d03 [SHA256-DCA14692C6CC1157F856212D1FD61DFD6BFB3A4B12EF03CEAA7A8D0332707B14]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -2032,12 +2032,12 @@ BEGIN
         BEGIN TRY
             INSERT INTO @tempListSync([Id], [DeleteAfterDatetime], [FirstASyncId], [LastAsyncId], [CountASyncIds], [IsDeleted], [IsSynced])
             SELECT Id, DeleteAfterDatetime, FirstASyncId, LastASyncId, CountASyncIds, IsDeleted, IsSynced
-            FROM [Maintenance].[Synonym_ArchiveSync_Logs] 
+            FROM [Maintenance].[Synonym_Archive_Sync_Logs] 
             WHERE ( CountASyncIds > 0 AND IsArchived = 1 AND IsDeleted <> 1 AND DeleteAfterDatetime < @startTime )
             UNION
             SELECT syn.Id, syn.DeleteAfterDatetime, syn.FirstASyncId, syn.LastASyncId, syn.CountASyncIds, syn.IsDeleted, syn.IsSynced
             FROM [Maintenance].[ASyncStatus_Logs] sts 
-            INNER JOIN [Maintenance].[Synonym_ArchiveSync_Logs] syn ON syn.Id = sts.SyncId
+            INNER JOIN [Maintenance].[Synonym_Archive_Sync_Logs] syn ON syn.Id = sts.SyncId
            WHERE sts.IsDeleted = 1;
 
             IF @@ROWCOUNT = 0
@@ -2094,7 +2094,7 @@ BEGIN
                 WHILE 0 >= 0
                 BEGIN
                     INSERT INTO #tempIds(Id)
-                    SELECT TOP(@maxLoopDeleteRows) Id FROM [Maintenance].[Synonym_ASyncDelete_Logs] WHERE [SyncId] = @cursorSyncId AND Id >= @firstId ORDER BY Id ASC;
+                    SELECT TOP(@maxLoopDeleteRows) Id FROM [Maintenance].[Synonym_Archive_Delete_Logs] WHERE [SyncId] = @cursorSyncId AND Id >= @firstId ORDER BY Id ASC;
                     IF @@ROWCOUNT = 0
                     BEGIN
                         SET @message = SPACE(@tab * 1) + 'Cleanup finished (total = ' + CAST(@totalIds AS nvarchar(100)) + N')';
@@ -2294,9 +2294,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ValidateASyncArchiveObjectsJobs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ValidateASyncArchiveObjectsJobs]
--- ### [Version]: 2023-09-08T11:12:50+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/OrchestratorDB/Jobs/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsJobs.sql
--- ### [Hash]: 0859ec6 [SHA256-5B95D015117EBAF0AD203669804DBE50B9297D52B54B3C06F12AF16D9D4945C3]
+-- ### [Hash]: 3311d03 [SHA256-5980BBA6B5685335E14BDB90209ACF83EE2720A229C6A9974A9A943A42207D7D]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -2319,12 +2319,12 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         -- Settings
         ----------------------------------------------------------------------------------------------------
-        DECLARE @synonymASyncDeleteName nvarchar(256) = N'Synonym_ASyncDelete_Jobs';
+        DECLARE @synonymASyncDeleteName nvarchar(256) = N'Synonym_Archive_Delete_Jobs';
         DECLARE @synonymASyncDeleteSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymArchiveSyncName nvarchar(256) = N'Synonym_ArchiveSync_Jobs';
+        DECLARE @synonymArchiveSyncName nvarchar(256) = N'Synonym_Archive_Sync_Jobs';
         DECLARE @synonymArchiveSyncSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_Jobs';
-        DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
+--        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_Jobs';
+--        DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
         DECLARE @clusteredName nvarchar(128) = N'Id';
         ----------------------------------------------------------------------------------------------------      
         -- Message / Error Handling
@@ -2390,9 +2390,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ASyncCleanupJobs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ASyncCleanupJobs]
--- ### [Version]: 2023-10-17T13:22:17+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/OrchestratorDB/Jobs/Procedure_OrchestratorDB.Maintenance.ASyncCleanupJobs.sql
--- ### [Hash]: db87142 [SHA256-186B5DEB7BED419A3A25EDC2E221314D8B7ABFB9CBBD861B520A247AAD9FFBC2]
+-- ### [Hash]: 3311d03 [SHA256-6ED42780549B4D49D32300F31D9F9A752DD641C91BCDADA4332BBF275421575B]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -2910,12 +2910,12 @@ BEGIN
         BEGIN TRY
             INSERT INTO @tempListSync([Id], [DeleteAfterDatetime], [FirstASyncId], [LastAsyncId], [CountASyncIds], [IsDeleted], [IsSynced])
             SELECT Id, DeleteAfterDatetime, FirstASyncId, LastASyncId, CountASyncIds, IsDeleted, IsSynced
-            FROM [Maintenance].[Synonym_ArchiveSync_Jobs] 
+            FROM [Maintenance].[Synonym_Archive_Sync_Jobs] 
             WHERE ( CountASyncIds > 0 AND IsArchived = 1 AND IsDeleted <> 1 AND DeleteAfterDatetime < @startTime )
             UNION
             SELECT syn.Id, syn.DeleteAfterDatetime, syn.FirstASyncId, syn.LastASyncId, syn.CountASyncIds, syn.IsDeleted, syn.IsSynced
             FROM [Maintenance].[ASyncStatus_Jobs] sts 
-            INNER JOIN [Maintenance].[Synonym_ArchiveSync_Jobs] syn ON syn.Id = sts.SyncId
+            INNER JOIN [Maintenance].[Synonym_Archive_Sync_Jobs] syn ON syn.Id = sts.SyncId
            WHERE sts.IsDeleted = 1;
 
             IF @@ROWCOUNT = 0
@@ -2972,7 +2972,7 @@ BEGIN
                 WHILE 0 >= 0
                 BEGIN
                     INSERT INTO #tempIds(Id)
-                    SELECT TOP(@maxLoopDeleteRows) Id FROM [Maintenance].[Synonym_ASyncDelete_Jobs] WHERE [SyncId] = @cursorSyncId AND Id >= @firstId ORDER BY Id ASC;
+                    SELECT TOP(@maxLoopDeleteRows) Id FROM [Maintenance].[Synonym_Archive_Delete_Jobs] WHERE [SyncId] = @cursorSyncId AND Id >= @firstId ORDER BY Id ASC;
                     IF @@ROWCOUNT = 0
                     BEGIN
                         SET @message = SPACE(@tab * 1) + 'Cleanup finished (total = ' + CAST(@totalIds AS nvarchar(100)) + N')';
@@ -3172,9 +3172,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ValidateASyncArchiveObjectsQueues]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ValidateASyncArchiveObjectsQueues]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/OrchestratorDB/Queues/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsQueues.sql
--- ### [Hash]: dc39c27 [SHA256-89EC0C6F9D72560F25CC81276FF903F4A5F276AF255A02A5530FE124FFDAA492]
+-- ### [Hash]: 3311d03 [SHA256-EA49CD6266D213869570946B2B948523E9BC11FC80EE6514E0B17F35AF73846D]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -3197,12 +3197,12 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         -- Settings
         ----------------------------------------------------------------------------------------------------
-        DECLARE @synonymASyncDeleteName nvarchar(256) = N'Synonym_ASyncDelete_AuditLogs';
+        DECLARE @synonymASyncDeleteName nvarchar(256) = N'Synonym_Archive_Delete_AuditLogs';
         DECLARE @synonymASyncDeleteSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymArchiveSyncName nvarchar(256) = N'Synonym_ArchiveSync_AuditLogs';
+        DECLARE @synonymArchiveSyncName nvarchar(256) = N'Synonym_Archive_Sync_AuditLogs';
         DECLARE @synonymArchiveSyncSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_AuditLogs';
-        DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
+--        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_AuditLogs';
+--        DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
         DECLARE @clusteredName nvarchar(128) = N'Id';
         ----------------------------------------------------------------------------------------------------      
         -- Message / Error Handling
@@ -3268,9 +3268,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ASyncCleanupQueues]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ASyncCleanupQueues]
--- ### [Version]: 2023-10-17T13:22:17+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/OrchestratorDB/Queues/Procedure_OrchestratorDB.Maintenance.ASyncCleanupQueues.sql
--- ### [Hash]: db87142 [SHA256-8AF854560E968AC0ACB400AC38691E51F6447019EA8192C3E75F7F4391C6A798]
+-- ### [Hash]: 3311d03 [SHA256-0A926DE47D6ECB256C41613DF71D61628BEAEA80BE390CCE1D98FF5233415C4A]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -3788,12 +3788,12 @@ BEGIN
         BEGIN TRY
             INSERT INTO @tempListSync([Id], [DeleteAfterDatetime], [FirstASyncId], [LastAsyncId], [CountASyncIds], [IsDeleted], [IsSynced])
             SELECT Id, DeleteAfterDatetime, FirstASyncId, LastASyncId, CountASyncIds, IsDeleted, IsSynced
-            FROM [Maintenance].[Synonym_ArchiveSync_Queues] 
+            FROM [Maintenance].[Synonym_Archive_Sync_Queues] 
             WHERE ( CountASyncIds > 0 AND IsArchived = 1 AND IsDeleted <> 1 AND DeleteAfterDatetime < @startTime )
             UNION
             SELECT syn.Id, syn.DeleteAfterDatetime, syn.FirstASyncId, syn.LastASyncId, syn.CountASyncIds, syn.IsDeleted, syn.IsSynced
             FROM [Maintenance].[ASyncStatus_Queues] sts 
-            INNER JOIN [Maintenance].[Synonym_ArchiveSync_Queues] syn ON syn.Id = sts.SyncId
+            INNER JOIN [Maintenance].[Synonym_Archive_Sync_Queues] syn ON syn.Id = sts.SyncId
            WHERE sts.IsDeleted = 1;
 
             IF @@ROWCOUNT = 0
@@ -3850,7 +3850,7 @@ BEGIN
                 WHILE 0 >= 0
                 BEGIN
                     INSERT INTO #tempIds(Id)
-                    SELECT TOP(@maxLoopDeleteRows) Id FROM [Maintenance].[Synonym_ASyncDelete_Queues] WHERE [SyncId] = @cursorSyncId AND Id >= @firstId ORDER BY Id ASC;
+                    SELECT TOP(@maxLoopDeleteRows) Id FROM [Maintenance].[Synonym_Archive_Delete_Queues] WHERE [SyncId] = @cursorSyncId AND Id >= @firstId ORDER BY Id ASC;
                     IF @@ROWCOUNT = 0
                     BEGIN
                         SET @message = SPACE(@tab * 1) + 'Cleanup finished (total = ' + CAST(@totalIds AS nvarchar(100)) + N')';
@@ -4052,9 +4052,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ValidateASyncArchiveObjectsAuditLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ValidateASyncArchiveObjectsAuditLogs]
--- ### [Version]: 2023-09-07T18:14:12+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/OrchestratorDB/AuditLogs/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsAuditLogs.sql
--- ### [Hash]: 914e4af [SHA256-9127950AF400FA423BFBBE7482F49B9618C2DEE04214F4E91AB99DD7A225F0CA]
+-- ### [Hash]: 3311d03 [SHA256-93695A543077B7B6682A3B9D5942340A393037920D92E61A5D5686DEAB61E017]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -4077,12 +4077,12 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         -- Settings
         ----------------------------------------------------------------------------------------------------
-        DECLARE @synonymASyncDeleteName nvarchar(256) = N'Synonym_ASyncDelete_AuditLogs';
+        DECLARE @synonymASyncDeleteName nvarchar(256) = N'Synonym_Archive_Delete_AuditLogs';
         DECLARE @synonymASyncDeleteSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymArchiveSyncName nvarchar(256) = N'Synonym_ArchiveSync_AuditLogs';
+        DECLARE @synonymArchiveSyncName nvarchar(256) = N'Synonym_Archive_Sync_AuditLogs';
         DECLARE @synonymArchiveSyncSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_AuditLogs';
-        DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
+--        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_AuditLogs';
+--        DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
         DECLARE @clusteredName nvarchar(128) = N'Id';
         ----------------------------------------------------------------------------------------------------      
         -- Message / Error Handling
@@ -4148,9 +4148,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ASyncCleanupAuditLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ASyncCleanupAuditLogs]
--- ### [Version]: 2023-10-17T13:22:17+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/OrchestratorDB/AuditLogs/Procedure_OrchestratorDB.Maintenance.ASyncCleanupAuditLogs.sql
--- ### [Hash]: db87142 [SHA256-A4260D325846915B3DF6E8FE5227C946A36D456DC578E43C7210E5ED39819823]
+-- ### [Hash]: 3311d03 [SHA256-8A47F199EB768ACCE469D89A9C93B1545A7B1DFF2457F85C31045DE5E209A26A]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -4668,12 +4668,12 @@ BEGIN
         BEGIN TRY
             INSERT INTO @tempListSync([Id], [DeleteAfterDatetime], [FirstASyncId], [LastAsyncId], [CountASyncIds], [IsDeleted], [IsSynced])
             SELECT Id, DeleteAfterDatetime, FirstASyncId, LastASyncId, CountASyncIds, IsDeleted, IsSynced
-            FROM [Maintenance].[Synonym_ArchiveSync_AuditLogs] 
+            FROM [Maintenance].[Synonym_Archive_Sync_AuditLogs] 
             WHERE ( CountASyncIds > 0 AND IsArchived = 1 AND IsDeleted <> 1 AND DeleteAfterDatetime < @startTime )
             UNION
             SELECT syn.Id, syn.DeleteAfterDatetime, syn.FirstASyncId, syn.LastASyncId, syn.CountASyncIds, syn.IsDeleted, syn.IsSynced
             FROM [Maintenance].[ASyncStatus_AuditLogs] sts 
-            INNER JOIN [Maintenance].[Synonym_ArchiveSync_AuditLogs] syn ON syn.Id = sts.SyncId
+            INNER JOIN [Maintenance].[Synonym_Archive_Sync_AuditLogs] syn ON syn.Id = sts.SyncId
            WHERE sts.IsDeleted = 1;
 
             IF @@ROWCOUNT = 0
@@ -4730,7 +4730,7 @@ BEGIN
                 WHILE 0 >= 0
                 BEGIN
                     INSERT INTO #tempIds(Id)
-                    SELECT TOP(@maxLoopDeleteRows) Id FROM [Maintenance].[Synonym_ASyncDelete_AuditLogs] WHERE [SyncId] = @cursorSyncId AND Id >= @firstId ORDER BY Id ASC;
+                    SELECT TOP(@maxLoopDeleteRows) Id FROM [Maintenance].[Synonym_Archive_Delete_AuditLogs] WHERE [SyncId] = @cursorSyncId AND Id >= @firstId ORDER BY Id ASC;
                     IF @@ROWCOUNT = 0
                     BEGIN
                         SET @message = SPACE(@tab * 1) + 'Cleanup finished (total = ' + CAST(@totalIds AS nvarchar(100)) + N')';
@@ -4931,9 +4931,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ValidateASyncArchiveObjectsRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ValidateASyncArchiveObjectsRobotLicenseLogs]
--- ### [Version]: 2023-09-07T18:44:11+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/OrchestratorDB/RobotLicenseLogs/Procedure_OrchestratorDB.Maintenance.ValidateASyncArchiveObjectsRobotLicenseLogs.sql
--- ### [Hash]: 3470ab5 [SHA256-70B3E123364A2EAF1FDA4C2DF2CE528BCE9C6B9BE7AFA623AA2860F81BE31AA6]
+-- ### [Hash]: 3311d03 [SHA256-8F05EAAE62F408C3CD465B79F874A5A45756F98F2D45EA2DEF1D761D9E28228F]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -4956,12 +4956,12 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         -- Settings
         ----------------------------------------------------------------------------------------------------
-        DECLARE @synonymASyncDeleteName nvarchar(256) = N'Synonym_ASyncDelete_RobotLicenseLogs';
+        DECLARE @synonymASyncDeleteName nvarchar(256) = N'Synonym_Archive_Delete_RobotLicenseLogs';
         DECLARE @synonymASyncDeleteSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymArchiveSyncName nvarchar(256) = N'Synonym_ArchiveSync_RobotLicenseLogs';
+        DECLARE @synonymArchiveSyncName nvarchar(256) = N'Synonym_Archive_Sync_RobotLicenseLogs';
         DECLARE @synonymArchiveSyncSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_RobotLicenseLogs';
-        DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
+--        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_RobotLicenseLogs';
+--        DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
         DECLARE @clusteredName nvarchar(128) = N'Id';
         ----------------------------------------------------------------------------------------------------      
         -- Message / Error Handling
@@ -5027,9 +5027,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ASyncCleanupRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ASyncCleanupRobotLicenseLogs]
--- ### [Version]: 2023-10-17T13:22:17+02:00
+-- ### [Version]: 2023-10-18T14:34:46+02:00
 -- ### [Source]: _src/Archive/OrchestratorDB/RobotLicenseLogs/Procedure_OrchestratorDB.Maintenance.ASyncCleanupRobotLicenseLogs.sql
--- ### [Hash]: db87142 [SHA256-ED5A5687AC523164E7E0137B66FE9EC0D62820506B04C449764BF9DE02BA991F]
+-- ### [Hash]: 3311d03 [SHA256-E6A1FF5F42861F41BF0546FA70E8C83AE728D3B6704F1A1F9854D4C22E405785]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -5547,12 +5547,12 @@ BEGIN
         BEGIN TRY
             INSERT INTO @tempListSync([Id], [DeleteAfterDatetime], [FirstASyncId], [LastAsyncId], [CountASyncIds], [IsDeleted], [IsSynced])
             SELECT Id, DeleteAfterDatetime, FirstASyncId, LastASyncId, CountASyncIds, IsDeleted, IsSynced
-            FROM [Maintenance].[Synonym_ArchiveSync_RobotLicenseLogs] 
+            FROM [Maintenance].[Synonym_Archive_Sync_RobotLicenseLogs] 
             WHERE ( CountASyncIds > 0 AND IsArchived = 1 AND IsDeleted <> 1 AND DeleteAfterDatetime < @startTime )
             UNION
             SELECT syn.Id, syn.DeleteAfterDatetime, syn.FirstASyncId, syn.LastASyncId, syn.CountASyncIds, syn.IsDeleted, syn.IsSynced
             FROM [Maintenance].[ASyncStatus_RobotLicenseLogs] sts 
-            INNER JOIN [Maintenance].[Synonym_ArchiveSync_RobotLicenseLogs] syn ON syn.Id = sts.SyncId
+            INNER JOIN [Maintenance].[Synonym_Archive_Sync_RobotLicenseLogs] syn ON syn.Id = sts.SyncId
            WHERE sts.IsDeleted = 1;
 
             IF @@ROWCOUNT = 0
@@ -5609,7 +5609,7 @@ BEGIN
                 WHILE 0 >= 0
                 BEGIN
                     INSERT INTO #tempIds(Id)
-                    SELECT TOP(@maxLoopDeleteRows) Id FROM [Maintenance].[Synonym_ASyncDelete_RobotLicenseLogs] WHERE [SyncId] = @cursorSyncId AND Id >= @firstId ORDER BY Id ASC;
+                    SELECT TOP(@maxLoopDeleteRows) Id FROM [Maintenance].[Synonym_Archive_Delete_RobotLicenseLogs] WHERE [SyncId] = @cursorSyncId AND Id >= @firstId ORDER BY Id ASC;
                     IF @@ROWCOUNT = 0
                     BEGIN
                         SET @message = SPACE(@tab * 1) + 'Cleanup finished (total = ' + CAST(@totalIds AS nvarchar(100)) + N')';
