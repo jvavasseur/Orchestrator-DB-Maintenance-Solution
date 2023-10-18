@@ -241,22 +241,22 @@ BEGIN
                     , [exclude] = NULL
                     , IsDeleted = tnt.IsDeleted
                 FROM @jsonValues_tenants jst
-                LEFT JOIN [Maintenance].[Synonym_Source_Tenants] tnt ON tnt.Id = jst.[value_id] OR tnt.[Name] LIKE jst.[value_name]
+                LEFT JOIN [Maintenance].[Synonym_Source_Tenants] tnt ON tnt.Id = jst.[value_id] OR tnt.[Name] COLLATE database_default LIKE jst.[value_name]
                 WHERE ( jst.[value_id] IS NOT NULL OR ( CHARINDEX(N'%', jst.[value_name], 1) = 0 AND jst.[value_name] NOT IN (N'#ACTIVE_TENANTS#', N'#OTHER_TENANTS#', N'#DELETED_TENANTS#') ) )
                 UNION ALL
                 -- filter matches
                 SELECT [type] = N'partial', jst.[key], jst.[value_name], jst.[value_id], tnt.[Name], tnt.Id
-                    , [keep] = IIF(NOT EXISTS(SELECT TOP(1) 1 FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] LIKE [value_name] OR tnt.[Id] = [value_id]) ) AND tnt.IsDeleted = 0, 1, 0)
-                    , [exclude] = (SELECT TOP(1) ISNULL([value_name], [value_id]) FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] LIKE [value_name] OR tnt.[Id] = [value_id]) )
+                    , [keep] = IIF(NOT EXISTS(SELECT TOP(1) 1 FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] COLLATE database_default LIKE [value_name] OR tnt.[Id] = [value_id]) ) AND tnt.IsDeleted = 0, 1, 0)
+                    , [exclude] = (SELECT TOP(1) ISNULL([value_name], [value_id]) FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] COLLATE database_default LIKE [value_name] OR tnt.[Id] = [value_id]) )
                     , IsDeleted = tnt.IsDeleted
                 FROM @jsonValues_tenants jst
-                LEFT JOIN [Maintenance].[Synonym_Source_Tenants] tnt ON tnt.Id = jst.[value_id] OR (tnt.[Name] LIKE jst.[value_name])
+                LEFT JOIN [Maintenance].[Synonym_Source_Tenants] tnt ON tnt.Id = jst.[value_id] OR (tnt.[Name] COLLATE database_default LIKE jst.[value_name])
                 WHERE jst.[value_id] IS NULL AND CHARINDEX(N'%', jst.[value_name], 1) > 0
                 UNION ALL 
                 -- alias
                 SELECT [type] = IIF(jst.[value_name] = N'#ACTIVE_TENANTS#', N'active', N'deleted'), jst.[key], jst.[value_name], jst.[value_id], tnt.[Name], tnt.Id
-                    , [keep] = IIF(NOT EXISTS(SELECT TOP(1) 1 FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] LIKE [value_name] OR tnt.[Id] = [value_id])), 1, 0)
-                    , [exclude] = (SELECT TOP(1) ISNULL([value_name], [value_id]) FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] LIKE [value_name] OR tnt.[Id] = [value_id]) )
+                    , [keep] = IIF(NOT EXISTS(SELECT TOP(1) 1 FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] COLLATE database_default LIKE [value_name] OR tnt.[Id] = [value_id])), 1, 0)
+                    , [exclude] = (SELECT TOP(1) ISNULL([value_name], [value_id]) FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] COLLATE database_default LIKE [value_name] OR tnt.[Id] = [value_id]) )
                     , IsDeleted = tnt.IsDeleted
                 FROM @jsonValues_tenants jst
                 INNER JOIN (VALUES(N'#ACTIVE_TENANTS#', 0, N'active'), (N'#DELETED_TENANTS#', 1, N'deleted') ) sts([name], [status], [type]) ON jst.[value_name] = sts.name
@@ -269,8 +269,8 @@ BEGIN
             UNION ALL
             -- others
             SELECT jst.[key], jst.[value_name], jst.[value_id], tnt.[Name], tnt.[Id]
-                , [keep] = IIF(NOT EXISTS(SELECT TOP(1) 1 FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] LIKE [value_name] OR tnt.[Id] = [value_id])), 1, 0)
-                , [exclude] = (SELECT TOP(1) ISNULL([value_name], [value_id]) FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] LIKE [value_name] OR tnt.[Id] = [value_id]) )
+                , [keep] = IIF(NOT EXISTS(SELECT TOP(1) 1 FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] COLLATE database_default LIKE [value_name] OR tnt.[Id] = [value_id])), 1, 0)
+                , [exclude] = (SELECT TOP(1) ISNULL([value_name], [value_id]) FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] COLLATE database_default LIKE [value_name] OR tnt.[Id] = [value_id]) )
                 , 0
             FROM @jsonValues_tenants jst
             CROSS APPLY (

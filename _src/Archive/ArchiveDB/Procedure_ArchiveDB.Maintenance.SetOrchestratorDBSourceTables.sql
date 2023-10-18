@@ -150,11 +150,14 @@ BEGIN
                                     --THROW;
                                 END CATCH
                                 INSERT INTO @json_errors([procedure], [severity], [message]) SELECT N'[Maintenance].[CreateArchivingExternalTable]', [severity], [message] FROM OPENJSON(@outputMessages) WITH([Message] nvarchar(MAX), [Severity] int)
-                            END                            
+								SELECT @sourceTableFullParts = QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable);
+							END
+							ELSE SELECT @sourceTableFullParts = ISNULL(@DataSource + N'.', '') + QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable);;
+							
                             IF NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10)
                             BEGIN
                                 BEGIN TRY
-                                    SELECT @synonymName = N'Synonym_Source_' + @cursorTable, @sourceTableFullParts =  QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable)
+                                    SELECT @synonymName = N'Synonym_Source_' + @cursorTable;--, @sourceTableFullParts =  QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable)
 
                                     EXEC [Maintenance].[SetSourceTable]
                                         @SynonymName = @synonymName

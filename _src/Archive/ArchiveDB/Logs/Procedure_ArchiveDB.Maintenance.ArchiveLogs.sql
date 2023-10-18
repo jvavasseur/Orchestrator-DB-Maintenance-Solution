@@ -719,7 +719,7 @@ BEGIN
 
                 IF @isExternal = 0
                 BEGIN
-                    EXEC sp_executesql @stmt = N'SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_Logs] WITH(INDEX([IX_Machine])) WHERE TimeStamp <= @targetTimestamp;', @params = N'@maxId bigint OUTPUT', @maxId = @maxId
+                    EXEC sp_executesql @stmt = N'SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_Logs] WITH(INDEX([IX_Machine])) WHERE TimeStamp <= @targetTimestamp;', @params = N'@maxId bigint OUTPUT, @targetTimestamp datetime', @maxId = @maxId OUTPUT, @targetTimestamp = @targetTimestamp;
                 END
                 ELSE
                 BEGIN
