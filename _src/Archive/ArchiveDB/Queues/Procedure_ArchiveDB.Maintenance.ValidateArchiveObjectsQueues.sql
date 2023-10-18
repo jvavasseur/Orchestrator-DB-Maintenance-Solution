@@ -72,7 +72,7 @@ BEGIN
         DECLARE @synonymSourceItemEventsSchema nvarchar(256) = N'Maintenance';
         DECLARE @synonymArchiveItemEventsName nvarchar(256) = N'Synonym_Archive_QueueItemEvents';
         DECLARE @synonymArchiveItemEventsSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_Queues';
+        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_Source_ASyncStatus_Queues';
         DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
         DECLARE @clusteredName nvarchar(128) = N'Id';
         DECLARE @queueItemsValid bit = 0;

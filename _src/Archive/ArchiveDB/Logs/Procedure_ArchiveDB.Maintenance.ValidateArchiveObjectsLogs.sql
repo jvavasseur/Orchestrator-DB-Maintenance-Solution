@@ -57,7 +57,7 @@ BEGIN
         DECLARE @synonymSourceSchema nvarchar(256) = N'Maintenance';
         DECLARE @synonymArchiveName nvarchar(256) = N'Synonym_Archive_Logs';
         DECLARE @synonymArchiveSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_Logs';
+        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_Source_ASyncStatus_Logs';
         DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
         DECLARE @clusteredName nvarchar(128) = N'Id';
         ----------------------------------------------------------------------------------------------------      

@@ -72,6 +72,7 @@ BEGIN
         DECLARE @runId int;  
         DECLARE @dryRun bit;
         DECLARE @isTimeOut bit = 0;
+        DECLARE @isExternal bit = 0;
 
         DECLARE @startTime datetime = SYSDATETIME();
         DECLARE @startTimeFloat float(53);
@@ -101,6 +102,7 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         DECLARE @minId bigint = 0;
         DECLARE @maxId bigint;
+        DECLARE @maxTargetId bigint;
         DECLARE @currentId bigint
         DECLARE @currentLoopId bigint;
         DECLARE @maxLoopDeleteRows int;
@@ -343,16 +345,28 @@ BEGIN
         -- Check @MaxBatchesLoops
         SET @maxBatches = NULLIF(@MaxBatchesLoops, 0);
 
-        -- Check @SynchronousDeleteIfNoDelay
-        SELECT @deleteIfNoDelay = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@SynchronousDeleteIfNoDelay));
-        INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay is NULL or empty. Default value will be used (No)', 10, 1 WHERE @deleteIfNoDelay IS NULL;
-        SET @deleteIfNoDelay = ISNULL(@deleteIfNoDelay, 0);
+        IF NOT EXISTS(SELECT 1 FROM sys.tables WHERE [name] = N'AuditLogs' AND SCHEMA_NAME(schema_id) = N'dbo' AND is_external = 1)
+        BEGIN
+            SET @isExternal = 0;
+            -- Check @SynchronousDeleteIfNoDelay
+            SELECT @deleteIfNoDelay = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@SynchronousDeleteIfNoDelay));
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay is NULL or empty. Default value will be used (No)', 10, 1 WHERE @deleteIfNoDelay IS NULL;
+            SET @deleteIfNoDelay = ISNULL(@deleteIfNoDelay, 0);
 
-        -- Check @IgnoreDeleteDelay
-        SELECT @ignoreDelay = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@IgnoreDeleteDelay));
-        INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@IgnoreDeleteDelay is NULL or empty. Default value will be used (No).', 10, 1 WHERE @ignoreDelay IS NULL;
-        INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay must be set if @IgnoreDeleteDelay is set', 16, 1 WHERE @ignoreDelay = 1 AND @deleteIfNoDelay <> 1;
-        SET @ignoreDelay = ISNULL(@ignoreDelay, 0);
+            -- Check @IgnoreDeleteDelay
+            SELECT @ignoreDelay = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@IgnoreDeleteDelay));
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@IgnoreDeleteDelay is NULL or empty. Default value will be used (No).', 10, 1 WHERE @ignoreDelay IS NULL;
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay must be set if @IgnoreDeleteDelay is set', 16, 1 WHERE @ignoreDelay = 1 AND @deleteIfNoDelay <> 1;
+            SET @ignoreDelay = ISNULL(@ignoreDelay, 0);
+        END
+        ELSE
+        BEGIN
+            SET @isExternal = 1;
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@SynchronousDeleteIfNoDelay automatically set to 0 (No) when using Extenal Table', 10, 1;
+            SET @deleteIfNoDelay = 0;
+            INSERT INTO @messages ([Message], Severity, [State]) SELECT N'@IgnoreDeleteDelay automatically set to 0 (No) when using Extenal Table', 10, 1;
+            SET @ignoreDelay = 0;
+        END
 
         -- Check Create Archive Table
         SELECT @synonymCreateTable = [value] FROM @paramsYesNo WHERE [parameter] = LTRIM(RTRIM(@CreateArchiveTable));
@@ -746,8 +760,14 @@ BEGIN
                 SELECT @countFilterIds = ISNULL(COUNT(*), 0), @countArchiveIds = ISNULL(COUNT(DISTINCT ArchiveId), 0) FROM #tempListFilters;
                 SELECT @targetTimestamp = MAX(TargetTimeStamp) FROM #tempListFilters WHERE TargetTimeStamp IS NOT NULL;
 
-                SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_AuditLogs];-- WITH(INDEX([IX_TenantId_IsGlobal_ExecutionTime])) WHERE ExecutionTime <= @targetTimestamp;
-                DECLARE @maxTargetId bigint;
+                IF @isExternal = 0
+                BEGIN
+                    EXEC sp_executesql @stmt = N'SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_AuditLogs] WITH(INDEX([IX_TenantId_IsGlobal_ExecutionTime])) WHERE ExecutionTime <= @targetTimestamp;', @params = N'@maxId bigint OUTPUT', @maxId = @maxId
+                END
+                ELSE
+                BEGIN
+                    SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_AuditLogs];
+                END
 
                 SELECT @maxTargetId = MAX(ISNULL(TargetId, 0)) FROM #tempListFilters;
                 IF @maxId < @maxTargetId SET @maxId = @maxTargetId;
@@ -976,8 +996,8 @@ BEGIN
                         SELECT tempSyncId, tempId FROM #tempListIds ids                                                                      --|
                         WHERE NOT EXISTS(SELECT 1 FROM [Maintenance].[Delete_AuditLogs] WHERE Id = ids.tempId) AND tempNoDelay = 0;          --|
                                                                                                                                              --|
-                        DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_AuditLogsEntities] src ON src.AuditLogsId = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
-                        DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_AuditLogs] src ON src.Id = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
+                        IF @isExternal = 0 DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_AuditLogsEntities] src ON src.AuditLogsId = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
+                        IF @isExternal = 0 DELETE src FROM #tempListIds ids INNER JOIN [Maintenance].[Synonym_Source_AuditLogs] src ON src.Id = ids.tempId WHERE @ignoreDelay = 1 OR ids.tempNoDelay = 1;
                                                                                                                                              --|
                         -- Update current Id(s)                                                                                              --|
                         UPDATE flt SET CurrentId = @currentLoopId                                                                            --|

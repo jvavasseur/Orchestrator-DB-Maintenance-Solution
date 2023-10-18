@@ -156,7 +156,7 @@ BEGIN
                         IF NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10)
                         BEGIN
                             BEGIN TRY
-                                SELECT @synonymName = N'Synonym_ASync' + @cursorTable, @sourceTableFullParts =  QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable)
+                                SELECT @synonymName = N'Synonym_Archive_' + @cursorTable, @sourceTableFullParts =  QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable)
 
                                 EXEC [Maintenance].[SetSourceTable]
                                     @SynonymName = @synonymName

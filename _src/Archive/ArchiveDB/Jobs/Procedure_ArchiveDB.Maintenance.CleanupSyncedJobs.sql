@@ -538,7 +538,7 @@ BEGIN
         BEGIN TRY
             INSERT INTO @tempListSync([Id], [DeleteOnDate])
             SELECT sts.SyncId, sts.DeletedOnDate
-            FROM [Maintenance].[Synonym_ASyncStatus_Jobs] sts
+            FROM [Maintenance].[Synonym_Source_ASyncStatus_Jobs] sts
             INNER JOIN [Maintenance].[Sync_Jobs] syn ON syn.Id = sts.SyncId
             WHERE sts.IsDeleted = 1 AND syn.IsSynced <> 1;
 

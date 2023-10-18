@@ -64,7 +64,7 @@ BEGIN
         DECLARE @synonymSourceEntitiesSchema nvarchar(256) = N'Maintenance';
         DECLARE @synonymArchiveEntitiesName nvarchar(256) = N'Synonym_Archive_AuditLogsEntities';
         DECLARE @synonymArchiveEntitiesSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_AuditLogs';
+        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_Source_ASyncStatus_AuditLogs';
         DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
         DECLARE @clusteredName nvarchar(128) = N'Id';
         DECLARE @auditLogsValid bit = 0;

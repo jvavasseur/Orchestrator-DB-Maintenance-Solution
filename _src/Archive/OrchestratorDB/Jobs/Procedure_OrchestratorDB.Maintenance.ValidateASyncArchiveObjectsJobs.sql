@@ -47,12 +47,12 @@ BEGIN
         ----------------------------------------------------------------------------------------------------
         -- Settings
         ----------------------------------------------------------------------------------------------------
-        DECLARE @synonymASyncDeleteName nvarchar(256) = N'Synonym_ASyncDelete_Jobs';
+        DECLARE @synonymASyncDeleteName nvarchar(256) = N'Synonym_Archive_Delete_Jobs';
         DECLARE @synonymASyncDeleteSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymArchiveSyncName nvarchar(256) = N'Synonym_ArchiveSync_Jobs';
+        DECLARE @synonymArchiveSyncName nvarchar(256) = N'Synonym_Archive_Sync_Jobs';
         DECLARE @synonymArchiveSyncSchema nvarchar(256) = N'Maintenance';
-        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_Jobs';
-        DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
+--        DECLARE @synonymASyncStatusName nvarchar(256) = N'Synonym_ASyncStatus_Jobs';
+--        DECLARE @synonymASyncStatusSchema nvarchar(256) = N'Maintenance';
         DECLARE @clusteredName nvarchar(128) = N'Id';
         ----------------------------------------------------------------------------------------------------      
         -- Message / Error Handling

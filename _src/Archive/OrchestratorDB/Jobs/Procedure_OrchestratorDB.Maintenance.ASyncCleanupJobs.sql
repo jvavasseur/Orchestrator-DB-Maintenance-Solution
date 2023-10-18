@@ -543,12 +543,12 @@ BEGIN
         BEGIN TRY
             INSERT INTO @tempListSync([Id], [DeleteAfterDatetime], [FirstASyncId], [LastAsyncId], [CountASyncIds], [IsDeleted], [IsSynced])
             SELECT Id, DeleteAfterDatetime, FirstASyncId, LastASyncId, CountASyncIds, IsDeleted, IsSynced
-            FROM [Maintenance].[Synonym_ArchiveSync_Jobs] 
+            FROM [Maintenance].[Synonym_Archive_Sync_Jobs] 
             WHERE ( CountASyncIds > 0 AND IsArchived = 1 AND IsDeleted <> 1 AND DeleteAfterDatetime < @startTime )
             UNION
             SELECT syn.Id, syn.DeleteAfterDatetime, syn.FirstASyncId, syn.LastASyncId, syn.CountASyncIds, syn.IsDeleted, syn.IsSynced
             FROM [Maintenance].[ASyncStatus_Jobs] sts 
-            INNER JOIN [Maintenance].[Synonym_ArchiveSync_Jobs] syn ON syn.Id = sts.SyncId
+            INNER JOIN [Maintenance].[Synonym_Archive_Sync_Jobs] syn ON syn.Id = sts.SyncId
            WHERE sts.IsDeleted = 1;
 
             IF @@ROWCOUNT = 0
@@ -605,7 +605,7 @@ BEGIN
                 WHILE 0 >= 0
                 BEGIN
                     INSERT INTO #tempIds(Id)
-                    SELECT TOP(@maxLoopDeleteRows) Id FROM [Maintenance].[Synonym_ASyncDelete_Jobs] WHERE [SyncId] = @cursorSyncId AND Id >= @firstId ORDER BY Id ASC;
+                    SELECT TOP(@maxLoopDeleteRows) Id FROM [Maintenance].[Synonym_Archive_Delete_Jobs] WHERE [SyncId] = @cursorSyncId AND Id >= @firstId ORDER BY Id ASC;
                     IF @@ROWCOUNT = 0
                     BEGIN
                         SET @message = SPACE(@tab * 1) + 'Cleanup finished (total = ' + CAST(@totalIds AS nvarchar(100)) + N')';
