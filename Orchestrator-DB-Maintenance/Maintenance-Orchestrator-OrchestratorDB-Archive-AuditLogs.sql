@@ -1288,9 +1288,9 @@ GO
 ALTER PROCEDURE [Maintenance].[SetArchiveDBSourceTables]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[SetArchiveDBSourceTables]
--- ### [Version]: 2023-10-18T14:34:46+02:00
+-- ### [Version]: 2023-10-18T15:02:49+00:00
 -- ### [Source]: _src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.SetArchiveDBSourceTables.sql
--- ### [Hash]: 3311d03 [SHA256-59242A2F00BA7E302D34845312DA7C2201322791BE1FF16F3722ADB775AC97EA]
+-- ### [Hash]: f12ceeb [SHA256-37A8CBDF20745BE039D87848873B9342026DA9BCEF772E3F5A09EAB6DE924295]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -1388,9 +1388,8 @@ BEGIN
         IF NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10) AND @outputIsValid = 1
         BEGIN
             BEGIN TRY
-
                 DECLARE CursorTables CURSOR FAST_FORWARD LOCAL FOR 
-                    SELECT lst.[group], [schema], [table], [exists], [isvalid], [columns] FROM [Maintenance].[ArchivingListASyncOrchestratorDBTables] lst
+                    SELECT lst.[group], [schema], [table], [exists], [isvalid], [columns] FROM [Maintenance].[Synonym_ArchivingListASyncOrchestratorDBTables] lst
                     INNER JOIN (VALUES(N'AuditLogs', 1), (N'Jobs', 1), (N'Logs', 1), (N'Queues', 1), (N'RobotLicenseLogs', 1)) AS v([group], [include]) ON v.[group] = lst.[group]
                     WHERE v.[include] >= 1;
 
@@ -1404,41 +1403,46 @@ BEGIN
                         IF @cursorIsValid = 0 
                         BEGIN
                             INSERT INTO @json_errors([severity], [message]) SELECT 10, N'Missing or invalid source table: Group = ' + ISNULL(@cursorGroup, '-') + N', Table = ' + @cursorSchema + N'.' + @cursorTable + N' ';
-                            CONTINUE;
                         END
-                        --INSERT INTO @json_errors([severity], [message]) SELECT 10, N'Add table: Group = ' + ISNULL(@cursorGroup, '-') + N', Table = ' + @cursorSchema + N'.' + @cursorTable + N' ';
+						ELSE
+						BEGIN
+							IF @IsExternal = 1
+							BEGIN
+								BEGIN TRY
+									EXEC [Maintenance].[CreateArchivingExternalTable] @ExternalDataSource = @DataSource, @ExternalName = @cursorTable, @ExternalSchema = @cursorSchema, @Columns = @cursorColumns
+										, @ShowMessages = 0, @ThrowError = 0, @Messages = @outputMessages OUTPUT , @IsValid = @outputIsValid OUTPUT;
+								END TRY
+								BEGIN CATCH
+									INSERT INTO @json_errors([severity], [message]) SELECT 16, ERROR_MESSAGE()
+									INSERT INTO @json_errors([severity], [message]) SELECT 16, N'ERROR[XT]: error(s) occured while checking external table' + QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable);
+									--THROW;
+								END CATCH
+								INSERT INTO @json_errors([procedure], [severity], [message]) SELECT N'[Maintenance].[CreateArchivingExternalTable]', [severity], [message] FROM OPENJSON(@outputMessages) WITH([Message] nvarchar(MAX), [Severity] int)
+					            SELECT @sourceTableFullParts = QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable);
+							END                        
+					        ELSE SELECT @sourceTableFullParts = ISNULL(@DataSource + N'.', '') + QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable);;
 
-                        BEGIN TRY
-                            EXEC [Maintenance].[CreateArchivingExternalTable] @ExternalDataSource = @DataSource, @ExternalName = @cursorTable, @ExternalSchema = @cursorSchema, @Columns = @cursorColumns
-                                , @ShowMessages = 0, @ThrowError = 0, @Messages = @outputMessages OUTPUT , @IsValid = @outputIsValid OUTPUT;
-                        END TRY
-                        BEGIN CATCH
-                            INSERT INTO @json_errors([severity], [message]) SELECT 16, ERROR_MESSAGE()
-                            INSERT INTO @json_errors([severity], [message]) SELECT 16, N'ERROR[XT]: error(s) occured while checking external table' + QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable);
-                            --THROW;
-                        END CATCH
-                        INSERT INTO @json_errors([procedure], [severity], [message]) SELECT N'[Maintenance].[CreateArchivingExternalTable]', [severity], [message] FROM OPENJSON(@outputMessages) WITH([Message] nvarchar(MAX), [Severity] int)
-                        
-                        IF NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10)
-                        BEGIN
-                            BEGIN TRY
-                                SELECT @synonymName = N'Synonym_Archive_' + @cursorTable, @sourceTableFullParts =  QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable)
+							IF NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10)
+							BEGIN
+								BEGIN TRY
+									SELECT @synonymName = N'Synonym_Archive_' + @cursorTable; --, @sourceTableFullParts =  QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable)
 
-                                EXEC [Maintenance].[SetSourceTable]
-                                    @SynonymName = @synonymName
-                                    , @SynonymSchema = N'Maintenance'
-                                    , @SourceTableFullParts =  @sourceTableFullParts
-                                    , @SourceExpectedColumns = @cursorColumns
-                                    , @CreateOrUpdateSynonym = 1
-                                    , @ShowMessages = 0, @IsValid = @outputIsValid OUTPUT, @Messages = @outputMessages OUTPUT
-                                ;
-                            END TRY
-                            BEGIN CATCH
-                                INSERT INTO @json_errors([severity], [message]) SELECT 16, ERROR_MESSAGE()
-                                INSERT INTO @json_errors([severity], [message]) SELECT 16, N'ERROR[SY0]: error(s) occured while checking synonym for table: ' + QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable);
-                --                THROW;
-                            END CATCH
-                        END
+									EXEC [Maintenance].[SetSourceTable]
+										@SynonymName = @synonymName
+										, @SynonymSchema = N'Maintenance'
+										, @SourceTableFullParts =  @sourceTableFullParts
+										, @SourceExpectedColumns = @cursorColumns
+										, @CreateOrUpdateSynonym = 1
+										, @ShowMessages = 0, @IsValid = @outputIsValid OUTPUT, @Messages = @outputMessages OUTPUT
+									;
+								END TRY
+								BEGIN CATCH
+									INSERT INTO @json_errors([severity], [message]) SELECT 16, ERROR_MESSAGE()
+									INSERT INTO @json_errors([severity], [message]) SELECT 16, N'ERROR[SY0]: error(s) occured while checking synonym for table: ' + QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable);
+					--                THROW;
+								END CATCH
+							END
+						END
                         INSERT INTO @json_errors([procedure], [severity], [message]) SELECT N'[Maintenance].[CreateArchivingExternalTable]', [severity], [message] FROM OPENJSON(@outputMessages) WITH([Message] nvarchar(MAX), [Severity] int)
 
                         FETCH CursorTables INTO @cursorGroup, @cursorSchema, @cursorTable, @cursorExists, @cursorIsValid, @cursorColumns;

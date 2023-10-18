@@ -1906,9 +1906,9 @@ GO
 ALTER PROCEDURE [Maintenance].[SetOrchestratorDBSourceTables]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[SetOrchestratorDBSourceTables]
--- ### [Version]: 2023-10-17T10:53:15+02:00
+-- ### [Version]: 2023-10-18T15:02:49+00:00
 -- ### [Source]: _src/Archive/ArchiveDB/Procedure_ArchiveDB.Maintenance.SetOrchestratorDBSourceTables.sql
--- ### [Hash]: 5ee9393 [SHA256-5E7CF3DF608A282355F2A891CA1C76C75E296918E72A6D1FE3D37B129518C921]
+-- ### [Hash]: f12ceeb [SHA256-9A78D6BC428656746E755F313B8CB126CB663DD8C61A1B7DF6F08F62F87702A6]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -2034,11 +2034,14 @@ BEGIN
                                     --THROW;
                                 END CATCH
                                 INSERT INTO @json_errors([procedure], [severity], [message]) SELECT N'[Maintenance].[CreateArchivingExternalTable]', [severity], [message] FROM OPENJSON(@outputMessages) WITH([Message] nvarchar(MAX), [Severity] int)
-                            END                            
+								SELECT @sourceTableFullParts = QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable);
+							END
+							ELSE SELECT @sourceTableFullParts = ISNULL(@DataSource + N'.', '') + QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable);;
+							
                             IF NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10)
                             BEGIN
                                 BEGIN TRY
-                                    SELECT @synonymName = N'Synonym_Source_' + @cursorTable, @sourceTableFullParts =  QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable)
+                                    SELECT @synonymName = N'Synonym_Source_' + @cursorTable;--, @sourceTableFullParts =  QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable)
 
                                     EXEC [Maintenance].[SetSourceTable]
                                         @SynonymName = @synonymName
@@ -2722,9 +2725,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ParseJsonArchiveRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ParseJsonArchiveRobotLicenseLogs]
--- ### [Version]: 2023-10-06T11:29:36+02:00
+-- ### [Version]: 2023-10-18T15:02:49+00:00
 -- ### [Source]: _src/Archive/ArchiveDB/RobotLicenseLogs/Procedure_ArchiveDB.Maintenance.ParseJsonArchiveRobotLicenseLogs.sql
--- ### [Hash]: dc39c27 [SHA256-7E5F2C81B0F0009CDE6748088D812DF77FE8D89720F3D91791552069FDFA3153]
+-- ### [Hash]: f12ceeb [SHA256-4460DF3717EAF7CEBC45303B2815A17567EC1B2A6C9BF4F43A16D4478E08DACD]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -2887,22 +2890,22 @@ BEGIN
                     , [exclude] = NULL
                     , IsDeleted = tnt.IsDeleted
                 FROM @jsonValues_tenants jst
-                LEFT JOIN [Maintenance].[Synonym_Source_Tenants] tnt ON tnt.Id = jst.[value_id] OR tnt.[Name] LIKE jst.[value_name]
+                LEFT JOIN [Maintenance].[Synonym_Source_Tenants] tnt ON tnt.Id = jst.[value_id] OR tnt.[Name] COLLATE database_default LIKE jst.[value_name]
                 WHERE ( jst.[value_id] IS NOT NULL OR ( CHARINDEX(N'%', jst.[value_name], 1) = 0 AND jst.[value_name] NOT IN (N'#ACTIVE_TENANTS#', N'#OTHER_TENANTS#', N'#DELETED_TENANTS#') ) )
                 UNION ALL
                 -- filter matches
                 SELECT [type] = N'partial', jst.[key], jst.[value_name], jst.[value_id], tnt.[Name], tnt.Id
-                    , [keep] = IIF(NOT EXISTS(SELECT TOP(1) 1 FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] LIKE [value_name] OR tnt.[Id] = [value_id]) ) AND tnt.IsDeleted = 0, 1, 0)
-                    , [exclude] = (SELECT TOP(1) ISNULL([value_name], [value_id]) FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] LIKE [value_name] OR tnt.[Id] = [value_id]) )
+                    , [keep] = IIF(NOT EXISTS(SELECT TOP(1) 1 FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] COLLATE database_default LIKE [value_name] OR tnt.[Id] = [value_id]) ) AND tnt.IsDeleted = 0, 1, 0)
+                    , [exclude] = (SELECT TOP(1) ISNULL([value_name], [value_id]) FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] COLLATE database_default LIKE [value_name] OR tnt.[Id] = [value_id]) )
                     , IsDeleted = tnt.IsDeleted
                 FROM @jsonValues_tenants jst
-                LEFT JOIN [Maintenance].[Synonym_Source_Tenants] tnt ON tnt.Id = jst.[value_id] OR (tnt.[Name] LIKE jst.[value_name])
+                LEFT JOIN [Maintenance].[Synonym_Source_Tenants] tnt ON tnt.Id = jst.[value_id] OR (tnt.[Name] COLLATE database_default LIKE jst.[value_name])
                 WHERE jst.[value_id] IS NULL AND CHARINDEX(N'%', jst.[value_name], 1) > 0
                 UNION ALL 
                 -- alias
                 SELECT [type] = IIF(jst.[value_name] = N'#ACTIVE_TENANTS#', N'active', N'deleted'), jst.[key], jst.[value_name], jst.[value_id], tnt.[Name], tnt.Id
-                    , [keep] = IIF(NOT EXISTS(SELECT TOP(1) 1 FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] LIKE [value_name] OR tnt.[Id] = [value_id])), 1, 0)
-                    , [exclude] = (SELECT TOP(1) ISNULL([value_name], [value_id]) FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] LIKE [value_name] OR tnt.[Id] = [value_id]) )
+                    , [keep] = IIF(NOT EXISTS(SELECT TOP(1) 1 FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] COLLATE database_default LIKE [value_name] OR tnt.[Id] = [value_id])), 1, 0)
+                    , [exclude] = (SELECT TOP(1) ISNULL([value_name], [value_id]) FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] COLLATE database_default LIKE [value_name] OR tnt.[Id] = [value_id]) )
                     , IsDeleted = tnt.IsDeleted
                 FROM @jsonValues_tenants jst
                 INNER JOIN (VALUES(N'#ACTIVE_TENANTS#', 0, N'active'), (N'#DELETED_TENANTS#', 1, N'deleted') ) sts([name], [status], [type]) ON jst.[value_name] = sts.name
@@ -2915,8 +2918,8 @@ BEGIN
             UNION ALL
             -- others
             SELECT jst.[key], jst.[value_name], jst.[value_id], tnt.[Name], tnt.[Id]
-                , [keep] = IIF(NOT EXISTS(SELECT TOP(1) 1 FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] LIKE [value_name] OR tnt.[Id] = [value_id])), 1, 0)
-                , [exclude] = (SELECT TOP(1) ISNULL([value_name], [value_id]) FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] LIKE [value_name] OR tnt.[Id] = [value_id]) )
+                , [keep] = IIF(NOT EXISTS(SELECT TOP(1) 1 FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] COLLATE database_default LIKE [value_name] OR tnt.[Id] = [value_id])), 1, 0)
+                , [exclude] = (SELECT TOP(1) ISNULL([value_name], [value_id]) FROM @jsonValues_exclude WHERE [key] = jst.[key] AND (tnt.[Name] COLLATE database_default LIKE [value_name] OR tnt.[Id] = [value_id]) )
                 , 0
             FROM @jsonValues_tenants jst
             CROSS APPLY (
@@ -3760,9 +3763,9 @@ GO
 ALTER PROCEDURE [Maintenance].[ArchiveRobotLicenseLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ArchiveRobotLicenseLogs]
--- ### [Version]: 2023-10-18T14:34:46+02:00
+-- ### [Version]: 2023-10-18T15:02:49+00:00
 -- ### [Source]: _src/Archive/ArchiveDB/RobotLicenseLogs/Procedure_ArchiveDB.Maintenance.ArchiveRobotLicenseLogs.sql
--- ### [Hash]: 3311d03 [SHA256-7DABEAE5805C4C84E94A67812CB04C54C6986F73CBE3FF405AC0E1EC7A8F6D21]
+-- ### [Hash]: f12ceeb [SHA256-DEC085918B44A6E9A50EFD564BDE87194763C6DC28692A19F5EE0B31314FFC36]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -4455,7 +4458,7 @@ BEGIN
 
                 IF @isExternal = 0
                 BEGIN
-                    EXEC sp_executesql @stmt = N'SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_RobotLicenseLogs] /*WITH(INDEX([IX_Machine]))*/ WHERE EndDate <= @targetTimestamp;', @params = N'@maxId bigint OUTPUT', @maxId = @maxId
+                    EXEC sp_executesql @stmt = N'SELECT @maxId = MAX(Id) FROM [Maintenance].[Synonym_Source_RobotLicenseLogs] /*WITH(INDEX([IX_Machine]))*/ WHERE EndDate <= @targetTimestamp;', @params = N'@maxId bigint OUTPUT, @targetTimestamp datetime', @maxId = @maxId OUTPUT, @targetTimestamp = @targetTimestamp;
                 END
                 ELSE
                 BEGIN
