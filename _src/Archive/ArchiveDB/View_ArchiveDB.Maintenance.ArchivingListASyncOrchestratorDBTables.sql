@@ -34,8 +34,8 @@ AS
     ), tables([schema], [table], [group], [object_id], [IsArchived]) AS (
         SELECT lst.[schema], lst.[table], lst.[group], tbl.object_id, lst.[IsArchived]
         FROM [list] lst
-        LEFT JOIN sys.tables tbl ON tbl.[name] = lst.[table]
-        LEFT JOIN sys.schemas sch ON tbl.schema_id = sch.schema_id AND sch.[name] = lst.[schema] 
+        LEFT JOIN sys.schemas sch ON sch.[name] = lst.[schema] 
+        LEFT JOIN sys.tables tbl ON tbl.schema_id = sch.schema_id AND tbl.[name] = lst.[table]
     )
     SELECT tbl.[group], tbl.[schema], tbl.[table], [IsArchived]--, lst.object_id
         , [exists] = CAST(IIF(tbl.object_id IS NULL, 0, 1) AS bit)
