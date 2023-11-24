@@ -1252,9 +1252,9 @@ GO
 ALTER PROCEDURE [Maintenance].[SetArchiveDBSourceTables]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[SetArchiveDBSourceTables]
--- ### [Version]: 2023-10-18T15:02:49+00:00
+-- ### [Version]: 2023-11-24T10:37:31+01:00
 -- ### [Source]: _src/Archive/OrchestratorDB/Procedure_OrchestratorDB.Maintenance.SetArchiveDBSourceTables.sql
--- ### [Hash]: f12ceeb [SHA256-37A8CBDF20745BE039D87848873B9342026DA9BCEF772E3F5A09EAB6DE924295]
+-- ### [Hash]: 474f556 [SHA256-6EE98B3042A9910640D083E6C64C8497DD91C3EEEF95D376244C4649AFB88E1C]
 -- ### [Docs]: https://???.???
 -- !!! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!
 -- !!! ~~~~~~~~~ NOT OFFICIALLY SUPPORTED BY UIPATH 
@@ -1314,6 +1314,8 @@ BEGIN
         -- Checks Synonyms and Tables
         ----------------------------------------------------------------------------------------------------
         SELECT @listTableColuns = N'[{"column":"group","datatype":"nvarchar(128)"},{"column":"schema","datatype":"nvarchar(128)"},{"column":"table","datatype":"nvarchar(128)"},{"column":"isarchived","datatype":"bit"},{"column":"exists","datatype":"bit"},{"column":"isvalid","datatype":"bit"},{"column":"columns","datatype":"nvarchar(MAX)"}]';
+        SELECT @DataSource = NULLIF(LTRIM(RTRIM(@DataSource)), N'');
+
         -- Add (IF External) Table ArchivingListArchiveDBTables
         IF @IsExternal = 1
         BEGIN
@@ -1370,6 +1372,8 @@ BEGIN
                         END
 						ELSE
 						BEGIN
+                            SELECT @outputMessages = NULL;
+
 							IF @IsExternal = 1
 							BEGIN
 								BEGIN TRY
@@ -1379,14 +1383,14 @@ BEGIN
 								BEGIN CATCH
 									INSERT INTO @json_errors([severity], [message]) SELECT 16, ERROR_MESSAGE()
 									INSERT INTO @json_errors([severity], [message]) SELECT 16, N'ERROR[XT]: error(s) occured while checking external table' + QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable);
-									--THROW;
+                                    SELECT @outputIsValid = 0;
 								END CATCH
 								INSERT INTO @json_errors([procedure], [severity], [message]) SELECT N'[Maintenance].[CreateArchivingExternalTable]', [severity], [message] FROM OPENJSON(@outputMessages) WITH([Message] nvarchar(MAX), [Severity] int)
-					            SELECT @sourceTableFullParts = QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable);
+					            SELECT @outputMessages = NULL, @sourceTableFullParts = QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable);
 							END                        
-					        ELSE SELECT @sourceTableFullParts = ISNULL(@DataSource + N'.', '') + QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable);;
+					        ELSE SELECT @outputIsValid = 1, @sourceTableFullParts = ISNULL(@DataSource + N'.', '') + QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable);;
 
-							IF NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10)
+                            IF @outputIsValid = 1 OR @IsExternal = 0
 							BEGIN
 								BEGIN TRY
 									SELECT @synonymName = N'Synonym_Archive_' + @cursorTable; --, @sourceTableFullParts =  QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable)
@@ -1403,7 +1407,6 @@ BEGIN
 								BEGIN CATCH
 									INSERT INTO @json_errors([severity], [message]) SELECT 16, ERROR_MESSAGE()
 									INSERT INTO @json_errors([severity], [message]) SELECT 16, N'ERROR[SY0]: error(s) occured while checking synonym for table: ' + QUOTENAME(@cursorSchema) + N'.' + QUOTENAME(@cursorTable);
-					--                THROW;
 								END CATCH
 							END
 						END
@@ -1435,23 +1438,29 @@ BEGIN
 
     -- Check / Set @IsValid flag
     SET @IsValid = IIF(NOT EXISTS(SELECT 1 FROM @json_errors WHERE [severity] > 10) AND @ERROR_NUMBER IS NULL AND @message IS NULL, 1, 0);
-
     SET @Messages = --ISNULL(
     ( 
-        SELECT [Procedure] = QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')), [Message], [Severity], [State] 
+        SELECT [Id], [Procedure] = QUOTENAME(COALESCE(OBJECT_SCHEMA_NAME(@@PROCID), N'?')) + N'.' + QUOTENAME(COALESCE(OBJECT_NAME(@@PROCID), N'?')), [Message], [Severity], [State] 
         FROM (
-            SELECT [Message], [Severity], [State] FROM (
-                SELECT TOP(100) [Message] = LEFT([message], 4000), [Severity] = [severity], [State] = 1 FROM @json_errors ORDER BY [id] ASC
+            SELECT [Id], [Message], [Severity], [State] FROM (
+                SELECT TOP(100) [Id], [Message] = LEFT([message], 4000), [Severity] = [severity], [State] = 1 FROM @json_errors ORDER BY [id] ASC
             ) err
-            UNION ALL SELECT N'ERROR: ' + @ERROR_MESSAGE, 16, 1 WHERE @ERROR_MESSAGE IS NOT NULL
-            UNION ALL SELECT @message, 16, 1 WHERE @message IS NOT NULL
+            UNION ALL SELECT (SELECT MAX(Id) + 1 FROM @json_errors), N'ERROR: ' + @ERROR_MESSAGE, 16, 1 WHERE @ERROR_MESSAGE IS NOT NULL
+            UNION ALL SELECT (SELECT (SELECT MAX(Id) + 2 FROM @json_errors)), @message, 16, 1 WHERE @message IS NOT NULL
         ) jsn
         FOR JSON PATH)
     --    , N'[]')
     ;
-    IF @ShowMessages = 1 OR (@IsValid = 0 AND @ThrowError = 1) SELECT [Message] = LEFT([Message], 1000), [Severity], [Error] = IIF([Severity] > 10, 1, 0) FROM OPENJSON(@Messages) WITH([Message] nvarchar(MAX), [Severity] int)
-    IF @IsValid = 0 AND @ThrowError = 1 THROW 50000, 'Error(s) occured. See output dataset', 1;
-    RETURN 0;
+    IF @ShowMessages = 1 OR (@IsValid = 0 AND @ThrowError = 1) SELECT [Id], [ERROR] = IIF([Severity] > 10, N'ERROR', N''), [Message] = LEFT([Message], 1000), [Severity], [IsError] = IIF([Severity] > 10, 1, 0) FROM @json_errors err WHERE [Severity] >= 10 ORDER BY err.Id ASC
+    IF @IsValid = 0 AND @ThrowError = 1 
+    BEGIN 
+        SELECT @message = NULL;
+        SELECT @message = COALESCE(@message + N', '+ CAST(Id AS nvarchar(10)), 'Error(s) occured. Review Results table and check row(s) where "IsError" = 1 and "Severity" > 10. Row Id(s): ' + CAST(Id AS nvarchar(10)) ) FROM @json_errors WHERE [severity] > 10 ORDER BY [Id];
+        SELECT @message;
+        print @message;
+        THROW 50000, @message, 1;
+    END
+
 END
 GO
 
