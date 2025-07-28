@@ -167,7 +167,7 @@ GO
 ALTER PROCEDURE [Maintenance].[AddRunMessage]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[AddRunMessage]
--- ### [Version]: 2023-01-31T12:58:44+00:00
+-- ### [Version]: 2023-01-31T12:58:44Z
 -- ### [Source]: _src/Runs/Procedure_Maintenance.AddRunMessage.sql
 -- ### [Hash]: d0ca361 [SHA256-AB8A92454EE6D7FD1A73DF40513F33C0DD9DDE342C9D900F558E46A2E3D91BAB]
 -- ### [Docs]: https://???.???
@@ -259,7 +259,7 @@ GO
 ALTER PROCEDURE [Maintenance].[DeleteRuns]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[DeleteRuns]
--- ### [Version]: 2023-01-31T12:58:44+00:00
+-- ### [Version]: 2023-01-31T12:58:44Z
 -- ### [Source]: _src/Runs/Procedure_Maintenance.DeleteRuns.sql
 -- ### [Hash]: d0ca361 [SHA256-C80C680B2B24A52204AA835431EE11A3CBB83FB7C32FA62BFDA5E114FD1A4692]
 -- ### [Docs]: https://???.???
@@ -3017,7 +3017,7 @@ GO
 ALTER PROCEDURE [Maintenance].[ParseJsonArchiveLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ParseJsonArchiveLogs]
--- ### [Version]: 2023-10-18T15:02:49+00:00
+-- ### [Version]: 2023-10-18T15:02:49Z
 -- ### [Source]: _src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.ParseJsonArchiveLogs.sql
 -- ### [Hash]: f12ceeb [SHA256-338D7393F00C2F9B91CBD7EF7F9E38378AC15331EBE231C76269BD43A3AE9FD3]
 -- ### [Docs]: https://???.???
@@ -4277,7 +4277,7 @@ GO
 ALTER PROCEDURE [Maintenance].[ArchiveLogs]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[ArchiveLogs]
--- ### [Version]: 2023-10-18T15:02:49+00:00
+-- ### [Version]: 2023-10-18T15:02:49Z
 -- ### [Source]: _src/Archive/ArchiveDB/Logs/Procedure_ArchiveDB.Maintenance.ArchiveLogs.sql
 -- ### [Hash]: f12ceeb [SHA256-27936D336A12297666A5C0B7F5ADD94E24E5FB4CBB0A0E8191CC6D8AADD4C833]
 -- ### [Docs]: https://???.???

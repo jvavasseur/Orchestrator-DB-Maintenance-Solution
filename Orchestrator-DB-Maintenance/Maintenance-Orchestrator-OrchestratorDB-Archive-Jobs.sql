@@ -167,7 +167,7 @@ GO
 ALTER PROCEDURE [Maintenance].[AddRunMessage]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[AddRunMessage]
--- ### [Version]: 2023-01-31T12:58:44+00:00
+-- ### [Version]: 2023-01-31T12:58:44Z
 -- ### [Source]: _src/Runs/Procedure_Maintenance.AddRunMessage.sql
 -- ### [Hash]: d0ca361 [SHA256-AB8A92454EE6D7FD1A73DF40513F33C0DD9DDE342C9D900F558E46A2E3D91BAB]
 -- ### [Docs]: https://???.???
@@ -259,7 +259,7 @@ GO
 ALTER PROCEDURE [Maintenance].[DeleteRuns]
 ----------------------------------------------------------------------------------------------------
 -- ### [Object]: PROCEDURE [Maintenance].[DeleteRuns]
--- ### [Version]: 2023-01-31T12:58:44+00:00
+-- ### [Version]: 2023-01-31T12:58:44Z
 -- ### [Source]: _src/Runs/Procedure_Maintenance.DeleteRuns.sql
 -- ### [Hash]: d0ca361 [SHA256-C80C680B2B24A52204AA835431EE11A3CBB83FB7C32FA62BFDA5E114FD1A4692]
 -- ### [Docs]: https://???.???
